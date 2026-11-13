@@ -1,7 +1,7 @@
 """Gera um resumo em markdown a partir do json da varredura."""
 from collections import Counter, defaultdict
 
-from .checks import PASS, WARN
+from .checks import ERROR, PASS, WARN
 from .nota import PESOS
 
 NOMES = {
@@ -64,4 +64,19 @@ def gerar_markdown(dados, top=20):
     for r in melhores:
         linhas.append(f"| {r['municipio']} | {r['uf']} | `{r['dominio']}` | {r['nota']} ({r['conceito']}) |")
 
+    linhas += ["", *qualidade_da_coleta(todos)]
     return "\n".join(linhas) + "\n"
+
+
+def qualidade_da_coleta(todos):
+    """Quantos checks deram erro e por que. Serve pra saber se o runner esta sendo bloqueado."""
+    linhas = ["## Qualidade da coleta", "", "| Item | Erros | Motivo mais comum |", "|---|---|---|"]
+    for check in PESOS:
+        motivos = Counter(
+            r["checks"][check]["detalhe"].split(":")[0]
+            for r in todos
+            if r["checks"].get(check, {}).get("status") == ERROR
+        )
+        mais_comum = motivos.most_common(1)[0][0] if motivos else "-"
+        linhas.append(f"| {check} | {sum(motivos.values())} | {mais_comum} |")
+    return linhas

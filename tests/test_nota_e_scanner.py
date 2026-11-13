@@ -79,3 +79,5 @@ def test_varredura_e_resumo():
     md = gerar_markdown(dados)
     assert "| 1 | SP |" in md
     assert "1 não responderam" in md
+    # o dominio que nao resolve gera erro em todos os checks web
+    assert "| https | 1 | dominio nao resolve |" in md

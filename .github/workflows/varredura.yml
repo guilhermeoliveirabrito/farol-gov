@@ -1,0 +1,68 @@
+name: varredura semanal
+
+on:
+  schedule:
+    # segunda-feira 06:17 UTC (03:17 em Brasilia)
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      limite:
+        description: "Varrer so os N primeiros dominios (vazio = todos)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: varredura
+  cancel-in-progress: false
+
+jobs:
+  varredura:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install -e .
+
+      - name: Atualizar lista de dominios
+        run: python scripts/coletar_dominios.py -o data/dominios.csv
+
+      - name: Varredura
+        env:
+          LIMITE: ${{ inputs.limite }}
+        run: |
+          extra=""
+          if [ -n "$LIMITE" ]; then extra="--limite $LIMITE"; fi
+          farol scan data/dominios.csv -o data/resultados/latest.json $extra
+          cp data/resultados/latest.json "data/resultados/$(date -u +%Y-%m-%d).json"
+
+      - name: Gerar resumo
+        run: farol resumo data/resultados/latest.json -o RESULTADOS.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: resultados
+          path: |
+            data/resultados/latest.json
+            RESULTADOS.md
+
+      # rodada de teste (com limite) nao vai pro repositorio
+      - name: Commit dos resultados
+        if: ${{ !inputs.limite }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ RESULTADOS.md
+          if git diff --cached --quiet; then
+            echo "nada mudou"
+            exit 0
+          fi
+          git commit -m "data: varredura de $(date -u +%Y-%m-%d)"
+          git push

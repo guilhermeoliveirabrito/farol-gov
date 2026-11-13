@@ -51,6 +51,13 @@ farol scan data/dominios.csv -o data/resultados/latest.json
 farol resumo data/resultados/latest.json
 ```
 
+### Vendo a página localmente
+
+```bash
+python scripts/montar_site.py          # monta _site/ com os dados de data/
+python -m http.server -d _site 8000    # abre em http://localhost:8000
+```
+
 ## De onde vêm os domínios
 
 A lista de municípios e seus sites oficiais vem do [Wikidata](https://www.wikidata.org/) (propriedade P856, ligada ao código IBGE). Se o site da sua cidade estiver errado ou faltando, o melhor jeito de corrigir é editar o Wikidata, assim a correção vale para todo mundo. Também dá para abrir uma issue aqui.

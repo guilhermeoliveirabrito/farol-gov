@@ -6,6 +6,7 @@ venv/
 .pytest_cache/
 build/
 dist/
+_site/
 
 # resultados locais de teste (os oficiais ficam em data/resultados)
 *.local.json

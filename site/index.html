@@ -26,7 +26,7 @@
 
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preload" href="fontes/lora.woff" as="font" type="font/woff" crossorigin>
-  <link rel="preload" href="dados/latest.json" as="fetch" crossorigin>
+  <link rel="preload" href="dados/resumo.json" as="fetch" crossorigin>
   <link rel="stylesheet" href="estilo.css">
   <script src="app.js" defer></script>
 </head>
@@ -67,7 +67,7 @@
       </div>
 
       <figure class="mapa" id="mapa-fig" hidden>
-        <svg id="mapa" role="img" aria-labelledby="mapa-legenda" preserveAspectRatio="xMidYMid meet"></svg>
+        <canvas id="mapa" role="img" aria-label="Mapa do Brasil com um ponto por prefeitura, colorido pela nota. A mesma informação está na lista de cidades abaixo."></canvas>
         <div class="dica" id="dica" hidden></div>
         <figcaption id="mapa-legenda">
           <span class="legenda-texto">Cada ponto é uma prefeitura, na cor da sua nota.</span>

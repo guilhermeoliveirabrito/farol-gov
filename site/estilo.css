@@ -70,6 +70,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; scroll-padding-top: 20px; }
 
 body {
@@ -141,19 +142,9 @@ h2 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 12px; }
   color: #f4dda4; border-left: 3px solid var(--facho); padding: 2px 0 2px 12px;
 }
 
-/* mapa */
+/* mapa (desenhado em canvas pelo app.js) */
 .mapa { position: relative; margin: 0; }
-.mapa svg { display: block; width: 100%; height: auto; max-height: 560px; overflow: visible; }
-.mapa .p.cA { fill: var(--cA); } .mapa .p.cB { fill: var(--cB); } .mapa .p.cC { fill: var(--cC); }
-.mapa .p.cD { fill: var(--cD); } .mapa .p.cF { fill: var(--cF); }
-.mapa .p.cX { fill: #5d7186; }
-.mapa .p.sem { fill: #2a4560; }
-.mapa .com .p { cursor: pointer; }
-.mapa .com .p:hover { stroke: #fff; stroke-width: .12; }
-
-/* o unico movimento da pagina: os pontos acendem de leste a oeste, como o facho passando */
-@keyframes acende { from { opacity: 0; } to { opacity: 1; } }
-.mapa.animar .p { animation: acende .6s ease-out both; }
+.mapa canvas { display: block; width: 100%; aspect-ratio: 41.1 / 39.8; max-height: 560px; }
 
 .mapa figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 20px; margin-top: 14px; font-size: .88rem; color: #8fa3b5; }
 .legenda-texto { font-family: var(--serif); font-style: italic; font-size: .98rem; color: var(--espuma); }
@@ -188,6 +179,7 @@ h2 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 12px; }
 }
 
 .bloco { padding-top: 8px; padding-bottom: 56px; }
+#itens, #estados { content-visibility: auto; contain-intrinsic-size: auto 640px; }
 
 .titulo-bloco { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 14px 40px; margin-bottom: 18px; }
 .titulo-bloco h2 { margin: 0; }
@@ -320,5 +312,4 @@ h2 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 12px; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .mapa.animar .p { animation: none; }
 }

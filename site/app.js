@@ -3,10 +3,12 @@
 // Regra da casa: nada aqui usa innerHTML. O detalhe de cada check pode trazer texto
 // vindo do servidor avaliado (header Location, mensagem de erro TLS), entao tudo
 // entra como textContent. A CSP com Trusted Types faz o navegador barrar qualquer deslize.
+//
+// Desempenho: a pagina abre so com dados/resumo.json (uma linha por municipio).
+// O detalhe de cada check fica em dados/uf/XX.json e so e baixado quando alguem abre uma cidade.
 
 const REPO = "https://github.com/guilhermeoliveirabrito/farol-gov";
 const POR_PAGINA = 40;
-const SVG = "http://www.w3.org/2000/svg";
 
 const NOMES = {
   https: "HTTPS com certificado válido",
@@ -21,6 +23,7 @@ const NOMES = {
 };
 
 const STATUS = { pass: "ok", warn: "parcial", fail: "falha", error: "erro" };
+const CODIGOS = { p: "pass", w: "warn", f: "fail", e: "error" };
 const CONCEITOS = ["A", "B", "C", "D", "F"];
 
 const AVISOS = {
@@ -32,6 +35,7 @@ const AVISOS = {
 
 const $ = (id) => document.getElementById(id);
 const num = (n) => n.toLocaleString("pt-BR");
+const ordemAlfabetica = new Intl.Collator("pt-BR").compare;
 
 let todos = [];
 let filtrados = [];
@@ -68,79 +72,230 @@ function barra(valor) {
 }
 
 const semAcento = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const noRanking = (r) => r.acessivel && r.ranking !== false;
-const passa = (lista, check) => lista.filter((r) => r.checks[check]?.status === "pass").length;
+const passa = (lista, check) => lista.filter((r) => r.st[check] === "pass").length;
 
-// ---------- mapa ----------
-
-// projecao simples (equiretangular corrigida pela latitude media do pais).
-// pro Brasil inteiro a distorcao e pequena e o formato fica reconhecivel.
-const ESCALA_LON = Math.cos((14 * Math.PI) / 180);
-const px = (lon) => (lon + 74.2) * ESCALA_LON;
-const py = (lat) => 5.6 - lat;
-
-function ponto(lon, lat, classe, animar) {
-  const c = document.createElementNS(SVG, "circle");
-  c.setAttribute("cx", px(lon).toFixed(2));
-  c.setAttribute("cy", py(lat).toFixed(2));
-  c.setAttribute("r", "0.21");
-  c.setAttribute("class", `p ${classe}`);
-  // o facho passa de leste (-34) a oeste (-74) em pouco mais de 1s
-  if (animar) c.style.animationDelay = (((-34 - lon) / 40) * 1.2).toFixed(2) + "s";
-  return c;
+async function buscarJson(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json();
 }
 
-function desenharMapa(lista, semSite) {
-  const comCoord = lista.filter((r) => typeof r.lat === "number" && typeof r.lon === "number");
-  // dado antigo sem coordenada: melhor nao mostrar mapa nenhum do que um mapa vazio
-  if (comCoord.length < 30) return;
-
-  const svg = $("mapa");
-  // vai ate -32 de longitude pra caber Fernando de Noronha
-  svg.setAttribute("viewBox", `0 0 ${(42.4 * ESCALA_LON).toFixed(2)} 39.8`);
-  const animar = !matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  const gSem = document.createElementNS(SVG, "g");
-  for (const [, , , lat, lon] of semSite) {
-    if (typeof lat === "number" && typeof lon === "number") gSem.append(ponto(lon, lat, "sem", animar));
-  }
-
-  const gCom = document.createElementNS(SVG, "g");
-  gCom.setAttribute("class", "com");
-  comCoord.forEach((r, i) => {
-    const classe = "c" + (noRanking(r) && conceitoSeguro(r.conceito) ? r.conceito : "X");
-    const c = ponto(r.lon, r.lat, classe, animar);
-    c.dataset.i = i;
-    gCom.append(c);
+// transforma a linha compacta do resumo.json num objeto facil de usar
+function decodificar(resumo) {
+  const idx = Object.fromEntries(resumo.campos.map((c, i) => [c, i]));
+  return resumo.municipios.map((l) => {
+    const st = {};
+    resumo.checks.forEach((c, i) => (st[c] = CODIGOS[l[idx.status][i]] || "error"));
+    const municipio = String(l[idx.municipio] ?? "");
+    const dominio = String(l[idx.dominio] ?? "");
+    return {
+      ibge: String(l[idx.ibge]),
+      municipio,
+      uf: String(l[idx.uf] ?? ""),
+      dominio,
+      lat: l[idx.lat],
+      lon: l[idx.lon],
+      nota: typeof l[idx.nota] === "number" ? l[idx.nota] : null,
+      conceito: conceitoSeguro(l[idx.conceito]),
+      acessivel: Boolean(l[idx.flags] & 1),
+      ranking: Boolean(l[idx.flags] & 2),
+      st,
+      _busca: semAcento(`${municipio} ${dominio}`),
+    };
   });
+}
 
-  svg.replaceChildren(gSem, gCom);
+// ---------- mapa ----------
+//
+// Canvas em vez de SVG: com ~5.500 pontos, um elemento por ponto pesava no DOM e na rolagem.
+// Aqui e um desenho so, e a animacao inteira roda num unico requestAnimationFrame.
+
+const ESCALA_LON = Math.cos((14 * Math.PI) / 180);
+const LARGURA_MAPA = 42.4 * ESCALA_LON; // vai ate -32 de longitude pra caber Fernando de Noronha
+const ALTURA_MAPA = 39.8;
+const RAIO = 0.21;
+const DURACAO_FACHO = 1200;
+
+const mapa = { pontos: [], grade: new Map(), escala: 1, dx: 0, dy: 0, destaque: -1, cores: {} };
+
+function prepararMapa(lista, semSite) {
+  const proj = (lon, lat) => [(lon + 74.2) * ESCALA_LON, 5.6 - lat];
+  const pontos = [];
+  for (const [ibge, municipio, uf, lat, lon] of semSite) {
+    if (typeof lat !== "number" || typeof lon !== "number") continue;
+    const [x, y] = proj(lon, lat);
+    pontos.push({ x, y, lon, cor: "sem", r: null, nome: municipio, uf, ibge });
+  }
+  for (const r of lista) {
+    if (typeof r.lat !== "number" || typeof r.lon !== "number") continue;
+    const [x, y] = proj(r.lon, r.lat);
+    const cor = r.ranking && r.conceito ? r.conceito : "X";
+    pontos.push({ x, y, lon: r.lon, cor, r });
+  }
+  // sem site por baixo; o resto em ordem pseudoaleatoria fixa (pelo codigo IBGE)
+  const embaralho = (p) => Math.imul(Number(p.r ? p.r.ibge : p.ibge), 2654435761) >>> 0;
+  pontos.sort((a, b) => (b.cor === "sem") - (a.cor === "sem") || embaralho(a) - embaralho(b));
+  // grade espacial pra achar o ponto debaixo do mouse sem varrer tudo
+  const grade = new Map();
+  pontos.forEach((p, i) => {
+    const chave = `${Math.floor(p.x)}:${Math.floor(p.y)}`;
+    if (!grade.has(chave)) grade.set(chave, []);
+    grade.get(chave).push(i);
+  });
+  mapa.pontos = pontos;
+  mapa.grade = grade;
+}
+
+function lerCores() {
+  const css = getComputedStyle(document.documentElement);
+  const v = (nome) => css.getPropertyValue(nome).trim();
+  mapa.cores = { A: v("--cA"), B: v("--cB"), C: v("--cC"), D: v("--cD"), F: v("--cF"), X: "#5d7186", sem: "#2a4560" };
+}
+
+function desenharMapa(progresso = 1) {
+  const canvas = $("mapa");
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // o facho passa de leste (-34) a oeste (-74)
+  const limite = -34 - progresso * 41;
+  const r = RAIO * mapa.escala;
+  // os pontos ja estao embaralhados (ver prepararMapa): assim nenhuma cor fica sempre
+  // por cima nas regioes densas e o mapa nao exagera nem esconde notas boas ou ruins
+  let corAtual = null;
+  ctx.beginPath();
+  for (const p of mapa.pontos) {
+    if (p.lon < limite) continue;
+    if (p.cor !== corAtual) {
+      if (corAtual) ctx.fill();
+      ctx.fillStyle = mapa.cores[p.cor];
+      corAtual = p.cor;
+      ctx.beginPath();
+    }
+    const x = mapa.dx + p.x * mapa.escala;
+    const y = mapa.dy + p.y * mapa.escala;
+    ctx.moveTo(x + r, y);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+  }
+  if (corAtual) ctx.fill();
+
+  const d = mapa.pontos[mapa.destaque];
+  if (d && progresso >= 1) {
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(mapa.dx + d.x * mapa.escala, mapa.dy + d.y * mapa.escala, r + 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function dimensionarMapa() {
+  const canvas = $("mapa");
+  const larg = canvas.clientWidth;
+  const alt = canvas.clientHeight;
+  if (!larg || !alt) return;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(larg * dpr);
+  canvas.height = Math.round(alt * dpr);
+  mapa.escala = Math.min(larg / LARGURA_MAPA, alt / ALTURA_MAPA);
+  mapa.dx = (larg - LARGURA_MAPA * mapa.escala) / 2;
+  mapa.dy = (alt - ALTURA_MAPA * mapa.escala) / 2;
+}
+
+function pontoNoMouse(ev) {
+  const caixa = $("mapa").getBoundingClientRect();
+  const x = (ev.clientX - caixa.left - mapa.dx) / mapa.escala;
+  const y = (ev.clientY - caixa.top - mapa.dy) / mapa.escala;
+  let melhor = -1;
+  let menor = 0.6 * 0.6; // raio de busca, em graus
+  for (let gx = Math.floor(x) - 1; gx <= Math.floor(x) + 1; gx++) {
+    for (let gy = Math.floor(y) - 1; gy <= Math.floor(y) + 1; gy++) {
+      for (const i of mapa.grade.get(`${gx}:${gy}`) || []) {
+        const p = mapa.pontos[i];
+        const dist = (p.x - x) ** 2 + (p.y - y) ** 2;
+        if (dist < menor) {
+          menor = dist;
+          melhor = i;
+        }
+      }
+    }
+  }
+  return melhor;
+}
+
+function iniciarMapa(lista, semSite) {
+  prepararMapa(lista, semSite);
+  // dado antigo sem coordenada: melhor nao mostrar mapa nenhum do que um mapa vazio
+  if (mapa.pontos.filter((p) => p.r).length < 30) return;
+
   const fig = $("mapa-fig");
-  if (animar) fig.classList.add("animar");
+  const canvas = $("mapa");
+  fig.hidden = false;
+  lerCores();
+  dimensionarMapa();
 
   const chaves = CONCEITOS.map((c) => el("li", {}, el("i", { class: "c" + c }), c));
   if (semSite.length) chaves.push(el("li", {}, el("i", { class: "sem" }), `sem site (${num(semSite.length)})`));
   $("chaves").replaceChildren(...chaves);
 
-  // dica ao passar o mouse; clique abre o municipio na lista
-  const dica = $("dica");
-  gCom.addEventListener("mousemove", (ev) => {
-    const r = comCoord[ev.target.dataset.i];
-    if (!r) return;
-    const caixa = fig.getBoundingClientRect();
-    const nota = r.nota != null ? `nota ${num(r.nota)}, conceito ${r.conceito}` : "sem nota";
-    dica.replaceChildren(el("strong", { text: r.municipio }), ` ${r.uf}`, el("br"), el("span", { text: nota }));
-    dica.style.left = ev.clientX - caixa.left + "px";
-    dica.style.top = ev.clientY - caixa.top + "px";
-    dica.hidden = false;
-  });
-  gCom.addEventListener("mouseleave", () => (dica.hidden = true));
-  gCom.addEventListener("click", (ev) => {
-    const r = comCoord[ev.target.dataset.i];
-    if (r) location.hash = `m-${r.ibge}`;
-  });
+  // a unica animacao da pagina; quem pede menos movimento ve o mapa pronto
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    desenharMapa(1);
+  } else {
+    const inicio = performance.now();
+    const passo = (agora) => {
+      const t = Math.min(1, (agora - inicio) / DURACAO_FACHO);
+      desenharMapa(1 - (1 - t) ** 2);
+      if (t < 1) requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+  }
 
-  fig.hidden = false;
+  let pendente = false;
+  new ResizeObserver(() => {
+    if (pendente) return;
+    pendente = true;
+    requestAnimationFrame(() => {
+      pendente = false;
+      dimensionarMapa();
+      desenharMapa(1);
+    });
+  }).observe(canvas);
+
+  const dica = $("dica");
+  canvas.addEventListener("mousemove", (ev) => {
+    const i = pontoNoMouse(ev);
+    if (i !== mapa.destaque) {
+      mapa.destaque = i;
+      desenharMapa(1);
+    }
+    const p = mapa.pontos[i];
+    if (!p) {
+      dica.hidden = true;
+      canvas.style.cursor = "";
+      return;
+    }
+    const caixa = fig.getBoundingClientRect();
+    const quadro = canvas.getBoundingClientRect();
+    let linha2 = "sem site cadastrado";
+    if (p.r) linha2 = p.r.nota != null ? `nota ${num(p.r.nota)}, conceito ${p.r.conceito}` : "sem nota";
+    dica.replaceChildren(el("strong", { text: p.r ? p.r.municipio : p.nome }), ` ${p.r ? p.r.uf : p.uf}`, el("br"), el("span", { text: linha2 }));
+    dica.style.left = quadro.left - caixa.left + mapa.dx + p.x * mapa.escala + "px";
+    dica.style.top = quadro.top - caixa.top + mapa.dy + p.y * mapa.escala + "px";
+    dica.hidden = false;
+    canvas.style.cursor = p.r ? "pointer" : "";
+  });
+  canvas.addEventListener("mouseleave", () => {
+    dica.hidden = true;
+    mapa.destaque = -1;
+    desenharMapa(1);
+  });
+  canvas.addEventListener("click", (ev) => {
+    const p = mapa.pontos[pontoNoMouse(ev)];
+    if (p && p.r) location.hash = `m-${p.r.ibge}`;
+  });
 }
 
 // ---------- achados ----------
@@ -163,7 +318,7 @@ function achados(ok) {
 function distribuicao(ok) {
   if (!ok.length) return;
   const cont = Object.fromEntries(CONCEITOS.map((c) => [c, 0]));
-  for (const r of ok) if (conceitoSeguro(r.conceito)) cont[r.conceito]++;
+  for (const r of ok) if (r.conceito) cont[r.conceito]++;
 
   const partes = CONCEITOS.filter((c) => cont[c]).map((c) => {
     const p = el("span", { class: `parte c${c}`, title: `${c}: ${num(cont[c])} municípios` });
@@ -181,30 +336,41 @@ function distribuicao(ok) {
   $("distribuicao").hidden = false;
 }
 
-// ---------- lista de municipios ----------
+// ---------- detalhes (sob demanda) ----------
 
-function tabelaDetalhes(r) {
+const detalhesUf = new Map();
+
+function carregarUf(uf) {
+  if (!detalhesUf.has(uf)) {
+    // guarda a promessa, assim duas cidades do mesmo estado nao baixam o arquivo duas vezes
+    const p = buscarJson(`dados/uf/${encodeURIComponent(uf)}.json`).catch((e) => {
+      detalhesUf.delete(uf);
+      throw e;
+    });
+    detalhesUf.set(uf, p);
+  }
+  return detalhesUf.get(uf);
+}
+
+function tabelaDetalhes(r, textos) {
   const corpo = el("tbody");
-  for (const [check, nome] of Object.entries(NOMES)) {
-    const c = r.checks[check];
-    if (!c) continue;
-    const st = statusSeguro(c.status);
+  Object.entries(NOMES).forEach(([check, nome], i) => {
+    const st = statusSeguro(r.st[check]);
     const ajuda = st === "pass" ? null : el("a", { href: `${REPO}/blob/main/docs/como-corrigir.md#${check}`, rel: "noopener", text: "como corrigir" });
+    const detalhe = textos ? String(textos[i] ?? "") : "";
     corpo.append(
       el(
         "tr",
         {},
         el("td", {}, el("span", { class: `status ${st}`, text: STATUS[st] })),
-        el("td", {}, el("strong", { text: nome }), el("div", { class: "info" }, c.detalhe, ajuda && ", ", ajuda)),
+        el("td", {}, el("strong", { text: nome }), el("div", { class: "info" }, detalhe, detalhe && ajuda && ", ", ajuda)),
       ),
     );
-  }
+  });
   return el("table", {}, corpo);
 }
 
-function montarDetalhes(r) {
-  const avisos = (r.avisos || []).filter((a) => AVISOS[a]).map((a) => el("p", { class: "avisos", text: AVISOS[a] }));
-
+function acoes(r) {
   const copiar = el("button", { type: "button", class: "link" }, "Copiar link");
   copiar.addEventListener("click", async () => {
     const url = `${location.origin}${location.pathname}#m-${r.ibge}`;
@@ -215,23 +381,37 @@ function montarDetalhes(r) {
       copiar.textContent = url;
     }
   });
-
   const titulo = encodeURIComponent(`Contestar resultado: ${r.municipio} (${r.dominio})`);
-  const acoes = el(
+  return el(
     "p",
     { class: "acoes" },
     r.nota != null ? el("span", { text: `Nota ${num(r.nota)} de 100` }) : null,
     copiar,
     el("a", { href: `${REPO}/issues/new?title=${titulo}`, rel: "noopener", text: "Contestar resultado" }),
   );
-
-  return el("div", { class: "detalhes" }, ...avisos, tabelaDetalhes(r), acoes);
 }
 
+function montarDetalhes(r) {
+  // mostra os status na hora e completa com os textos quando o arquivo do estado chegar
+  const caixa = el("div", { class: "detalhes" }, tabelaDetalhes(r, null), acoes(r));
+  carregarUf(r.uf)
+    .then((dados) => {
+      const extra = dados[r.ibge];
+      if (!extra) return;
+      const avisos = (extra.a || []).filter((a) => AVISOS[a]).map((a) => el("p", { class: "avisos", text: AVISOS[a] }));
+      caixa.replaceChildren(...avisos, tabelaDetalhes(r, extra.d), acoes(r));
+    })
+    .catch(() => {
+      caixa.append(el("p", { class: "avisos", text: "Não foi possível carregar o detalhe de cada item. Tente abrir de novo." }));
+    });
+  return caixa;
+}
+
+// ---------- lista de municipios ----------
+
 function linhaMunicipio(r) {
-  const conceito = conceitoSeguro(r.conceito);
-  const selo = conceito
-    ? el("span", { class: `conceito ${conceito}`, title: `Nota ${r.nota}`, text: conceito })
+  const selo = r.conceito
+    ? el("span", { class: `conceito ${r.conceito}`, title: `Nota ${r.nota}`, text: r.conceito })
     : el("span", { class: "conceito sem", title: "Sem nota", text: "–" });
 
   const resumo = el(
@@ -251,7 +431,6 @@ function linhaMunicipio(r) {
   );
 
   const det = el("details", { id: `m-${r.ibge}` }, resumo);
-  // a tabela so e montada quando abre: com milhares de municipios faz diferenca
   det.addEventListener("toggle", () => {
     if (det.open && det.childElementCount === 1) det.append(montarDetalhes(r));
     if (det.open) history.replaceState(null, "", `#m-${r.ibge}`);
@@ -344,9 +523,8 @@ function adocao(ok) {
   );
 
   const itens = Object.entries(NOMES).map(([check, nome]) => {
-    const st = ok.map((r) => r.checks[check]?.status);
-    const atende = pct(st.filter((s) => s === "pass").length, ok.length);
-    const parcial = pct(st.filter((s) => s === "warn").length, ok.length);
+    const atende = pct(passa(ok, check), ok.length);
+    const parcial = pct(ok.filter((r) => r.st[check] === "warn").length, ok.length);
     const a = el("i", { class: "ok" });
     const b = el("i", { class: "parcial" });
     a.style.width = atende + "%";
@@ -364,15 +542,15 @@ function adocao(ok) {
 
 // ---------- inicio ----------
 
-function cabecalho(dados) {
-  const data = new Date(dados.gerado_em).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
-  const acessiveis = dados.resultados.filter((r) => r.acessivel).length;
+function cabecalho(resumo) {
+  const data = new Date(resumo.gerado_em).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+  const acessiveis = todos.filter((r) => r.acessivel).length;
   $("meta").textContent =
-    `Última varredura em ${data}: ${num(dados.total)} sites verificados, ${num(acessiveis)} responderam.`;
+    `Última varredura em ${data}: ${num(resumo.total)} sites verificados, ${num(acessiveis)} responderam.`;
 
-  if (dados.amostra) {
+  if (resumo.amostra) {
     $("aviso-amostra").textContent =
-      `Resultado de teste com uma amostra de ${num(dados.amostra)} sites, não a varredura completa. ` +
+      `Resultado de teste com uma amostra de ${num(resumo.amostra)} sites, não a varredura completa. ` +
       "Os números ainda não representam o país.";
     $("aviso-amostra").hidden = false;
   }
@@ -384,45 +562,29 @@ function semDados() {
   document.querySelector(".busca-hero").hidden = true;
 }
 
-async function buscarJson(url) {
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return resp.json();
-}
-
 async function iniciar() {
-  let dados;
+  // os dois arquivos saem em paralelo; o de municipios sem site e opcional
+  const pedidoSemSite = buscarJson("dados/sem_site.json").catch(() => []);
+  let resumo;
   try {
-    dados = await buscarJson("dados/latest.json");
-    if (!Array.isArray(dados.resultados)) throw new Error("formato inesperado");
+    resumo = await buscarJson("dados/resumo.json");
+    if (!Array.isArray(resumo.municipios)) throw new Error("formato inesperado");
   } catch {
     semDados();
     return;
   }
-  // a lista de municipios sem site e opcional, so serve pro mapa
-  const semSite = await buscarJson("dados/sem_site.json")
-    .then((d) => (Array.isArray(d) ? d : []))
-    .catch(() => []);
 
   // melhores primeiro; sem nota vai pro fim
-  todos = dados.resultados
-    .filter((r) => r && typeof r === "object" && r.checks)
-    .map((r) => ({ ...r, municipio: String(r.municipio ?? ""), _busca: semAcento(`${r.municipio} ${r.dominio}`) }))
-    .sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1) || a.municipio.localeCompare(b.municipio, "pt-BR"));
-  const ok = todos.filter(noRanking);
+  todos = decodificar(resumo).sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1) || ordemAlfabetica(a.municipio, b.municipio));
+  const ok = todos.filter((r) => r.acessivel && r.ranking);
 
-  cabecalho(dados);
-  desenharMapa(todos, semSite);
+  cabecalho(resumo);
   achados(ok);
   distribuicao(ok);
-  rankingEstados(ok);
-  adocao(ok);
 
   const ufs = [...new Set(todos.map((r) => r.uf).filter(Boolean))].sort();
   $("filtro-uf").append(...ufs.map((uf) => el("option", { value: uf, text: uf })));
-
   aplicarFiltros();
-  abrirDoLink();
 
   let espera;
   $("busca").addEventListener("input", () => {
@@ -435,6 +597,17 @@ async function iniciar() {
   $("filtro-conceito").addEventListener("change", aplicarFiltros);
   $("mais").addEventListener("click", mostrarMais);
   window.addEventListener("hashchange", abrirDoLink);
+  abrirDoLink();
+
+  const semSite = await pedidoSemSite;
+  iniciarMapa(todos, Array.isArray(semSite) ? semSite : []);
+
+  // o que fica la embaixo pode esperar o navegador ficar livre
+  const depois = window.requestIdleCallback || ((f) => setTimeout(f, 200));
+  depois(() => {
+    rankingEstados(ok);
+    adocao(ok);
+  });
 }
 
 iniciar();

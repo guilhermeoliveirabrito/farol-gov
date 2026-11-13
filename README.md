@@ -26,7 +26,7 @@ Em 2019 um levantamento da DigiCert apontou que [47% dos domínios .gov do Brasi
 | `spf` | Registro SPF que não aceita qualquer remetente | Primeira barreira contra e-mail falso |
 | `dmarc` | Política DMARC `quarantine` ou `reject` | Sem isso, qualquer um manda e-mail "da prefeitura" |
 
-Os pesos de cada item e o cálculo da nota estão em [docs/metodologia.md](docs/metodologia.md).
+Os pesos de cada item e o cálculo da nota estão em [docs/metodologia.md](docs/metodologia.md). Se você administra algum desses sites, o [guia de correção](docs/como-corrigir.md) mostra o que fazer em cada item.
 
 ## O que **não** é feito
 
@@ -60,14 +60,16 @@ A lista de municípios e seus sites oficiais vem do [Wikidata](https://www.wikid
 - [x] Checks de DNS (DNSSEC, SPF, DMARC)
 - [x] Checks web (HTTPS, redirect, TLS, HSTS, headers, security.txt)
 - [x] Varredura semanal via GitHub Actions
-- [ ] Página com ranking por estado e município (GitHub Pages)
+- [x] Página com ranking por estado e município (GitHub Pages)
+- [x] Guia de correção para cada item ([docs/como-corrigir.md](docs/como-corrigir.md))
+- [x] Detecção de cadastros suspeitos no Wikidata
 - [ ] Histórico e gráfico de evolução
 - [ ] Domínios estaduais e federais
-- [ ] Guia de correção para cada item, voltado para quem administra os sites
+- [ ] Testar se o servidor ainda aceita TLS 1.0/1.1
 
 ## Contribuindo
 
-Issues e PRs são bem-vindos. Se você trabalha na TI de algum órgão e quer contestar um resultado, abra uma issue que a gente olha junto.
+Issues e PRs são bem-vindos. Um jeito fácil de começar: o arquivo [`data/revisar_wikidata.csv`](data/revisar_wikidata.csv) lista municípios com site errado ou desatualizado no Wikidata. Corrigir lá melhora o farol e todo projeto que usa esses dados. Se você trabalha na TI de algum órgão e quer contestar um resultado, abra uma issue que a gente olha junto.
 
 ## Licença
 

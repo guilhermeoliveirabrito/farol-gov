@@ -2,7 +2,7 @@
 
 **Observatório aberto da segurança dos sites e e-mails do governo brasileiro.**
 
-[English version](README.en.md)
+**[Ver o ranking →](https://guilhermeoliveirabrito.github.io/farol-gov/)** · [English version](README.en.md)
 
 O farol-gov verifica, toda semana, se os domínios de prefeituras, governos estaduais e órgãos públicos seguem o básico de segurança na internet: HTTPS de verdade, TLS atualizado, DNSSEC e proteção contra e-mails falsos (SPF e DMARC). O resultado vira um ranking por estado e município, com os dados abertos para quem quiser analisar.
 

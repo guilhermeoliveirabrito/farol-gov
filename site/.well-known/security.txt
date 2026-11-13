@@ -1,0 +1,5 @@
+Contact: https://github.com/guilhermeoliveirabrito/farol-gov/security/advisories/new
+Expires: 2027-11-13T00:00:00.000Z
+Preferred-Languages: pt, en
+Canonical: https://guilhermeoliveirabrito.github.io/farol-gov/.well-known/security.txt
+Policy: https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/SECURITY.md

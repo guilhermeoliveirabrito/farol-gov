@@ -9,9 +9,9 @@
         content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; require-trusted-types-for 'script'; trusted-types 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#0b2135">
+  <meta name="theme-color" content="#07182a">
 
-  <title>farol-gov: o site da sua prefeitura protege você?</title>
+  <title>farol-gov: a segurança dos sites das prefeituras</title>
   <meta name="description" content="Observatório aberto da segurança dos sites e e-mails das prefeituras brasileiras: HTTPS, TLS, DNSSEC, SPF e DMARC, atualizado toda semana.">
 
   <meta property="og:type" content="website">
@@ -25,64 +25,80 @@
   <meta name="twitter:card" content="summary_large_image">
 
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="fontes/lora.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="fontes/inter-display.woff" as="font" type="font/woff" crossorigin>
   <link rel="preload" href="dados/resumo.json" as="fetch" crossorigin>
   <link rel="stylesheet" href="estilo.css">
   <script src="app.js" defer></script>
 </head>
 <body>
-  <a class="pular" href="#cidades">Pular para a busca</a>
+  <a class="pular" href="#cidades">Pular para a lista de cidades</a>
 
-  <div class="mar">
+  <div class="noite">
     <header class="topo largura">
       <a class="marca" href="./">
-        <img src="favicon.svg" alt="" width="26" height="26">
+        <img src="favicon.svg" alt="" width="24" height="24">
         farol-gov
       </a>
       <nav aria-label="Seções">
-        <a href="#cidades">Cidades</a>
+        <a href="#itens">O que falta</a>
         <a href="#estados">Estados</a>
-        <a href="#itens">Itens</a>
+        <a href="#cidades">Cidades</a>
         <a href="https://github.com/guilhermeoliveirabrito/farol-gov" rel="noopener">Código</a>
       </nav>
     </header>
 
-    <section class="hero largura">
-      <div class="hero-texto">
-        <h1>O site da sua prefeitura protege você?</h1>
+    <section class="hero">
+      <canvas id="mapa" class="mapa" role="img" aria-label="Mapa do Brasil com um ponto por prefeitura, colorido pela nota. O facho de um farol gira sobre o mapa. A mesma informação está na lista de cidades."></canvas>
+      <div class="dica" id="dica" hidden></div>
+
+      <div class="hero-texto largura">
+        <h1 id="manchete">O site da sua prefeitura protege você?</h1>
         <p class="lead">
-          Toda semana o farol-gov confere se os sites e e-mails das prefeituras seguem o básico de segurança:
-          HTTPS, TLS atualizado, DNSSEC e proteção contra e-mails falsos. São verificações passivas,
-          as mesmas que um navegador faz.
+          Toda semana o farol-gov verifica a segurança dos sites e e-mails de
+          <strong id="n-total">milhares de</strong> prefeituras. Procure a sua.
         </p>
 
-        <div class="busca-hero">
-          <label for="busca-hero" class="sr">Nome da sua cidade</label>
-          <input id="busca-hero" type="search" placeholder="Digite o nome da sua cidade" autocomplete="off" spellcheck="false">
-          <button id="ir-busca" type="button">Ver nota</button>
+        <div class="busca" id="busca-caixa">
+          <label for="busca" class="sr">Nome da sua cidade</label>
+          <input id="busca" type="text" role="combobox" aria-expanded="false" aria-controls="sugestoes"
+                 aria-autocomplete="list" placeholder="Digite o nome da sua cidade" autocomplete="off" spellcheck="false">
+          <ul id="sugestoes" class="sugestoes" role="listbox" aria-label="Cidades encontradas" hidden></ul>
         </div>
 
         <p class="meta" id="meta">Carregando resultados…</p>
         <p class="aviso" id="aviso-amostra" hidden></p>
       </div>
 
-      <figure class="mapa" id="mapa-fig" hidden>
-        <canvas id="mapa" role="img" aria-label="Mapa do Brasil com um ponto por prefeitura, colorido pela nota. A mesma informação está na lista de cidades abaixo."></canvas>
-        <div class="dica" id="dica" hidden></div>
-        <figcaption id="mapa-legenda">
-          <span class="legenda-texto">Cada ponto é uma prefeitura, na cor da sua nota.</span>
-          <ul class="chaves" id="chaves"></ul>
-        </figcaption>
-      </figure>
+      <div class="legenda-mapa largura" id="legenda-mapa" hidden>
+        <ul class="chaves" id="chaves"></ul>
+        <p>O facho sai do Farol da Barra, em Salvador. Cada ponto é uma prefeitura.</p>
+      </div>
     </section>
   </div>
 
-  <main class="carta">
-    <section class="achados largura" id="achados" aria-label="Principais números" hidden></section>
+  <main class="dia">
+    <section class="secao largura" id="itens">
+      <div class="cabeca">
+        <h2>O que falta nas prefeituras</h2>
+        <p>Parte das prefeituras que cumpre cada item. Os que mais protegem o cidadão contam mais na nota.</p>
+      </div>
+      <ol class="itens" id="lista-itens"></ol>
+    </section>
 
-    <section class="largura bloco" id="cidades">
-      <div class="titulo-bloco">
-        <h2>Procure sua cidade</h2>
+    <section class="secao largura" id="estados">
+      <div class="cabeca">
+        <h2>Estado por estado</h2>
+        <p>Nota média das prefeituras de cada estado. Toque em um estado para ver as cidades dele.</p>
+      </div>
+      <div class="estados-grade">
+        <div class="ladrilhos" id="ladrilhos" role="list" aria-label="Mapa de estados"></div>
+        <ol class="ranking-uf" id="ranking-uf" aria-label="Estados da maior para a menor nota média"></ol>
+      </div>
+    </section>
+
+    <section class="secao largura" id="cidades">
+      <div class="cabeca">
+        <h2>Todas as cidades</h2>
         <div class="distribuicao" id="distribuicao" hidden>
           <div class="dist-barra" id="dist-barra"></div>
           <ul class="dist-legenda" id="dist-legenda"></ul>
@@ -90,9 +106,9 @@
       </div>
 
       <div class="filtros" role="search">
-        <label class="busca">
-          <span class="sr">Nome do município ou domínio</span>
-          <input id="busca" type="search" placeholder="Município ou domínio" autocomplete="off" spellcheck="false">
+        <label class="filtro-texto">
+          <span class="sr">Município ou domínio</span>
+          <input id="filtro" type="search" placeholder="Filtrar por município ou domínio" autocomplete="off" spellcheck="false">
         </label>
         <label>
           <span class="sr">Estado</span>
@@ -108,30 +124,18 @@
         </label>
       </div>
       <p class="contagem" id="contagem" aria-live="polite"></p>
-      <ul class="lista" id="lista"></ul>
-      <button class="mais" id="mais" type="button" hidden>Mostrar mais municípios</button>
+      <ul class="cidades" id="lista"></ul>
+      <button class="mais" id="mais" type="button" hidden>Mostrar mais cidades</button>
 
       <details class="explica">
         <summary>Como a nota é calculada</summary>
         <p>
           Cada item vale uma quantidade de pontos. DMARC e HTTPS valem mais porque protegem o cidadão diretamente.
-          Item atendido conta inteiro e parcial conta metade. A nota vai de 0 a 100: A a partir de 90,
+          Item cumprido conta inteiro e parcial conta metade. A nota vai de 0 a 100: A a partir de 90,
           B a partir de 75, C a partir de 55, D a partir de 35 e F abaixo disso.
           Detalhes na <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/metodologia.md" rel="noopener">metodologia</a>.
         </p>
       </details>
-    </section>
-
-    <section class="largura bloco" id="itens">
-      <h2>Adoção de cada item</h2>
-      <p class="nota-rodape">Parte das prefeituras que atende cada item. Clique no nome para ver como corrigir.</p>
-      <div id="adocao"></div>
-    </section>
-
-    <section class="largura bloco" id="estados">
-      <h2>Ranking por estado</h2>
-      <p class="nota-rodape">Média das notas dos municípios avaliados em cada estado. Estados com poucos sites cadastrados no Wikidata podem estar sub-representados.</p>
-      <ol class="estados" id="lista-uf"></ol>
     </section>
   </main>
 
@@ -151,5 +155,12 @@
       </p>
     </div>
   </footer>
+
+  <dialog class="ficha" id="ficha" aria-labelledby="ficha-nome">
+    <div class="ficha-topo">
+      <button type="button" class="fechar" id="fechar-ficha">Fechar</button>
+    </div>
+    <div id="ficha-corpo"></div>
+  </dialog>
 </body>
 </html>

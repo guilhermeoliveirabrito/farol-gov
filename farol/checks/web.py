@@ -129,7 +129,8 @@ def avaliar_hsts(valor):
 
 
 def avaliar_headers(headers):
-    nosniff = headers.get("x-content-type-options", "").strip().lower() == "nosniff"
+    # header duplicado (proxy + aplicacao) chega como "nosniff, nosniff"
+    nosniff = "nosniff" in headers.get("x-content-type-options", "").lower()
     csp = headers.get("content-security-policy", "").lower()
     frame = "x-frame-options" in headers or "frame-ancestors" in csp
 

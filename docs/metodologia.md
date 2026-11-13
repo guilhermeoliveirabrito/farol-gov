@@ -15,6 +15,19 @@ Cada verificação devolve um de quatro estados:
 
 Domínios que não resolvem no DNS ou não respondem nem em HTTP nem em HTTPS ficam fora do ranking e aparecem como "inacessíveis".
 
+## Qualidade do cadastro
+
+O site de cada município vem do Wikidata, e nem sempre o cadastro está certo. Antes de avaliar, o farol faz algumas checagens:
+
+| Aviso | O que acontece |
+|---|---|
+| `dominio_alternativo` | O domínio cadastrado não existe, mas a versão com/sem `www.` existe. Avaliamos a que funciona. |
+| `nao_resolve` | Nenhuma das duas versões existe no DNS. Fica sem nota. |
+| `fora_do_gov_br` | O domínio não termina em `.gov.br`. É avaliado, mas fica **fora do ranking** até alguém confirmar que é mesmo o site da prefeitura (já apareceu site de associação de municípios cadastrado como site de prefeitura). |
+| `dominio_compartilhado` | O mesmo domínio aparece para mais de um município. Também fica fora do ranking. |
+
+Todos os casos vão para `data/revisar_wikidata.csv`, que serve de lista de tarefas para quem quiser corrigir o Wikidata.
+
 ## Pesos
 
 | Check | Peso | Critério para `pass` | Quando é `warn` |

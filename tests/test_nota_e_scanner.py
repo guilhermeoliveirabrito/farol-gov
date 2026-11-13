@@ -1,7 +1,7 @@
 from farol.checks import FAIL, PASS, WARN, Resultado
 from farol.dominios import Entidade, dominio_email, normalizar_host, uf_do_ibge
 from farol.nota import PESOS, calcular_nota, conceito
-from farol.resumo import gerar_markdown
+from farol.resumo import gerar_markdown, linhas_revisao
 from farol.scanner import avaliar, varrer
 from tests.fakes import FakeCliente, FakeResolver, resp
 
@@ -81,3 +81,49 @@ def test_varredura_e_resumo():
     assert "1 não responderam" in md
     # o dominio que nao resolve gera erro em todos os checks web
     assert "| https | 1 | dominio nao resolve |" in md
+
+
+def test_usa_dominio_sem_www_quando_o_cadastrado_nao_existe():
+    host = "cidade.sp.gov.br"
+    resolver = FakeResolver(enderecos={host: (True, True)})
+    cliente = FakeCliente({f"https://{host}/": resp(f"https://{host}/")})
+    r = avaliar(Entidade("3509502", "Cidade", "SP", "www." + host), resolver, cliente)
+
+    assert r["dominio"] == host
+    assert r["dominio_wikidata"] == "www." + host
+    assert "dominio_alternativo" in r["avisos"]
+    assert r["acessivel"]
+    assert r["ranking"]
+
+
+def test_dominio_fora_do_gov_br_sai_do_ranking():
+    host = "www.associacao.org.br"
+    resolver = FakeResolver(enderecos={host: (True, False)})
+    cliente = FakeCliente({f"https://{host}/": resp(f"https://{host}/")})
+    r = avaliar(Entidade("1301159", "Careiro", "AM", host), resolver, cliente)
+
+    assert r["acessivel"]
+    assert r["nota"] is not None
+    assert not r["ranking"]
+    assert "fora_do_gov_br" in r["avisos"]
+
+
+def test_dominio_repetido_vira_compartilhado():
+    ent, resolver, cliente = _ambiente()
+    outro = Entidade("3509601", "Vizinha", "SP", ent.dominio)
+    dados = varrer([ent, outro], lambda: resolver, cliente, workers=2)
+
+    for r in dados["resultados"]:
+        assert "dominio_compartilhado" in r["avisos"]
+        assert not r["ranking"]
+
+
+def test_linhas_de_revisao():
+    ent, resolver, cliente = _ambiente()
+    fora = Entidade("2611606", "Outra", "PE", "fora.pe.gov.br")
+    dados = varrer([ent, fora], lambda: resolver, cliente, workers=2)
+
+    revisao = linhas_revisao(dados)
+    assert len(revisao) == 1
+    assert revisao[0]["ibge"] == "2611606"
+    assert "não existe" in revisao[0]["motivo"]

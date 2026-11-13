@@ -55,6 +55,15 @@ def dominio_email(host):
     return host
 
 
+def alternativo(host):
+    """www.x.gov.br <-> x.gov.br. Muita entrada do wikidata so funciona numa das duas formas."""
+    return host[4:] if host.startswith("www.") else "www." + host
+
+
+def fora_do_gov_br(host):
+    return not host.endswith(".gov.br")
+
+
 def ler_csv(caminho):
     with open(caminho, newline="", encoding="utf-8") as f:
         return [Entidade(**{k: linha[k] for k in CAMPOS}) for linha in csv.DictReader(f)]

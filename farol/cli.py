@@ -55,6 +55,8 @@ def cmd_scan(args):
 
     cliente = ClienteHTTP(timeout=args.timeout)
     dados = varrer(entidades, ResolverDNS, cliente, workers=args.workers, progresso=progresso)
+    # a pagina mostra um aviso quando o resultado e so uma amostra
+    dados["amostra"] = args.amostra or args.limite or None
 
     saida = Path(args.saida)
     saida.parent.mkdir(parents=True, exist_ok=True)

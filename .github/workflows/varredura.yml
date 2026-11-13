@@ -6,13 +6,13 @@ on:
     - cron: "17 6 * * 1"
   workflow_dispatch:
     inputs:
-      limite:
-        description: "Varrer so os N primeiros dominios (vazio = todos)"
+      amostra:
+        description: "Varrer so N dominios aleatorios (vazio = todos)"
         required: false
         default: ""
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: varredura
@@ -22,6 +22,8 @@ jobs:
   varredura:
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -36,16 +38,16 @@ jobs:
 
       - name: Varredura
         env:
-          LIMITE: ${{ inputs.limite }}
+          AMOSTRA: ${{ inputs.amostra }}
         run: |
           extra=""
-          if [ -n "$LIMITE" ]; then extra="--limite $LIMITE"; fi
+          if [ -n "$AMOSTRA" ]; then extra="--amostra $AMOSTRA"; fi
           farol scan data/dominios.csv -o data/resultados/latest.json $extra
           cp data/resultados/latest.json "data/resultados/$(date -u +%Y-%m-%d).json"
 
       - name: Gerar resumo
         run: |
-          farol resumo data/resultados/latest.json -o RESULTADOS.md
+          farol resumo data/resultados/latest.json -o RESULTADOS.md --revisao data/revisar_wikidata.csv
           cat RESULTADOS.md
           cat RESULTADOS.md >> "$GITHUB_STEP_SUMMARY"
 
@@ -54,11 +56,12 @@ jobs:
           name: resultados
           path: |
             data/resultados/latest.json
+            data/revisar_wikidata.csv
             RESULTADOS.md
 
-      # rodada de teste (com limite) nao vai pro repositorio
+      # rodada de teste (com amostra) nao vai pro repositorio
       - name: Commit dos resultados
-        if: ${{ !inputs.limite }}
+        if: ${{ !inputs.amostra }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -69,3 +72,14 @@ jobs:
           fi
           git commit -m "data: varredura de $(date -u +%Y-%m-%d)"
           git push
+
+  # publica a pagina com o resultado desta rodada (inclusive amostra, que aparece com aviso)
+  site:
+    needs: varredura
+    uses: ./.github/workflows/pages.yml
+    with:
+      artefato: resultados
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

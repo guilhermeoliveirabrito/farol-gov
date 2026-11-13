@@ -1,0 +1,61 @@
+name: pagina
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      artefato:
+        description: "Nome do artifact com o latest.json (quando chamado pela varredura)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Pegar resultados da varredura
+        if: ${{ inputs.artefato }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.artefato }}
+          path: .
+
+      - name: Montar o site
+        run: |
+          mkdir -p _site/dados
+          cp -r site/* _site/
+          if [ -f data/resultados/latest.json ]; then
+            cp data/resultados/latest.json _site/dados/latest.json
+            [ -f data/revisar_wikidata.csv ] && cp data/revisar_wikidata.csv _site/dados/
+          else
+            echo "sem resultados ainda, a pagina vai mostrar aviso"
+          fi
+
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+build/
+dist/
+
+# resultados locais de teste (os oficiais ficam em data/resultados)
+*.local.json
+.env

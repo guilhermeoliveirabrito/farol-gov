@@ -23,13 +23,19 @@ def _pct(parte, total):
 
 def gerar_markdown(dados, top=20):
     todos = dados["resultados"]
-    ok = [r for r in todos if r["acessivel"]]
+    acessiveis = [r for r in todos if r["acessivel"]]
+    # json antigo nao tinha o campo ranking
+    ok = [r for r in acessiveis if r.get("ranking", True)]
     linhas = [
         "# Resultados",
         "",
         f"Varredura de {dados['gerado_em'][:10]}. "
-        f"{len(todos)} domínios verificados, {len(ok)} acessíveis "
-        f"({len(todos) - len(ok)} não responderam e ficaram fora da nota).",
+        f"{len(todos)} domínios verificados, {len(acessiveis)} acessíveis "
+        f"({len(todos) - len(acessiveis)} não responderam e ficaram fora da nota).",
+        "",
+        f"{len(acessiveis) - len(ok)} municípios acessíveis ficaram fora do ranking porque o domínio "
+        "cadastrado precisa de revisão (fora do `.gov.br` ou repetido em mais de um município). "
+        "Lista em [data/revisar_wikidata.csv](data/revisar_wikidata.csv).",
         "",
         "Metodologia: [docs/metodologia.md](docs/metodologia.md). "
         "Dados completos: [data/resultados/latest.json](data/resultados/latest.json).",
@@ -66,6 +72,30 @@ def gerar_markdown(dados, top=20):
 
     linhas += ["", *qualidade_da_coleta(todos)]
     return "\n".join(linhas) + "\n"
+
+
+MOTIVOS_REVISAO = {
+    "nao_resolve": "domínio não existe no DNS",
+    "fora_do_gov_br": "domínio fora do .gov.br",
+    "dominio_compartilhado": "mesmo domínio usado por outro município",
+    "dominio_alternativo": "só funciona com/sem www",
+}
+
+
+def linhas_revisao(dados):
+    """Entradas do wikidata que provavelmente estao erradas, pra quem quiser corrigir."""
+    linhas = []
+    for r in dados["resultados"]:
+        motivos = [MOTIVOS_REVISAO[a] for a in r.get("avisos", []) if a in MOTIVOS_REVISAO]
+        if motivos:
+            linhas.append({
+                "ibge": r["ibge"],
+                "municipio": r["municipio"],
+                "uf": r["uf"],
+                "dominio_wikidata": r.get("dominio_wikidata", r["dominio"]),
+                "motivo": "; ".join(motivos),
+            })
+    return linhas
 
 
 def qualidade_da_coleta(todos):

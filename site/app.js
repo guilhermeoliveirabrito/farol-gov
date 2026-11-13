@@ -6,6 +6,7 @@
 
 const REPO = "https://github.com/guilhermeoliveirabrito/farol-gov";
 const POR_PAGINA = 40;
+const SVG = "http://www.w3.org/2000/svg";
 
 const NOMES = {
   https: "HTTPS com certificado válido",
@@ -54,21 +55,11 @@ function el(tag, attrs = {}, ...filhos) {
 }
 
 // so deixa passar valores conhecidos pra virar classe CSS
-function statusSeguro(s) {
-  return s in STATUS ? s : "error";
-}
+const statusSeguro = (s) => (s in STATUS ? s : "error");
+const conceitoSeguro = (c) => (CONCEITOS.includes(c) ? c : null);
 
-function conceitoSeguro(c) {
-  return CONCEITOS.includes(c) ? c : null;
-}
-
-function pct(parte, total) {
-  return total ? (100 * parte) / total : 0;
-}
-
-function fmtPct(v) {
-  return v.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%";
-}
+const pct = (parte, total) => (total ? (100 * parte) / total : 0);
+const fmtPct = (v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%";
 
 function barra(valor) {
   const i = el("i");
@@ -76,29 +67,97 @@ function barra(valor) {
   return el("div", { class: "barra", "aria-hidden": "true" }, i);
 }
 
-function semAcento(s) {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const semAcento = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const noRanking = (r) => r.acessivel && r.ranking !== false;
+const passa = (lista, check) => lista.filter((r) => r.checks[check]?.status === "pass").length;
+
+// ---------- mapa ----------
+
+// projecao simples (equiretangular corrigida pela latitude media do pais).
+// pro Brasil inteiro a distorcao e pequena e o formato fica reconhecivel.
+const ESCALA_LON = Math.cos((14 * Math.PI) / 180);
+const px = (lon) => (lon + 74.2) * ESCALA_LON;
+const py = (lat) => 5.6 - lat;
+
+function ponto(lon, lat, classe, animar) {
+  const c = document.createElementNS(SVG, "circle");
+  c.setAttribute("cx", px(lon).toFixed(2));
+  c.setAttribute("cy", py(lat).toFixed(2));
+  c.setAttribute("r", "0.21");
+  c.setAttribute("class", `p ${classe}`);
+  // o facho passa de leste (-34) a oeste (-74) em pouco mais de 1s
+  if (animar) c.style.animationDelay = (((-34 - lon) / 40) * 1.2).toFixed(2) + "s";
+  return c;
 }
 
-function noRanking(r) {
-  return r.acessivel && r.ranking !== false;
+function desenharMapa(lista, semSite) {
+  const comCoord = lista.filter((r) => typeof r.lat === "number" && typeof r.lon === "number");
+  // dado antigo sem coordenada: melhor nao mostrar mapa nenhum do que um mapa vazio
+  if (comCoord.length < 30) return;
+
+  const svg = $("mapa");
+  // vai ate -32 de longitude pra caber Fernando de Noronha
+  svg.setAttribute("viewBox", `0 0 ${(42.4 * ESCALA_LON).toFixed(2)} 39.8`);
+  const animar = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const gSem = document.createElementNS(SVG, "g");
+  for (const [, , , lat, lon] of semSite) {
+    if (typeof lat === "number" && typeof lon === "number") gSem.append(ponto(lon, lat, "sem", animar));
+  }
+
+  const gCom = document.createElementNS(SVG, "g");
+  gCom.setAttribute("class", "com");
+  comCoord.forEach((r, i) => {
+    const classe = "c" + (noRanking(r) && conceitoSeguro(r.conceito) ? r.conceito : "X");
+    const c = ponto(r.lon, r.lat, classe, animar);
+    c.dataset.i = i;
+    gCom.append(c);
+  });
+
+  svg.replaceChildren(gSem, gCom);
+  const fig = $("mapa-fig");
+  if (animar) fig.classList.add("animar");
+
+  const chaves = CONCEITOS.map((c) => el("li", {}, el("i", { class: "c" + c }), c));
+  if (semSite.length) chaves.push(el("li", {}, el("i", { class: "sem" }), `sem site (${num(semSite.length)})`));
+  $("chaves").replaceChildren(...chaves);
+
+  // dica ao passar o mouse; clique abre o municipio na lista
+  const dica = $("dica");
+  gCom.addEventListener("mousemove", (ev) => {
+    const r = comCoord[ev.target.dataset.i];
+    if (!r) return;
+    const caixa = fig.getBoundingClientRect();
+    const nota = r.nota != null ? `nota ${num(r.nota)}, conceito ${r.conceito}` : "sem nota";
+    dica.replaceChildren(el("strong", { text: r.municipio }), ` ${r.uf}`, el("br"), el("span", { text: nota }));
+    dica.style.left = ev.clientX - caixa.left + "px";
+    dica.style.top = ev.clientY - caixa.top + "px";
+    dica.hidden = false;
+  });
+  gCom.addEventListener("mouseleave", () => (dica.hidden = true));
+  gCom.addEventListener("click", (ev) => {
+    const r = comCoord[ev.target.dataset.i];
+    if (r) location.hash = `m-${r.ibge}`;
+  });
+
+  fig.hidden = false;
 }
 
-// ---------- resumo do topo ----------
+// ---------- achados ----------
 
-function indicadores(ok) {
-  const conta = (check) => ok.filter((r) => r.checks[check]?.status === "pass").length;
-  const cartoes = [
-    [num(ok.length), "municípios no ranking", ""],
-    [fmtPct(pct(conta("https"), ok.length)), "têm HTTPS com certificado válido", "https"],
-    [fmtPct(pct(conta("dmarc"), ok.length)), "bloqueiam e-mail falso (DMARC)", "dmarc"],
-    [fmtPct(pct(conta("dnssec"), ok.length)), "usam DNSSEC", "dnssec"],
+function achados(ok) {
+  if (!ok.length) return;
+  const semDmarc = 1 - passa(ok, "dmarc") / ok.length;
+  const semRedirect = 100 - pct(passa(ok, "redirect"), ok.length);
+  const dnssec = pct(passa(ok, "dnssec"), ok.length);
+
+  const frases = [
+    [`${Math.round(semDmarc * 10)} em 10`, "prefeituras não impedem que golpistas mandem e-mails falsos usando o nome delas."],
+    [fmtPct(semRedirect), "dos sites ainda abrem sem criptografia quando alguém digita o endereço sem https."],
+    [fmtPct(dnssec), "das prefeituras usam DNSSEC, a assinatura que impede o desvio do endereço do site."],
   ];
-  $("indicadores").replaceChildren(
-    ...cartoes.map(([v, t, check]) =>
-      el("div", { class: "indicador" + (check ? " " + check : "") }, el("strong", { text: v }), el("span", { text: t })),
-    ),
-  );
+  $("achados").replaceChildren(...frases.map(([n, t]) => el("p", { class: "achado" }, el("strong", { text: n }), t)));
+  $("achados").hidden = false;
 }
 
 function distribuicao(ok) {
@@ -111,17 +170,13 @@ function distribuicao(ok) {
     p.style.flexGrow = cont[c];
     return p;
   });
-  $("dist-barra").replaceChildren(...partes);
-  $("dist-barra").setAttribute(
-    "aria-label",
-    CONCEITOS.map((c) => `${c}: ${fmtPct(pct(cont[c], ok.length))}`).join(", "),
-  );
-  $("dist-barra").setAttribute("role", "img");
+  const barraDist = $("dist-barra");
+  barraDist.replaceChildren(...partes);
+  barraDist.setAttribute("role", "img");
+  barraDist.setAttribute("aria-label", CONCEITOS.map((c) => `${c}: ${fmtPct(pct(cont[c], ok.length))}`).join(", "));
 
   $("dist-legenda").replaceChildren(
-    ...CONCEITOS.map((c) =>
-      el("li", {}, el("span", { class: `conceito ${c}`, text: c }), el("span", {}, fmtPct(pct(cont[c], ok.length)), el("small", { text: ` · ${num(cont[c])}` }))),
-    ),
+    ...CONCEITOS.map((c) => el("li", {}, el("b", { text: c }), fmtPct(pct(cont[c], ok.length)))),
   );
   $("distribuicao").hidden = false;
 }
@@ -140,7 +195,7 @@ function tabelaDetalhes(r) {
         "tr",
         {},
         el("td", {}, el("span", { class: `status ${st}`, text: STATUS[st] })),
-        el("td", {}, el("strong", { text: nome }), el("div", { class: "info" }, c.detalhe, ajuda && " · ", ajuda)),
+        el("td", {}, el("strong", { text: nome }), el("div", { class: "info" }, c.detalhe, ajuda && ", ", ajuda)),
       ),
     );
   }
@@ -182,9 +237,16 @@ function linhaMunicipio(r) {
   const resumo = el(
     "summary",
     {},
-    el("span", { class: "nome" }, r.municipio || r.dominio, el("span", { class: "dominio", text: r.dominio })),
-    el("span", { class: "uf sigla", text: r.uf }),
-    r.nota != null ? barra(r.nota) : el("span", { class: "uf", text: r.acessivel ? "fora do ranking" : "sem resposta" }),
+    el(
+      "span",
+      { class: "nome" },
+      el("span", { class: "nome-texto", text: r.municipio || r.dominio }),
+      el("span", { class: "dominio", text: r.dominio }),
+    ),
+    el("span", { class: "sigla", text: r.uf }),
+    r.nota != null
+      ? el("span", { class: "pontos" }, el("span", { text: r.nota.toFixed(0) }), barra(r.nota))
+      : el("span", { class: "situacao", text: r.acessivel ? "fora do ranking" : "não respondeu" }),
     selo,
   );
 
@@ -221,8 +283,8 @@ function mostrarMais() {
   mostrando += proximos.length;
 
   $("contagem").textContent = filtrados.length
-    ? `Mostrando ${num(mostrando)} de ${num(filtrados.length)} municípios`
-    : "Nenhum município encontrado.";
+    ? `Mostrando ${num(mostrando)} de ${num(filtrados.length)} municípios, da maior nota para a menor.`
+    : "Nenhum município com esse nome. Confira a grafia ou procure pelo domínio do site.";
   $("mais").hidden = mostrando >= filtrados.length;
 }
 
@@ -232,13 +294,21 @@ function abrirDoLink() {
   if (!m) return;
   const r = todos.find((x) => x.ibge === m[1]);
   if (!r) return;
-  $("busca").value = r.municipio;
+  $("busca").value = r.dominio;
+  $("filtro-uf").value = "";
+  $("filtro-conceito").value = "";
   aplicarFiltros();
   const det = document.getElementById(`m-${r.ibge}`);
   if (det) {
     det.open = true;
-    det.scrollIntoView({ block: "center" });
+    det.scrollIntoView({ block: "start" });
   }
+}
+
+function buscarDoTopo() {
+  $("busca").value = $("busca-hero").value;
+  aplicarFiltros();
+  $("cidades").scrollIntoView({ block: "start" });
 }
 
 // ---------- estados e itens ----------
@@ -251,15 +321,15 @@ function rankingEstados(ok) {
     .map(([uf, notas]) => ({ uf, media: notas.reduce((a, b) => a + b, 0) / notas.length, n: notas.length }))
     .sort((a, b) => b.media - a.media);
 
-  document.querySelector("#tabela-uf tbody").replaceChildren(
-    ...linhas.map((l, i) =>
+  $("lista-uf").replaceChildren(
+    ...linhas.map((l) =>
       el(
-        "tr",
+        "li",
         {},
-        el("td", { text: i + 1 }),
-        el("td", {}, el("strong", { text: l.uf })),
-        el("td", {}, el("div", { class: "com-barra" }, l.media.toFixed(1), barra(l.media))),
-        el("td", { class: "num", text: num(l.n) }),
+        el("strong", { text: l.uf }),
+        el("span", { class: "media", text: l.media.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }),
+        barra(l.media),
+        el("span", { class: "qtd", text: `${num(l.n)} ${l.n === 1 ? "cidade" : "cidades"}` }),
       ),
     ),
   );
@@ -275,18 +345,18 @@ function adocao(ok) {
 
   const itens = Object.entries(NOMES).map(([check, nome]) => {
     const st = ok.map((r) => r.checks[check]?.status);
-    const passa = pct(st.filter((s) => s === "pass").length, ok.length);
+    const atende = pct(st.filter((s) => s === "pass").length, ok.length);
     const parcial = pct(st.filter((s) => s === "warn").length, ok.length);
     const a = el("i", { class: "ok" });
     const b = el("i", { class: "parcial" });
-    a.style.width = passa + "%";
+    a.style.width = atende + "%";
     b.style.width = parcial + "%";
     return el(
       "div",
       { class: "item" },
       el("a", { href: `${REPO}/blob/main/docs/como-corrigir.md#${check}`, rel: "noopener", text: nome }),
-      el("div", { class: "barra", role: "img", "aria-label": `${fmtPct(passa)} atende, ${fmtPct(parcial)} parcial` }, a, b),
-      el("span", { class: "valor", text: fmtPct(passa) }),
+      el("div", { class: "barra", role: "img", "aria-label": `${fmtPct(atende)} atende, ${fmtPct(parcial)} parcial` }, a, b),
+      el("span", { class: "valor", text: fmtPct(atende) }),
     );
   });
   $("adocao").replaceChildren(legenda, ...itens);
@@ -298,11 +368,11 @@ function cabecalho(dados) {
   const data = new Date(dados.gerado_em).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
   const acessiveis = dados.resultados.filter((r) => r.acessivel).length;
   $("meta").textContent =
-    `Última varredura em ${data}: ${num(dados.total)} domínios verificados, ${num(acessiveis)} responderam.`;
+    `Última varredura em ${data}: ${num(dados.total)} sites verificados, ${num(acessiveis)} responderam.`;
 
   if (dados.amostra) {
     $("aviso-amostra").textContent =
-      `Resultado de teste com uma amostra de ${num(dados.amostra)} domínios, não a varredura completa. ` +
+      `Resultado de teste com uma amostra de ${num(dados.amostra)} sites, não a varredura completa. ` +
       "Os números ainda não representam o país.";
     $("aviso-amostra").hidden = false;
   }
@@ -311,19 +381,28 @@ function cabecalho(dados) {
 function semDados() {
   $("meta").textContent = "Ainda não há resultados publicados. A primeira varredura completa sai na próxima segunda-feira.";
   for (const id of ["cidades", "estados", "itens"]) $(id).hidden = true;
+  document.querySelector(".busca-hero").hidden = true;
+}
+
+async function buscarJson(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json();
 }
 
 async function iniciar() {
   let dados;
   try {
-    const resp = await fetch("dados/latest.json");
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    dados = await resp.json();
+    dados = await buscarJson("dados/latest.json");
     if (!Array.isArray(dados.resultados)) throw new Error("formato inesperado");
   } catch {
     semDados();
     return;
   }
+  // a lista de municipios sem site e opcional, so serve pro mapa
+  const semSite = await buscarJson("dados/sem_site.json")
+    .then((d) => (Array.isArray(d) ? d : []))
+    .catch(() => []);
 
   // melhores primeiro; sem nota vai pro fim
   todos = dados.resultados
@@ -333,7 +412,8 @@ async function iniciar() {
   const ok = todos.filter(noRanking);
 
   cabecalho(dados);
-  indicadores(ok);
+  desenharMapa(todos, semSite);
+  achados(ok);
   distribuicao(ok);
   rankingEstados(ok);
   adocao(ok);
@@ -349,6 +429,8 @@ async function iniciar() {
     clearTimeout(espera);
     espera = setTimeout(aplicarFiltros, 150);
   });
+  $("busca-hero").addEventListener("keydown", (ev) => ev.key === "Enter" && buscarDoTopo());
+  $("ir-busca").addEventListener("click", buscarDoTopo);
   $("filtro-uf").addEventListener("change", aplicarFiltros);
   $("filtro-conceito").addEventListener("change", aplicarFiltros);
   $("mais").addEventListener("click", mostrarMais);

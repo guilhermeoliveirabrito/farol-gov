@@ -127,3 +127,13 @@ def test_linhas_de_revisao():
     assert len(revisao) == 1
     assert revisao[0]["ibge"] == "2611606"
     assert "não existe" in revisao[0]["motivo"]
+
+
+def test_coordenadas_vao_pro_resultado():
+    ent, resolver, cliente = _ambiente()
+    com_coord = Entidade(ent.ibge, ent.municipio, ent.uf, ent.dominio, lat="-22.9056", lon="-47.0608")
+    r = avaliar(com_coord, resolver, cliente)
+    assert (r["lat"], r["lon"]) == (-22.9056, -47.0608)
+
+    sem = avaliar(ent, resolver, cliente)
+    assert sem["lat"] is None

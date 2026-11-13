@@ -18,7 +18,7 @@ IGNORAR = (
     "wikipedia.org", "blogspot.com", "wordpress.com", "google.com",
 )
 
-CAMPOS = ["ibge", "municipio", "uf", "dominio"]
+CAMPOS = ["ibge", "municipio", "uf", "dominio", "lat", "lon"]
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,9 @@ class Entidade:
     municipio: str
     uf: str
     dominio: str
+    # coordenadas so servem pro mapa da pagina, entao sao opcionais
+    lat: str = ""
+    lon: str = ""
 
 
 def uf_do_ibge(codigo):
@@ -64,9 +67,17 @@ def fora_do_gov_br(host):
     return not host.endswith(".gov.br")
 
 
+def coordenada(valor):
+    try:
+        return round(float(valor), 4)
+    except (TypeError, ValueError):
+        return None
+
+
 def ler_csv(caminho):
     with open(caminho, newline="", encoding="utf-8") as f:
-        return [Entidade(**{k: linha[k] for k in CAMPOS}) for linha in csv.DictReader(f)]
+        # csv antigo nao tinha lat/lon
+        return [Entidade(**{k: linha.get(k) or "" for k in CAMPOS}) for linha in csv.DictReader(f)]
 
 
 def salvar_csv(caminho, entidades):
@@ -75,4 +86,4 @@ def salvar_csv(caminho, entidades):
         w = csv.DictWriter(f, fieldnames=CAMPOS)
         w.writeheader()
         for e in entidades:
-            w.writerow({"ibge": e.ibge, "municipio": e.municipio, "uf": e.uf, "dominio": e.dominio})
+            w.writerow({k: getattr(e, k) for k in CAMPOS})

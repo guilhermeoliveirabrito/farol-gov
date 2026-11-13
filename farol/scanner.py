@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from .checks import ERROR, Resultado
 from .checks import dns as checks_dns
 from .checks import web as checks_web
-from .dominios import alternativo, dominio_email, fora_do_gov_br
+from .dominios import alternativo, coordenada, dominio_email, fora_do_gov_br
 from .nota import PESOS, calcular_nota, conceito
 
 log = logging.getLogger(__name__)
@@ -59,6 +59,8 @@ def avaliar(entidade, resolver, cliente):
         "ibge": entidade.ibge,
         "municipio": entidade.municipio,
         "uf": entidade.uf,
+        "lat": coordenada(entidade.lat),
+        "lon": coordenada(entidade.lon),
         "dominio": host,
         "dominio_wikidata": entidade.dominio,
         "acessivel": acessivel,

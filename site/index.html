@@ -3,97 +3,139 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- GitHub Pages nao deixa configurar headers, entao a CSP vai por meta.
+       require-trusted-types-for garante que nenhum innerHTML passe despercebido. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; require-trusted-types-for 'script'; trusted-types 'none'">
   <meta name="referrer" content="no-referrer">
-  <title>farol-gov · segurança dos sites das prefeituras</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f1a2e">
+
+  <title>farol-gov · O site da sua prefeitura protege você?</title>
   <meta name="description" content="Observatório aberto da segurança dos sites e e-mails das prefeituras brasileiras: HTTPS, TLS, DNSSEC, SPF e DMARC, atualizado toda semana.">
+
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="O site da sua prefeitura protege você?">
+  <meta property="og:description" content="Ranking aberto da segurança dos sites e e-mails das prefeituras brasileiras, atualizado toda semana.">
+  <meta property="og:url" content="https://guilhermeoliveirabrito.github.io/farol-gov/">
+  <meta property="og:image" content="https://guilhermeoliveirabrito.github.io/farol-gov/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="dados/latest.json" as="fetch" crossorigin>
   <link rel="stylesheet" href="estilo.css">
   <script src="app.js" defer></script>
 </head>
 <body>
+  <a class="pular" href="#cidades">Pular para a busca</a>
+
   <header class="topo">
     <div class="largura">
       <a class="marca" href="./">
         <img src="favicon.svg" alt="" width="28" height="28">
         farol-gov
       </a>
-      <nav>
+      <nav aria-label="Seções">
         <a href="#cidades">Cidades</a>
         <a href="#estados">Estados</a>
         <a href="#itens">Itens</a>
-        <a href="https://github.com/guilhermeoliveirabrito/farol-gov">GitHub</a>
+        <a href="https://github.com/guilhermeoliveirabrito/farol-gov" rel="noopener">GitHub</a>
       </nav>
     </div>
   </header>
 
-  <main class="largura">
+  <main id="conteudo">
     <section class="abertura">
-      <h1>O site da sua prefeitura protege você?</h1>
-      <p>
-        Toda semana o farol-gov verifica se os sites e e-mails das prefeituras brasileiras seguem o
-        básico de segurança: HTTPS de verdade, TLS atualizado, DNSSEC e proteção contra e-mails falsos.
-        Só verificações passivas, as mesmas que um navegador faz.
-      </p>
-      <p class="meta" id="meta">Carregando resultados…</p>
-      <p class="aviso" id="aviso-amostra" hidden></p>
-    </section>
-
-    <section class="indicadores" id="indicadores" aria-label="Resumo"></section>
-
-    <section id="cidades">
-      <h2>Procure sua cidade</h2>
-      <div class="filtros">
-        <label class="busca">
-          <span class="sr">Nome do município</span>
-          <input id="busca" type="search" placeholder="Nome do município ou domínio" autocomplete="off">
-        </label>
-        <label>
-          <span class="sr">Estado</span>
-          <select id="filtro-uf"><option value="">UF: todas</option></select>
-        </label>
-        <label>
-          <span class="sr">Conceito</span>
-          <select id="filtro-conceito">
-            <option value="">Conceito: todos</option>
-            <option>A</option><option>B</option><option>C</option><option>D</option><option>F</option>
-            <option value="-">Sem nota</option>
-          </select>
-        </label>
+      <div class="largura">
+        <p class="selo">Observatório aberto · atualizado toda semana</p>
+        <h1>O site da sua prefeitura protege você?</h1>
+        <p class="lead">
+          O farol-gov verifica se os sites e e-mails das prefeituras brasileiras seguem o básico de segurança:
+          HTTPS de verdade, TLS atualizado, DNSSEC e proteção contra e-mails falsos. Só verificações passivas,
+          as mesmas que um navegador faz.
+        </p>
+        <p class="meta" id="meta">Carregando resultados…</p>
+        <p class="aviso" id="aviso-amostra" hidden></p>
       </div>
-      <p class="contagem" id="contagem"></p>
-      <ul class="lista" id="lista"></ul>
-      <button class="mais" id="mais" type="button" hidden>Mostrar mais</button>
     </section>
 
-    <section id="estados">
-      <h2>Ranking por estado</h2>
-      <p class="nota-rodape">Média das notas dos municípios avaliados. Estados com poucos municípios no Wikidata podem estar sub-representados.</p>
-      <table class="tabela" id="tabela-uf">
-        <thead><tr><th>#</th><th>UF</th><th>Nota média</th><th class="num">Municípios</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
+    <div class="largura">
+      <section class="indicadores" id="indicadores" aria-label="Resumo"></section>
 
-    <section id="itens">
-      <h2>Adoção de cada item</h2>
-      <div id="adocao"></div>
-    </section>
+      <section class="distribuicao" id="distribuicao" aria-label="Distribuição dos conceitos" hidden>
+        <div class="dist-barra" id="dist-barra"></div>
+        <ul class="dist-legenda" id="dist-legenda"></ul>
+        <details class="explica">
+          <summary>Como a nota é calculada</summary>
+          <p>
+            Cada item vale uma quantidade de pontos (DMARC e HTTPS valem mais, porque afetam o cidadão diretamente).
+            Item atendido vale 100%, parcial vale 50%. A nota vai de 0 a 100:
+            <strong>A</strong> a partir de 90, <strong>B</strong> a partir de 75, <strong>C</strong> a partir de 55,
+            <strong>D</strong> a partir de 35 e <strong>F</strong> abaixo disso.
+            <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/metodologia.md" rel="noopener">Metodologia completa</a>.
+          </p>
+        </details>
+      </section>
+
+      <section id="cidades">
+        <h2>Procure sua cidade</h2>
+        <div class="filtros" role="search">
+          <label class="busca">
+            <span class="sr">Nome do município ou domínio</span>
+            <input id="busca" type="search" placeholder="Nome do município ou domínio" autocomplete="off" spellcheck="false">
+          </label>
+          <label>
+            <span class="sr">Estado</span>
+            <select id="filtro-uf"><option value="">UF: todas</option></select>
+          </label>
+          <label>
+            <span class="sr">Conceito</span>
+            <select id="filtro-conceito">
+              <option value="">Conceito: todos</option>
+              <option>A</option><option>B</option><option>C</option><option>D</option><option>F</option>
+              <option value="-">Sem nota</option>
+            </select>
+          </label>
+        </div>
+        <p class="contagem" id="contagem" aria-live="polite"></p>
+        <ul class="lista" id="lista"></ul>
+        <button class="mais" id="mais" type="button" hidden>Mostrar mais</button>
+      </section>
+
+      <section id="estados">
+        <h2>Ranking por estado</h2>
+        <p class="nota-rodape">Média das notas dos municípios avaliados. Estados com poucos municípios cadastrados no Wikidata podem estar sub-representados.</p>
+        <div class="rolagem">
+          <table class="tabela" id="tabela-uf">
+            <thead><tr><th scope="col">#</th><th scope="col">UF</th><th scope="col">Nota média</th><th scope="col" class="num">Municípios</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="itens">
+        <h2>Adoção de cada item</h2>
+        <div id="adocao"></div>
+      </section>
+    </div>
   </main>
 
   <footer class="rodape">
     <div class="largura">
       <p>
-        <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/metodologia.md">Metodologia</a> ·
-        <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/etica.md">Ética e limites</a> ·
-        <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/como-corrigir.md">Como corrigir</a> ·
-        <a href="dados/latest.json">Dados (JSON)</a>
+        <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/metodologia.md" rel="noopener">Metodologia</a> ·
+        <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/etica.md" rel="noopener">Ética e limites</a> ·
+        <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/como-corrigir.md" rel="noopener">Como corrigir</a> ·
+        <a href="dados/latest.json">Dados (JSON)</a> ·
+        <a href=".well-known/security.txt">security.txt</a>
       </p>
       <p>
         Achou um erro ou é responsável por algum domínio?
-        <a href="https://github.com/guilhermeoliveirabrito/farol-gov/issues/new">Abra uma issue</a>.
-        Dados sob CC BY 4.0. Lista de municípios derivada do Wikidata.
+        <a href="https://github.com/guilhermeoliveirabrito/farol-gov/issues/new" rel="noopener">Abra uma issue</a>.
+        Código MIT, dados sob CC BY 4.0. Lista de municípios derivada do Wikidata.
       </p>
     </div>
   </footer>

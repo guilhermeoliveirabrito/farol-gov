@@ -45,17 +45,22 @@ jobs:
       - name: Montar o site
         run: |
           mkdir -p _site/dados
-          cp -r site/* _site/
+          # site/. em vez de site/* pra levar o .well-known junto
+          cp -r site/. _site/
           if [ -f data/resultados/latest.json ]; then
-            cp data/resultados/latest.json _site/dados/latest.json
-            [ -f data/revisar_wikidata.csv ] && cp data/revisar_wikidata.csv _site/dados/
+            # minificado: o json com indentacao e uns 30% maior
+            python -c "import json,sys; json.dump(json.load(open(sys.argv[1])), open(sys.argv[2],'w'), ensure_ascii=False, separators=(',',':'))" \
+              data/resultados/latest.json _site/dados/latest.json
           else
             echo "sem resultados ainda, a pagina vai mostrar aviso"
           fi
+          [ -f data/revisar_wikidata.csv ] && cp data/revisar_wikidata.csv _site/dados/
+          ls -la _site _site/dados
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+          include-hidden-files: true
       - id: deploy
         uses: actions/deploy-pages@v5

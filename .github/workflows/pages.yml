@@ -55,6 +55,10 @@ jobs:
             echo "sem resultados ainda, a pagina vai mostrar aviso"
           fi
           [ -f data/revisar_wikidata.csv ] && cp data/revisar_wikidata.csv _site/dados/
+          # municipios sem site viram pontos cinza no mapa
+          if [ -f data/sem_site.csv ]; then
+            python scripts/sem_site_json.py data/sem_site.csv _site/dados/sem_site.json
+          fi
           ls -la _site _site/dados
 
       - uses: actions/configure-pages@v6

@@ -57,6 +57,7 @@ jobs:
           path: |
             data/resultados/latest.json
             data/revisar_wikidata.csv
+            data/sem_site.csv
             RESULTADOS.md
 
       # rodada de teste (com amostra) nao vai pro repositorio

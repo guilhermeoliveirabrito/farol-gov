@@ -61,6 +61,27 @@ def resumir(dados):
     return resumo, por_uf
 
 
+PERGUNTA = '<h1 id="manchete">O site da sua prefeitura protege você?</h1>'
+TOTAL = '<strong id="n-total">milhares de</strong>'
+
+
+def manchete(resumo):
+    """Frase de abertura com o dado da semana. Vai direto no HTML pra nao piscar ao carregar."""
+    i_dmarc = resumo["checks"].index("dmarc")
+    ranqueados = [m for m in resumo["municipios"] if m[-2] & (ACESSIVEL | RANKING) == ACESSIVEL | RANKING]
+    if not ranqueados:
+        return None
+    sem_dmarc = sum(1 for m in ranqueados if m[-1][i_dmarc] != "p") / len(ranqueados)
+    em_dez = round(sem_dmarc * 10)
+    if em_dez < 3:
+        return None
+    return f"{em_dez} em cada 10 prefeituras deixam golpistas mandar e-mail em nome delas."
+
+
+def numero_br(n):
+    return f"{n:,}".replace(",", ".")
+
+
 def sem_site(caminho_csv):
     pontos = []
     with open(caminho_csv, newline="", encoding="utf-8") as f:
@@ -87,6 +108,15 @@ def montar(raiz, saida):
         for uf, detalhes in por_uf.items():
             compacto(detalhes, saida / "dados" / "uf" / f"{uf}.json")
         compacto(dados, saida / "dados" / "latest.json")
+
+        index = saida / "index.html"
+        if index.exists():
+            html = index.read_text(encoding="utf-8")
+            frase = manchete(resumo)
+            if frase:
+                html = html.replace(PERGUNTA, f'<h1 id="manchete">{frase}</h1>')
+            html = html.replace(TOTAL, f'<strong id="n-total">{numero_br(resumo["total"])}</strong>')
+            index.write_text(html, encoding="utf-8")
         print(f"{len(resumo['municipios'])} municipios no resumo, {len(por_uf)} arquivos de detalhe")
     else:
         print("sem resultados ainda, a pagina vai mostrar aviso")

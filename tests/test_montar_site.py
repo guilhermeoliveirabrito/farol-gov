@@ -58,3 +58,27 @@ def test_montar_pasta(tmp_path):
     assert json.loads((saida / "dados" / "resumo.json").read_text())["municipios"][0][0] == "2611606"
     assert "2611606" in json.loads((saida / "dados" / "uf" / "PE.json").read_text())
     assert json.loads((saida / "dados" / "sem_site.json").read_text()) == [["5200050", "Abadia", "GO", -16.75, -49.44]]
+
+
+def test_manchete_com_dado_da_semana():
+    dados = {"gerado_em": "x", "total": 10, "resultados": []}
+    for i in range(10):
+        r = _resultado(f"26116{i:02d}", "PE")
+        # 7 de 10 sem dmarc bloqueando
+        if i < 7:
+            r["checks"]["dmarc"]["status"] = "warn" if i % 2 else "fail"
+        dados["resultados"].append(r)
+    resumo, _ = montar_site.resumir(dados)
+    assert montar_site.manchete(resumo).startswith("7 em cada 10 prefeituras")
+
+
+def test_manchete_injetada_no_html(tmp_path):
+    (tmp_path / "site").mkdir()
+    (tmp_path / "site" / "index.html").write_text(montar_site.PERGUNTA + montar_site.TOTAL, encoding="utf-8")
+    (tmp_path / "data" / "resultados").mkdir(parents=True)
+    r = _resultado("2611606", "PE", status="fail")
+    (tmp_path / "data" / "resultados" / "latest.json").write_text(json.dumps({"gerado_em": "x", "total": 3633, "resultados": [r]}))
+    montar_site.montar(tmp_path, tmp_path / "_site")
+    html = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
+    assert "10 em cada 10" in html
+    assert ">3.633<" in html

@@ -58,4 +58,5 @@ nota = 100 * soma(peso * valor) / soma(pesos)
 
 - A lista de domínios depende do Wikidata. Município sem site cadastrado lá não entra.
 - Alguns servidores bloqueiam IPs de datacenter (como os do GitHub Actions), o que pode gerar `error` em vez do resultado real.
+- O DMARC é lido só no próprio domínio. Ainda não consideramos a política herdada do domínio organizacional ([RFC 7489, seção 6.6.3](https://www.rfc-editor.org/rfc/rfc7489#section-6.6.3)).
 - Um site pode ter nota boa e ainda assim ter vulnerabilidades. O farol mede higiene de configuração, não faz pentest.

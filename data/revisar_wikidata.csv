@@ -1,0 +1,226 @@
+ibge,municipio,uf,dominio_wikidata,motivo
+1100023,Ariquemes,RO,www.ariquemes.ro.gov.br,só funciona com/sem www
+1100304,Vilhena,RO,pmvilhena.com.br,domínio não existe no DNS; domínio fora do .gov.br
+1200104,Brasiléia,AC,www.amac-acre.com.br,domínio fora do .gov.br
+1200385,Plácido de Castro,AC,www.placidodecastro.ac.cnm.org.br,domínio não existe no DNS; domínio fora do .gov.br
+1200401,Rio Branco,AC,portalcgm.riobranco.ac.gov.br,domínio não existe no DNS
+1200609,Tarauacá,AC,www.tarauaca.gov.br,domínio não existe no DNS
+1300680,Boa Vista do Ramos,AM,www.portalbvr.com.br,domínio fora do .gov.br
+1301159,Careiro da Várzea,AM,www.aam.org.br,domínio fora do .gov.br
+1301308,Codajás,AM,www.ale.am.gov.br,domínio não existe no DNS
+1301704,Humaitá,AM,www.humaita-am.com,domínio fora do .gov.br
+1301902,Itacoatiara,AM,www.itacoatiara.com,domínio fora do .gov.br
+1501105,Bagre,PA,www.bagre.pa.gov.br,só funciona com/sem www
+1501808,Breves,PA,www.prefeiturabreves.pa.gov.br,domínio não existe no DNS
+1502103,Cametá,PA,www.cameta.pa.gov.br,domínio não existe no DNS
+1504802,Monte Alegre,PA,www.prefeiturademontealegre.pa.gov.br,domínio não existe no DNS
+1506138,Redenção,PA,citybrazil.uol.com.br,domínio não existe no DNS; domínio fora do .gov.br
+1506807,Santarém,PA,www.santarem.pa.gov.br,só funciona com/sem www
+1600303,Macapá,AP,www.prefeiturademacapa.ap.gov.br,domínio não existe no DNS
+1600535,Porto Grande,AP,www.portogrande.ap.gov.br,só funciona com/sem www
+2100204,Alcântara,MA,alcantara-ma.hpg.ig.com.br,domínio não existe no DNS; domínio fora do .gov.br
+2100550,Amapá do Maranhão,MA,www.amapadomaranhao.ma.gov.br,domínio não existe no DNS
+2103604,Coroatá,MA,www.coroataonlinema.com,domínio fora do .gov.br
+2105401,Itapecuru-Mirim,MA,www.itapecuru.ma.gov.br,domínio não existe no DNS
+2108009,Pastos Bons,MA,www.pastosbons-ma.com.br,domínio não existe no DNS; domínio fora do .gov.br
+2109908,Santa Inês,MA,www.santaines.ma.gov.br,só funciona com/sem www
+2112506,Tutóia,MA,www.prefeituradetutoia.com.br,domínio não existe no DNS; domínio fora do .gov.br
+2200301,Alto Longá,PI,altolonga.org,domínio não existe no DNS; domínio fora do .gov.br
+2305001,Guaraciaba do Norte,CE,www.guaraciabadonorte.org,domínio fora do .gov.br
+2306207,Itaiçaba,CE,www.itaitinga.ce.gov.br,mesmo domínio usado por outro município
+2306256,Itaitinga,CE,www.itaitinga.ce.gov.br,mesmo domínio usado por outro município
+2308500,Mombaça,CE,www.mariapereiraweb.net,domínio fora do .gov.br
+2313757,Umirim,CE,www.ceara.com.br,domínio fora do .gov.br; mesmo domínio usado por outro município
+2313955,Varjota,CE,www.ceara.com.br,domínio fora do .gov.br; mesmo domínio usado por outro município
+2402006,Caicó,RN,www.prefeituradecaico.com.br,domínio não existe no DNS; domínio fora do .gov.br
+2403202,Doutor Severiano,RN,www.doutorseveriano.com,domínio fora do .gov.br
+2407104,Macaíba,RN,prefeiturademacaiba.com.br,domínio fora do .gov.br
+2408003,Mossoró,RN,www.prefeiturademossoro.com.br,domínio fora do .gov.br; mesmo domínio usado por outro município
+2411429,Santana do Seridó,RN,www.santanadoserido.rn.gov.br,domínio não existe no DNS
+2412906,São Tomé,RN,prefeituramunicipaldesaotome.rn.gov.br,domínio não existe no DNS
+2414902,Viçosa,RN,www.prefeiturademossoro.com.br,domínio fora do .gov.br; mesmo domínio usado por outro município
+2504009,Campina Grande,PB,www.camaracg.com.br,domínio fora do .gov.br
+2516706,Teixeira,PB,www.teixeirapb.com.br,domínio fora do .gov.br
+2604155,Casinhas,PE,www.prefeituracasinhas.pe.gov.br,domínio não existe no DNS
+2605152,Dormentes,PE,www.dormentes.pe.gov.br,só funciona com/sem www
+2607505,Itaíba,PE,www.itaenga.pe.gov.br,mesmo domínio usado por outro município
+2608503,Lagoa de Itaenga,PE,www.itaenga.pe.gov.br,mesmo domínio usado por outro município
+2609006,Macaparana,PE,www.bb.com.br,domínio fora do .gov.br
+2702900,Girau do Ponciano,AL,www.giraudoponciano.al.gov.br,mesmo domínio usado por outro município
+2704500,Maragogi,AL,www.prefeiturademaragogi.com,domínio não existe no DNS; domínio fora do .gov.br
+2705002,Mata Grande,AL,www.matagrande.al.cnm.org.br,domínio não existe no DNS; domínio fora do .gov.br
+2706901,Pilar,AL,www.giraudoponciano.al.gov.br,mesmo domínio usado por outro município
+2708501,São Luís do Quitunde,AL,www.municipioonline.com.br,domínio fora do .gov.br
+2709152,Teotônio Vilela,AL,www.prefeiturateotonio.com.br,domínio fora do .gov.br
+2804201,Monte Alegre de Sergipe,SE,www.montealegre.se.gov.br,domínio não existe no DNS
+2900801,Alcobaça,BA,www.alcobaca-bahia.com,domínio não existe no DNS; domínio fora do .gov.br
+2902104,Araci,BA,www.araci-ba.org,domínio não existe no DNS; domínio fora do .gov.br
+2902609,Baixa Grande,BA,www.baixagrande.net,domínio fora do .gov.br
+2903102,Barra do Rocha,BA,www.barradorocha.ba.io.org.br,domínio fora do .gov.br
+2903300,Barro Preto,BA,www.barropreto.ba.io.org.br,domínio fora do .gov.br
+2904803,Caatiba,BA,www.ipmbrasil.org.br,domínio fora do .gov.br
+2905156,Caetanos,BA,www.caetanos.ba.io.org.br,domínio fora do .gov.br
+2905404,Cairu,BA,cairu.ba.io.org.br,domínio fora do .gov.br
+2906006,Campo Formoso,BA,www.portalcampoformoso.com.br,domínio fora do .gov.br
+2906501,Candeias,BA,www.candeias.ba.io.org.br,domínio fora do .gov.br
+2906857,Capela do Alto Alegre,BA,www.capeladoaltoalegre.ba.indap.org.br,domínio não existe no DNS; domínio fora do .gov.br
+2906899,Caraíbas,BA,www.sct.ba.gov.br,só funciona com/sem www
+2907103,Carinhanha,BA,www.carinhanha.com,domínio não existe no DNS; domínio fora do .gov.br
+2907202,Casa Nova,BA,www.casanova.ba.io.org.br,domínio fora do .gov.br
+2909703,Cristópolis,BA,www.cristopolis.ba.io.org.br,domínio fora do .gov.br
+2910305,Elísio Medrado,BA,www.elisiomedrado.ba.io.org.br,domínio fora do .gov.br
+2913200,Ibotirama,BA,www.ibotirama.ba.io.org.br,domínio fora do .gov.br
+2913903,Ipiaú,BA,www.ipiauhoje.com.br,domínio não existe no DNS; domínio fora do .gov.br
+2914307,Iramaia,BA,www.iramaia.ba.io.org.br,domínio fora do .gov.br
+2918357,João Dourado,BA,www.jdnamidia.com.br,domínio não existe no DNS; domínio fora do .gov.br
+2921104,Medeiros Neto,BA,medeirosneto.com,domínio fora do .gov.br
+2921500,Monte Santo,BA,www.montesanto.net,domínio fora do .gov.br
+2922656,Nordestina,BA,www.nordestina.ba.io.org.br,domínio fora do .gov.br
+2923803,Paripiranga,BA,www.paripiranga.ba.io.org.br,domínio fora do .gov.br
+2924058,Pé de Serra,BA,www.pedeserranet.com,domínio não existe no DNS; domínio fora do .gov.br
+2926301,Riachão do Jacuípe,BA,www.riachao.com,domínio fora do .gov.br
+2927705,Santa Cruz Cabrália,BA,www.pmsantacruzcabralia.ba.ipmbrasil.org.br,domínio não existe no DNS; domínio fora do .gov.br
+2928109,Santa Maria da Vitória,BA,santamariadavitoria100anos.com.br,domínio não existe no DNS; domínio fora do .gov.br
+2928703,Santo Antônio de Jesus,BA,www.santoantoniodejesus.ba.io.org.br,domínio fora do .gov.br
+2931509,Teofilândia,BA,wwww.teofilandia.ba.gov.br,domínio não existe no DNS
+2932200,Ubaitaba,BA,www.ubaitaba.ba.io.org.br,domínio fora do .gov.br
+2932507,Una,BA,www.una.ba.io.org.br,domínio fora do .gov.br
+3102902,Antônio Carlos,MG,www.antoniocarlos.mg.gov.br,domínio não existe no DNS
+3106200,Belo Horizonte,MG,portalbelohorizonte.com.br,domínio fora do .gov.br
+3107505,Bom Jardim de Minas,MG,www.camarabomjardimdeminas.com.br,domínio não existe no DNS; domínio fora do .gov.br
+3109105,Bueno Brandão,MG,buenobrandao.com.br,domínio fora do .gov.br
+3109451,Cabeceira Grande,MG,www.pmcg.mg.gov.br,domínio não existe no DNS
+3110905,Campanha,MG,members.tripod.com,domínio não existe no DNS; domínio fora do .gov.br
+3123007,Dores de Campos,MG,www.doresdecampos.com,domínio não existe no DNS; domínio fora do .gov.br
+3127107,Frutal,MG,www.frutal.mg.leg.br,domínio fora do .gov.br
+3128204,Guaraciaba,MG,www.guaraciaba.mg.leg.br,domínio fora do .gov.br
+3130556,Imbé de Minas,MG,www.imbedeminas.com.br,domínio fora do .gov.br
+3131802,Itabirinha,MG,www.itabirinha.com.br,domínio não existe no DNS; domínio fora do .gov.br
+3135605,Jequitaí,MG,site.jequitai.mg.gov.br,domínio não existe no DNS
+3136520,José Gonçalves de Minas,MG,www.prefeiturajosegoncalvesdeminas.mg.gov.br,domínio não existe no DNS
+3138609,Lima Duarte,MG,www.limaduarte.com,domínio fora do .gov.br
+3149200,Pedrinópolis,MG,www.pedrinopolis.mg.leg.br,domínio fora do .gov.br
+3154606,Ribeirão das Neves,MG,www.neves.mg.gov.br,domínio não existe no DNS
+3155504,Rio Paranaíba,MG,www.pmrioparanaiba.com.br,domínio não existe no DNS; domínio fora do .gov.br
+3157807,Santa Luzia,MG,santaluzia.mg.gov.br,só funciona com/sem www
+3161650,São Geraldo do Baixio,MG,portal.saogeraldodobaixio.mg.gov.br,domínio não existe no DNS
+3162906,São João Nepomuceno,MG,www.saojoaonepomuceno.mg.gov.br,domínio não existe no DNS
+3163706,São Lourenço,MG,www.saolourenço.mg.gov.br,domínio não existe no DNS
+3171204,Vespasiano,MG,www.udt.net.br,domínio fora do .gov.br
+3200169,Água Doce do Norte,ES,www.guiacapixaba.net,domínio fora do .gov.br
+3200904,Barra de São Francisco,ES,www.vitoria.es.gov.br,mesmo domínio usado por outro município
+3201100,Bom Jesus do Norte,ES,www.bomjesusdonorte.es.gov.br,domínio não existe no DNS
+3201902,Domingos Martins,ES,www.domingosmartins.es.gov.br,mesmo domínio usado por outro município
+3202009,Dores do Rio Preto,ES,www.domingosmartins.es.gov.br,mesmo domínio usado por outro município
+3205309,Vitória,ES,www.vitoria.es.gov.br,mesmo domínio usado por outro município
+3302502,Magé,RJ,www.mage.rj.gov.br,só funciona com/sem www
+3302700,Maricá,RJ,conhecamarica.com.br,domínio fora do .gov.br
+3303302,Niterói,RJ,www.prefeituradeniteroi.org,domínio fora do .gov.br
+3304557,Rio de Janeiro,RJ,riotur.rio,domínio fora do .gov.br
+3518800,Guarulhos,SP,www.guarulhos.sp.leg.br,domínio fora do .gov.br
+3528908,Mariápolis,SP,www.marinopolis.sp.gov.br,mesmo domínio usado por outro município
+3529104,Marinópolis,SP,www.marinopolis.sp.gov.br,mesmo domínio usado por outro município
+3550803,São Sebastião da Grama,SP,www.ssgrama.sp.gov.br,só funciona com/sem www
+4100400,Almirante Tamandaré,PR,www.temandare.pr.gov.br,domínio não existe no DNS
+4101903,Assaí,PR,www.pmassai.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4103107,Bocaiuva do Sul,PR,www.bocaiuvadosul.com,domínio fora do .gov.br
+4107553,Farol,PR,farol.eprefeituras.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4108304,Foz do Iguaçu,PR,www2.fozdoiguacu.pr.gov.br,domínio não existe no DNS
+4110805,Iretama,PR,www.pmiretama.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4112603,Jardim Olinda,PR,www.pontagrossa.pr.gov.br,mesmo domínio usado por outro município
+4115507,Marumbi,PR,www.pmmarumbi.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4119905,Ponta Grossa,PR,www.pontagrossa.pr.gov.br,mesmo domínio usado por outro município
+4119954,Pontal do Paraná,PR,www.portaldoparana.pr.gov.br,domínio não existe no DNS
+4121802,Ribeirão Claro,PR,www.ribeiraoclaro.com.br,domínio fora do .gov.br
+4122909,Salto do Itararé,PR,www.saltodoitarare.pr.gov.br,mesmo domínio usado por outro município
+4124004,Santana do Itararé,PR,www.saltodoitarare.pr.gov.br,mesmo domínio usado por outro município
+4128203,União da Vitória,PR,www.uniaodavitoria.pr.gov.br,só funciona com/sem www
+4128500,Wenceslau Braz,PR,www.wbraz.com.br,domínio fora do .gov.br
+4201000,Anita Garibaldi,SC,www.anitagaribaldi.sc.gov.br,domínio não existe no DNS
+4204004,Catanduvas,SC,www.catanduvas.sc.org.br,domínio não existe no DNS; domínio fora do .gov.br
+4204103,Caxambu do Sul,SC,caxambudosul.atende.net,domínio fora do .gov.br
+4204194,Chapadão do Lageado,SC,chapadaodolageado.atende.net,domínio fora do .gov.br
+4205803,Garuva,SC,garuva.atende.net,domínio fora do .gov.br
+4206504,Guaramirim,SC,guaramirim.atende.net,domínio fora do .gov.br
+4206652,Guatambu,SC,www.guatambu.sc.gov.br,só funciona com/sem www
+4207502,Indaial,SC,indaial.atende.net,domínio fora do .gov.br
+4208906,Jaraguá do Sul,SC,portal.jaraguadosul.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4209151,José Boiteux,SC,www.pmjb.sc.gov.br,domínio não existe no DNS
+4210001,Luiz Alves,SC,www.luizalves.sc.gov.br,só funciona com/sem www
+4212007,Palma Sola,SC,palmasola.atende.net,domínio fora do .gov.br
+4213807,Praia Grande,SC,www.praiagrande-sc.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4217402,Schroeder,SC,www.schroeder.com.br,domínio fora do .gov.br
+4217600,Siderópolis,SC,www.sidera.com.br,domínio fora do .gov.br
+4300059,Água Santa,RS,www.aguasantars.com.br,domínio fora do .gov.br
+4300455,Alegria,RS,www.pmalegria.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4300901,Aratiba,RS,www.pmaratiba.com.br,domínio fora do .gov.br
+4301404,Arvorezinha,RS,www.arvorezinhars.com.br,domínio fora do .gov.br
+4303202,Cacique Doble,RS,www.caciquedoblers.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4303558,Camargo,RS,www.pmcamargo.com.br,domínio fora do .gov.br
+4304663,Capão do Leão,RS,www.prefeitura.capaodoleao.com.br,domínio fora do .gov.br
+4305587,Colinas,RS,www.colinasrs.com.br,domínio fora do .gov.br
+4305850,Coqueiros do Sul,RS,www.coqueirosul.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4306007,Crissiumal,RS,www.crissiumal-rs.com.br,domínio fora do .gov.br
+4306320,Derrubadas,RS,www.derrubadas-rs.com.br,domínio fora do .gov.br
+4306734,Doutor Maurício Cardoso,RS,www.pdrmcard.com.br,domínio fora do .gov.br
+4307104,Herval,RS,www.herval.rs.gov.br,só funciona com/sem www
+4307559,Estação,RS,www.pmestacao.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4307831,Eugénio de Castro,RS,www.pmeuca.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4308300,Fontoura Xavier,RS,www.fontouraxavier-rs.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4308854,Gentil,RS,www.pmgentil.com.br,domínio fora do .gov.br
+4309050,Glorinha,RS,www.glorinha.rs.gov.br,só funciona com/sem www
+4310306,Ilópolis,RS,www.ilopolis-rs.com.br,domínio fora do .gov.br
+4310363,Imigrante,RS,www.imigrante-rs.com.br,domínio fora do .gov.br
+4310413,Inhacorá,RS,www.inhacora.rs.gov.br,domínio não existe no DNS
+4310439,Ipê,RS,www.ipe-rs.com.br,domínio fora do .gov.br
+4310702,Itatiba do Sul,RS,www.itatibadosul-rs.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4310850,Jaboticaba,RS,www.jaboticaba.rs.gov.br,domínio não existe no DNS
+4311809,Marau,RS,www.pmmarau.com.br,domínio fora do .gov.br
+4312005,Mariano Moro,RS,www.pmmarianomoro.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4312138,Mato Castelhano,RS,www.matocastelhano-rs.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4312153,Mato Leitão,RS,www.matoleitao-rs.com.br,domínio fora do .gov.br
+4312179,Mato Queimado,RS,www.matoqueimado-rs.com.br,domínio fora do .gov.br
+4312351,Montauri,RS,www.pmmontauri.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4312427,Mormaço,RS,www.mormac.rs.gov.br,domínio não existe no DNS
+4312443,Morrinhos do Sul,RS,www.pmmorrinhosdosul.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4312609,Muçum,RS,www.mucum-rs.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4312658,Não-Me-Toque,RS,www.naometoquers.com.br,domínio fora do .gov.br
+4312757,Nova Alvorada,RS,www.nalvorada.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4313003,Nova Bréscia,RS,www.prefeituradenovabrescia.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4313300,Nova Prata,RS,www.novapratars.com.br,domínio fora do .gov.br
+4313441,Novo Tiradentes,RS,www.novotiradentesrs.com.br,domínio fora do .gov.br
+4313706,Palmeira das Missões,RS,www.palmeiradasmissoes-rs.com.br,domínio fora do .gov.br
+4313805,Palmitinho,RS,www.palmitinho.rs.gov.br,só funciona com/sem www
+4314159,Paverama,RS,www.paverama.rs.gov.br,só funciona com/sem www
+4314902,Porto Alegre,RS,prefeitura.poa.br,domínio fora do .gov.br
+4315453,Relvado,RS,www.relvadors.com.br,domínio fora do .gov.br
+4315800,Roca Sales,RS,www.rocasales-rs.com.br,domínio fora do .gov.br
+4316402,Rosário do Sul,RS,www.prefeituraderosario.com.br,domínio fora do .gov.br
+4316477,Salvador das Missões,RS,www.pmsalvadormissoes.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4317103,Santana do Livramento,RS,www.sdolivramento.com.br,domínio fora do .gov.br
+4317558,Santo Antônio do Palma,RS,www.pmpalma.com.br,domínio fora do .gov.br
+4318424,São João da Urtiga,RS,www.saojoaodaurtigars.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4319158,São Miguel das Missões,RS,www.saomiguel-rs.com.br,domínio fora do .gov.br
+4319406,São Pedro do Sul,RS,www.saopedrodosul.rs.gov.br,domínio não existe no DNS
+4320206,Seberi,RS,www.pmseberi.com.br,domínio fora do .gov.br
+4320552,Sertão Santana,RS,www.sertaosantana-rs.com.br,domínio fora do .gov.br
+4320701,Sobradinho,RS,www.sobradinho-rs.com.br,domínio fora do .gov.br
+4321329,Taquaruçu do Sul,RS,www.taquarucudosulrs.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4321634,Três Arroios,RS,www.pmtresarroios.com.br,domínio fora do .gov.br
+4321808,Três de Maio,RS,www.pmtresdemaio.com.br,domínio fora do .gov.br
+4321907,Três Passos,RS,www.trespassos-rs.com.br,domínio fora do .gov.br
+4322558,Vanini,RS,www.pmvanini.com.br,domínio fora do .gov.br
+4322855,Vespasiano Corrêa,RS,www.vespasianocorrears.com.br,domínio fora do .gov.br
+4323507,Vista Alegre,RS,www.pmvistaalegre.com.br,domínio fora do .gov.br
+4323705,Vista Gaúcha,RS,www.vistagaucha-rs.com.br,domínio fora do .gov.br
+5000203,Água Clara,MS,www.aguaclara.ms.gov.br,domínio não existe no DNS
+5000856,Angélica,MS,www.angelicams.com.br,domínio fora do .gov.br
+5003108,Corguinho,MS,www.prefeituracorguinho.ms.gov.br,domínio não existe no DNS
+5005806,Nioaque,MS,www.prefeituranioaque.com.br,domínio não existe no DNS; domínio fora do .gov.br
+5006200,Nova Andradina,MS,www.novaandradina.ms.gov.br,domínio não existe no DNS
+5006903,Porto Murtinho,MS,www.portomurtinho.ms.gov.br,só funciona com/sem www
+5107800,Santo Antônio de Leverger,MT,www.santoantoniodeleverger.mt.gov.br,domínio não existe no DNS
+5200134,Acreúna,GO,www.acreunagoias.com.br,domínio não existe no DNS; domínio fora do .gov.br
+5208905,Goiás,GO,www.goias-go.com.br,domínio não existe no DNS; domínio fora do .gov.br
+5212709,Mambaí,GO,mambai.megasoftservicos.com.br,domínio fora do .gov.br
+5213087,Minaçu,GO,www.minacunet.com,domínio não existe no DNS; domínio fora do .gov.br

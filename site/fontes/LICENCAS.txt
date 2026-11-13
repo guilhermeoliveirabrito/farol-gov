@@ -1,0 +1,13 @@
+Fontes usadas na pagina
+
+Lora (lora.woff)
+Copyright 2011 The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic),
+with Reserved Font Name "Lora".
+Arquivo original, apenas empacotado em WOFF.
+
+Inter (inter.woff, inter-semibold.woff)
+Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+Subconjunto com os caracteres latinos.
+
+As duas sao distribuidas sob a SIL Open Font License, versao 1.1:
+https://openfontlicense.org

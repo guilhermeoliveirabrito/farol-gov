@@ -101,19 +101,15 @@ ibge,municipio,uf,dominio_wikidata,motivo
 3138609,Lima Duarte,MG,www.limaduarte.com,domínio fora do .gov.br
 3149200,Pedrinópolis,MG,www.pedrinopolis.mg.leg.br,domínio fora do .gov.br
 3154606,Ribeirão das Neves,MG,www.neves.mg.gov.br,domínio não existe no DNS
-3155504,Rio Paranaíba,MG,www.pmrioparanaiba.com.br,domínio não existe no DNS; domínio fora do .gov.br
-3157807,Santa Luzia,MG,santaluzia.mg.gov.br,só funciona com/sem www
-3161650,São Geraldo do Baixio,MG,portal.saogeraldodobaixio.mg.gov.br,domínio não existe no DNS
-3162906,São João Nepomuceno,MG,www.saojoaonepomuceno.mg.gov.br,domínio não existe no DNS
+3155504,Rio Paranaíba,MG,www.pmrioparanaiba.com.br,só funciona com/sem www; domínio fora do .gov.br
+3162906,São João Nepomuceno,MG,www.saojoaonepomuceno.mg.gov.br,só funciona com/sem www
 3163706,São Lourenço,MG,www.saolourenço.mg.gov.br,domínio não existe no DNS
 3171204,Vespasiano,MG,www.udt.net.br,domínio fora do .gov.br
 3200169,Água Doce do Norte,ES,www.guiacapixaba.net,domínio fora do .gov.br
 3200904,Barra de São Francisco,ES,www.vitoria.es.gov.br,mesmo domínio usado por outro município
-3201100,Bom Jesus do Norte,ES,www.bomjesusdonorte.es.gov.br,domínio não existe no DNS
 3201902,Domingos Martins,ES,www.domingosmartins.es.gov.br,mesmo domínio usado por outro município
 3202009,Dores do Rio Preto,ES,www.domingosmartins.es.gov.br,mesmo domínio usado por outro município
 3205309,Vitória,ES,www.vitoria.es.gov.br,mesmo domínio usado por outro município
-3302502,Magé,RJ,www.mage.rj.gov.br,só funciona com/sem www
 3302700,Maricá,RJ,conhecamarica.com.br,domínio fora do .gov.br
 3303302,Niterói,RJ,www.prefeituradeniteroi.org,domínio fora do .gov.br
 3304557,Rio de Janeiro,RJ,riotur.rio,domínio fora do .gov.br
@@ -121,16 +117,15 @@ ibge,municipio,uf,dominio_wikidata,motivo
 3528908,Mariápolis,SP,www.marinopolis.sp.gov.br,mesmo domínio usado por outro município
 3529104,Marinópolis,SP,www.marinopolis.sp.gov.br,mesmo domínio usado por outro município
 3550803,São Sebastião da Grama,SP,www.ssgrama.sp.gov.br,só funciona com/sem www
-4100400,Almirante Tamandaré,PR,www.temandare.pr.gov.br,domínio não existe no DNS
-4101903,Assaí,PR,www.pmassai.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4101903,Assaí,PR,www.pmassai.com.br,domínio fora do .gov.br
 4103107,Bocaiuva do Sul,PR,www.bocaiuvadosul.com,domínio fora do .gov.br
-4107553,Farol,PR,farol.eprefeituras.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4107553,Farol,PR,farol.eprefeituras.com.br,domínio fora do .gov.br
 4108304,Foz do Iguaçu,PR,www2.fozdoiguacu.pr.gov.br,domínio não existe no DNS
-4110805,Iretama,PR,www.pmiretama.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4110805,Iretama,PR,www.pmiretama.com.br,domínio fora do .gov.br
 4112603,Jardim Olinda,PR,www.pontagrossa.pr.gov.br,mesmo domínio usado por outro município
-4115507,Marumbi,PR,www.pmmarumbi.com.br,domínio não existe no DNS; domínio fora do .gov.br
+4115507,Marumbi,PR,www.pmmarumbi.com.br,domínio fora do .gov.br
 4119905,Ponta Grossa,PR,www.pontagrossa.pr.gov.br,mesmo domínio usado por outro município
-4119954,Pontal do Paraná,PR,www.portaldoparana.pr.gov.br,domínio não existe no DNS
+4119954,Pontal do Paraná,PR,www.portaldoparana.pr.gov.br,só funciona com/sem www
 4121802,Ribeirão Claro,PR,www.ribeiraoclaro.com.br,domínio fora do .gov.br
 4122909,Salto do Itararé,PR,www.saltodoitarare.pr.gov.br,mesmo domínio usado por outro município
 4124004,Santana do Itararé,PR,www.saltodoitarare.pr.gov.br,mesmo domínio usado por outro município

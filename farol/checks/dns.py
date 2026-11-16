@@ -1,8 +1,11 @@
-"""Checks de DNS: DNSSEC, SPF e DMARC."""
+"""Checks de DNS: DNSSEC, CAA, SPF e DMARC."""
+import time
+
 from . import ERROR, FAIL, PASS, WARN, Resultado
 
-# resolvers publicos que validam DNSSEC
-SERVIDORES_PADRAO = ("1.1.1.1", "8.8.8.8")
+# resolvers publicos que validam DNSSEC. Com 32 threads consultando ao mesmo tempo,
+# dois servidores so nao davam conta e muita consulta estourava o tempo.
+SERVIDORES_PADRAO = ("1.1.1.1", "8.8.8.8", "9.9.9.9", "1.0.0.1", "8.8.4.4")
 
 
 class ErroDNS(Exception):
@@ -12,26 +15,37 @@ class ErroDNS(Exception):
 class ResolverDNS:
     """Wrapper fino em cima do dnspython, pra facilitar trocar por um fake nos testes."""
 
-    def __init__(self, servidores=SERVIDORES_PADRAO, timeout=5.0):
+    def __init__(self, servidores=SERVIDORES_PADRAO, timeout=12.0, tentativas=2):
         import dns.flags
         import dns.resolver
 
         self._r = dns.resolver.Resolver(configure=False)
         self._r.nameservers = list(servidores)
+        # cada servidor tem 3s pra responder; dentro do lifetime o dnspython vai trocando de servidor
+        self._r.timeout = 3.0
         self._r.lifetime = timeout
+        self._r.rotate = True
         # DO=1 pede pro resolver validar e devolver a flag AD
         self._r.use_edns(0, dns.flags.DO, 1232)
+        self._tentativas = tentativas
 
     def _resolve(self, nome, tipo):
         import dns.exception
         import dns.resolver
 
-        try:
-            return self._r.resolve(nome, tipo, raise_on_no_answer=False)
-        except dns.resolver.NXDOMAIN:
-            return None
-        except dns.exception.DNSException as e:
-            raise ErroDNS(f"{type(e).__name__}: {e}") from e
+        for tentativa in range(self._tentativas):
+            try:
+                return self._r.resolve(nome, tipo, raise_on_no_answer=False)
+            except dns.resolver.NXDOMAIN:
+                return None
+            except (dns.resolver.LifetimeTimeout, dns.resolver.NoNameservers) as e:
+                # servidor autoritativo lento ou resolver sobrecarregado: espera um pouco e tenta de novo
+                if tentativa + 1 < self._tentativas:
+                    time.sleep(1.5)
+                    continue
+                raise ErroDNS(f"{type(e).__name__}: {e}") from e
+            except dns.exception.DNSException as e:
+                raise ErroDNS(f"{type(e).__name__}: {e}") from e
 
     def txt(self, nome):
         resp = self._resolve(nome, "TXT")
@@ -40,18 +54,25 @@ class ResolverDNS:
         return [b"".join(r.strings).decode("utf-8", "replace") for r in resp.rrset]
 
     def endereco(self, nome):
-        """Retorna (existe, validado_dnssec)."""
+        """Retorna (existe, validado_dnssec, ips)."""
         import dns.flags
 
         resp = self._resolve(nome, "A")
         if resp is None:
-            return False, False
+            return False, False, []
         if resp.rrset is None:
             # sem A, tenta AAAA antes de dizer que nao existe
             resp = self._resolve(nome, "AAAA")
             if resp is None or resp.rrset is None:
-                return False, False
-        return True, bool(resp.response.flags & dns.flags.AD)
+                return False, False, []
+        ips = sorted(r.to_text() for r in resp.rrset)
+        return True, bool(resp.response.flags & dns.flags.AD), ips
+
+    def caa(self, nome):
+        resp = self._resolve(nome, "CAA")
+        if resp is None or resp.rrset is None:
+            return []
+        return [r.to_text() for r in resp.rrset]
 
 
 def avaliar_spf(registros):
@@ -138,13 +159,32 @@ def checar_dmarc(dominio, resolver):
 
 
 def checar_dnssec(host, resolver):
-    """Devolve (existe, Resultado). Se o host nem existe, o resto nem precisa rodar."""
+    """Devolve (existe, Resultado, ips). Se o host nem existe, o resto nem precisa rodar."""
     try:
-        existe, validado = resolver.endereco(host)
+        existe, validado, ips = resolver.endereco(host)
     except ErroDNS as e:
-        return True, Resultado("dnssec", ERROR, str(e))
+        return True, Resultado("dnssec", ERROR, str(e)), []
     if not existe:
-        return False, Resultado("dnssec", ERROR, "dominio nao resolve")
+        return False, Resultado("dnssec", ERROR, "dominio nao resolve"), []
     if validado:
-        return True, Resultado("dnssec", PASS, "resposta validada (AD)")
-    return True, Resultado("dnssec", FAIL, "dominio sem DNSSEC")
+        return True, Resultado("dnssec", PASS, "resposta validada (AD)"), ips
+    return True, Resultado("dnssec", FAIL, "dominio sem DNSSEC"), ips
+
+
+def checar_caa(dominio, resolver):
+    """CAA diz quais autoridades podem emitir certificado pro dominio.
+
+    Pela RFC 8659 o registro vale pros subdominios, entao sobe a arvore ate achar
+    (cidade.sp.gov.br -> sp.gov.br -> gov.br). Para antes do TLD.
+    """
+    partes = dominio.rstrip(".").split(".")
+    try:
+        for i in range(len(partes) - 1):
+            nome = ".".join(partes[i:])
+            registros = [r for r in resolver.caa(nome) if " issue " in f" {r} " or " issuewild " in f" {r} "]
+            if registros:
+                origem = "" if i == 0 else f" (herdado de {nome})"
+                return Resultado("caa", PASS, f"{len(registros)} registro(s) CAA{origem}")
+    except ErroDNS as e:
+        return Resultado("caa", ERROR, str(e))
+    return Resultado("caa", FAIL, "qualquer autoridade pode emitir certificado para o dominio")

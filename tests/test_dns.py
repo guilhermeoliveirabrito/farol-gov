@@ -1,7 +1,7 @@
 import pytest
 
 from farol.checks import ERROR, FAIL, PASS, WARN
-from farol.checks.dns import avaliar_dmarc, avaliar_spf, checar_dmarc, checar_dnssec, checar_spf
+from farol.checks.dns import avaliar_dmarc, avaliar_spf, checar_caa, checar_dmarc, checar_dnssec, checar_spf
 from tests.fakes import FakeResolver
 
 
@@ -74,6 +74,33 @@ def test_dnssec():
     assert checar_dnssec("assinado.gov.br", resolver)[1].status == PASS
     assert checar_dnssec("sem.gov.br", resolver)[1].status == FAIL
 
-    existe, r = checar_dnssec("naoexiste.gov.br", resolver)
+    existe, r, ips = checar_dnssec("naoexiste.gov.br", resolver)
     assert not existe
     assert r.status == ERROR
+    assert ips == []
+
+
+def test_caa_no_proprio_dominio():
+    resolver = FakeResolver(caa={"cidade.sp.gov.br": ['0 issue "letsencrypt.org"']})
+    r = checar_caa("cidade.sp.gov.br", resolver)
+    assert r.status == PASS
+    assert "herdado" not in r.detalhe
+
+
+def test_caa_herdado_do_estado():
+    resolver = FakeResolver(caa={"sp.gov.br": ['0 issue "digicert.com"', '0 iodef "mailto:x@sp.gov.br"']})
+    r = checar_caa("cidade.sp.gov.br", resolver)
+    assert r.status == PASS
+    assert "herdado de sp.gov.br" in r.detalhe
+    # iodef sozinho nao restringe emissao
+    assert r.detalhe.startswith("1 registro")
+
+
+def test_caa_ausente_e_nao_olha_o_tld():
+    resolver = FakeResolver(caa={"br": ['0 issue "x"']})
+    assert checar_caa("cidade.sp.gov.br", resolver).status == FAIL
+
+
+def test_caa_com_erro_de_dns():
+    resolver = FakeResolver(quebrados={"cidade.sp.gov.br"})
+    assert checar_caa("cidade.sp.gov.br", resolver).status == ERROR

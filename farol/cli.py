@@ -10,7 +10,8 @@ from . import __version__
 from .checks.dns import ResolverDNS
 from .checks.web import ClienteHTTP
 from .dominios import Entidade, ler_csv, normalizar_host
-from .resumo import gerar_markdown, linhas_revisao
+from . import historico
+from .resumo import gerar_markdown, linhas_movimento, linhas_revisao
 from .scanner import avaliar, varrer
 
 CORES = {"pass": "\033[32m", "warn": "\033[33m", "fail": "\033[31m", "error": "\033[90m"}
@@ -54,7 +55,11 @@ def cmd_scan(args):
             print(f"  {i}/{total}", file=sys.stderr)
 
     cliente = ClienteHTTP(timeout=args.timeout)
-    dados = varrer(entidades, ResolverDNS, cliente, workers=args.workers, progresso=progresso)
+    # repescagem com o dobro de paciencia
+    lento = ClienteHTTP(timeout=args.timeout * 2.5, tentativas=2)
+    dados = varrer(entidades, ResolverDNS, cliente, workers=args.workers, progresso=progresso, cliente_lento=lento, por_ip=args.por_ip)
+    rep = dados["repescagem"]
+    print(f"repescagem: {rep['recuperados']} de {rep['tentados']} recuperados", file=sys.stderr)
     # a pagina mostra um aviso quando o resultado e so uma amostra
     dados["amostra"] = args.amostra or args.limite or None
 
@@ -68,6 +73,8 @@ def cmd_scan(args):
 def cmd_resumo(args):
     dados = json.loads(Path(args.json).read_text(encoding="utf-8"))
     md = gerar_markdown(dados, top=args.top)
+    if args.historico:
+        md += "\n".join(linhas_movimento(dados, historico.carregar(args.historico))) + "\n"
     if args.revisao:
         revisao = linhas_revisao(dados)
         with open(args.revisao, "w", newline="", encoding="utf-8") as f:
@@ -79,6 +86,13 @@ def cmd_resumo(args):
         Path(args.saida).write_text(md, encoding="utf-8")
     else:
         print(md)
+    return 0
+
+
+def cmd_arquivar(args):
+    dados = json.loads(Path(args.json).read_text(encoding="utf-8"))
+    destino = historico.salvar(dados, args.pasta)
+    print(f"historico salvo em {destino}", file=sys.stderr)
     return 0
 
 
@@ -98,6 +112,7 @@ def main(argv=None):
     p.add_argument("-o", "--saida", default="data/resultados/latest.json")
     p.add_argument("-w", "--workers", type=int, default=32)
     p.add_argument("--timeout", type=float, default=10.0)
+    p.add_argument("--por-ip", type=int, default=3, help="verificacoes simultaneas no mesmo servidor")
     p.add_argument("--limite", type=int, help="so os N primeiros (pra testar)")
     p.add_argument("--amostra", type=int, help="N dominios aleatorios (pra testar)")
     p.add_argument("--semente", type=int, default=42, help="semente da amostra")
@@ -108,7 +123,13 @@ def main(argv=None):
     p.add_argument("-o", "--saida")
     p.add_argument("--top", type=int, default=20)
     p.add_argument("--revisao", help="salva um csv com os dominios que precisam de revisao no wikidata")
+    p.add_argument("--historico", help="pasta do historico, pra incluir quem subiu e quem caiu")
     p.set_defaults(func=cmd_resumo)
+
+    p = sub.add_parser("arquivar", help="guarda a varredura no historico semanal (formato compacto)")
+    p.add_argument("json")
+    p.add_argument("--pasta", default="data/historico")
+    p.set_defaults(func=cmd_arquivar)
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(message)s")

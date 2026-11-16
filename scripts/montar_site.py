@@ -17,6 +17,7 @@ Uso:
 """
 import argparse
 import csv
+import hashlib
 import json
 import shutil
 import sys
@@ -132,6 +133,27 @@ def sem_site(caminho_csv):
     return pontos
 
 
+def carimbar(saida, versao_dados):
+    """Cache-busting: o GitHub Pages guarda arquivos por 10 minutos, entao cada versao
+    nova de app.js/estilo.css ganha um ?v=<hash> e os dados ganham a data da varredura."""
+    hashes = {}
+    for nome in ("app.js", "estilo.css"):
+        arq = saida / nome
+        if arq.exists():
+            hashes[nome] = hashlib.sha256(arq.read_bytes()).hexdigest()[:10]
+    for pagina in ("index.html", "404.html"):
+        arq = saida / pagina
+        if not arq.exists():
+            continue
+        html = arq.read_text(encoding="utf-8")
+        for nome, h in hashes.items():
+            html = html.replace(f'"{nome}"', f'"{nome}?v={h}"').replace(f'/farol-gov/{nome}"', f'/farol-gov/{nome}?v={h}"')
+        if versao_dados:
+            html = html.replace('href="dados/resumo.json"', f'href="dados/resumo.json?v={versao_dados}"')
+            html = html.replace('<meta name="referrer"', f'<meta name="versao-dados" content="{versao_dados}">\n  <meta name="referrer"', 1)
+        arq.write_text(html, encoding="utf-8")
+
+
 def montar(raiz, saida):
     raiz, saida = Path(raiz), Path(saida)
     if saida.exists():
@@ -170,6 +192,11 @@ def montar(raiz, saida):
     revisar = raiz / "data" / "revisar_wikidata.csv"
     if revisar.exists():
         shutil.copy(revisar, saida / "dados" / revisar.name)
+
+    versao = None
+    if resultados.exists():
+        versao = hashlib.sha256(resultados.read_bytes()).hexdigest()[:10]
+    carimbar(saida, versao)
 
 
 def main():

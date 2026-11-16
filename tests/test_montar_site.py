@@ -109,3 +109,19 @@ def test_variacao_de_posicao_e_historico_da_cidade():
     assert [h[0] for h in por_uf["PE"]["2611606"]["h"]] == ["2026-11-09", "2026-11-16"]
     assert por_uf["PE"]["2611606"]["h"][0][2] == 2
     assert [e["data"] for e in evolucao] == ["2026-11-09", "2026-11-16"]
+
+
+def test_cache_busting(tmp_path):
+    (tmp_path / "site").mkdir()
+    (tmp_path / "site" / "index.html").write_text(
+        '<meta name="referrer" content="no-referrer"><link rel="preload" href="dados/resumo.json" as="fetch">'
+        '<link rel="stylesheet" href="estilo.css"><script src="app.js" defer></script>', encoding="utf-8")
+    (tmp_path / "site" / "app.js").write_text("console.log(1)")
+    (tmp_path / "site" / "estilo.css").write_text("body{}")
+    (tmp_path / "data" / "resultados").mkdir(parents=True)
+    (tmp_path / "data" / "resultados" / "latest.json").write_text(json.dumps({"gerado_em": "x", "total": 1, "resultados": [_resultado("2611606", "PE")]}))
+    montar_site.montar(tmp_path, tmp_path / "_site")
+    html = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
+    assert '"app.js?v=' in html and '"estilo.css?v=' in html
+    assert 'dados/resumo.json?v=' in html
+    assert '<meta name="versao-dados"' in html

@@ -33,7 +33,7 @@ def cmd_check(args):
         status = c["status"].upper().ljust(5)
         if cor:
             status = CORES[c["status"]] + status + RESET
-        print(f"  {status}  {nome.ljust(13)} {c['detalhe']}")
+        print(f"  {status}  {nome.ljust(15)} {c['detalhe']}")
     if r["acessivel"]:
         print(f"\n  nota: {r['nota']} ({r['conceito']})\n")
     else:

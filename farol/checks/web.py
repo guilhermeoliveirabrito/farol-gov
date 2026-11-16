@@ -1,11 +1,14 @@
-"""Checks web: HTTPS, redirecionamento, TLS, HSTS, headers e security.txt.
+"""Checks web: HTTPS, redirecionamento, TLS, HSTS, headers, conteúdo misto, cookies e security.txt.
 
 Usa só a biblioteca padrão. Tudo aqui é GET simples, igual um navegador faria.
+A única exceção é o teste de TLS antigo, que é só um handshake (sem requisição HTTP),
+o mesmo que ferramentas como o SSL Labs fazem.
 """
 import http.client
 import re
 import socket
 import ssl
+import time
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlsplit
 
@@ -16,6 +19,8 @@ from . import ERROR, FAIL, PASS, WARN, Resultado
 REDIRECTS = (301, 302, 303, 307, 308)
 TLS_OK = ("TLSv1.2", "TLSv1.3")
 HSTS_MINIMO = 31536000  # 1 ano
+CERT_DIAS_AVISO = 14
+CORPO_MAXIMO = 512 * 1024  # o suficiente pra achar recurso http:// no HTML da pagina inicial
 
 
 @dataclass
@@ -25,6 +30,10 @@ class Resposta:
     headers: dict = field(default_factory=dict)
     corpo: bytes = b""
     tls: str | None = None
+    # Set-Cookie fica separado: juntar com virgula quebra a data do Expires
+    cookies: list = field(default_factory=list)
+    # validade do certificado (epoch), so quando a conexao foi verificada
+    expira: float | None = None
 
 
 class ErroConexao(Exception):
@@ -75,8 +84,13 @@ class ClienteHTTP:
 
         try:
             conn.connect()
-            # pega a versao antes do getresponse, porque com Connection: close o sock some
+            # pega versao e certificado antes do getresponse, porque com Connection: close o sock some
             tls = conn.sock.version() if partes.scheme == "https" else None
+            expira = None
+            if partes.scheme == "https" and verificar:
+                cert = conn.sock.getpeercert() or {}
+                if cert.get("notAfter"):
+                    expira = ssl.cert_time_to_seconds(cert["notAfter"])
             conn.request("GET", caminho, headers={
                 "User-Agent": USER_AGENT,
                 "Accept": "text/html,*/*;q=0.8",
@@ -84,11 +98,14 @@ class ClienteHTTP:
             })
             resp = conn.getresponse()
             headers = {}
+            cookies = []
             for k, v in resp.getheaders():
                 k = k.lower()
+                if k == "set-cookie":
+                    cookies.append(v)
                 headers[k] = f"{headers[k]}, {v}" if k in headers else v
             corpo = resp.read(ler) if ler else b""
-            return Resposta(url=url, status=resp.status, headers=headers, corpo=corpo, tls=tls)
+            return Resposta(url=url, status=resp.status, headers=headers, corpo=corpo, tls=tls, cookies=cookies, expira=expira)
         except ssl.SSLCertVerificationError as e:
             raise ErroConexao("certificado", e.verify_message or str(e)) from e
         except ssl.SSLError as e:
@@ -105,9 +122,39 @@ class ClienteHTTP:
             conn.close()
 
 
-def seguir(cliente, url, verificar=False, max_saltos=5, ler=0):
-    """Segue redirects e devolve a ultima resposta."""
-    resp = cliente.get(url, verificar=verificar, ler=ler)
+    def aceita_tls_antigo(self, host, porta=443):
+        """Tenta um handshake oferecendo so TLS 1.0 e 1.1. Devolve a versao aceita ou None.
+
+        Levanta ErroConexao se nao der pra testar (timeout, ou o OpenSSL local sem suporte).
+        """
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        try:
+            ctx.minimum_version = ssl.TLSVersion.TLSv1
+            ctx.maximum_version = ssl.TLSVersion.TLSv1_1
+            # sem isso o OpenSSL 3 nem tenta as versoes antigas
+            ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
+        except (ValueError, ssl.SSLError) as e:
+            raise ErroConexao("outro", f"OpenSSL local sem suporte a TLS antigo: {e}") from e
+        try:
+            with socket.create_connection((host, porta), timeout=self.timeout) as sock:
+                with ctx.wrap_socket(sock, server_hostname=host) as tls:
+                    return tls.version()
+        except ssl.SSLError:
+            return None
+        except ConnectionResetError:
+            # muito servidor simplesmente derruba a conexao quando nao aceita a versao
+            return None
+        except TimeoutError as e:
+            raise ErroConexao("timeout") from e
+        except OSError as e:
+            raise ErroConexao("outro", f"{type(e).__name__}: {e}") from e
+
+
+def seguir(cliente, url, verificar=False, max_saltos=5, ler=0, inicio=None):
+    """Segue redirects e devolve a ultima resposta. Se `inicio` vier, comeca dele sem baixar de novo."""
+    resp = inicio or cliente.get(url, verificar=verificar, ler=ler)
     for _ in range(max_saltos):
         local = resp.headers.get("location")
         if resp.status not in REDIRECTS or not local:
@@ -140,6 +187,65 @@ def avaliar_headers(headers):
         falta = "anti-clickjacking" if nosniff else "X-Content-Type-Options"
         return Resultado("headers", WARN, f"falta {falta}")
     return Resultado("headers", FAIL, "sem X-Content-Type-Options nem anti-clickjacking")
+
+
+# recurso ativo (script, iframe, css) carregado por http:// numa pagina https
+ATIVO = re.compile(
+    r"<(?:script|iframe|frame|embed|object)\b[^>]*?\s(?:src|data)\s*=\s*[\"']?http://"
+    r"|<link\b(?=[^>]*rel\s*=\s*[\"']?stylesheet)[^>]*?\shref\s*=\s*[\"']?http://"
+    r"|<form\b[^>]*?\saction\s*=\s*[\"']?http://",
+    re.I,
+)
+# recurso passivo (imagem, audio, video): o navegador carrega mas avisa
+PASSIVO = re.compile(r"<(?:img|audio|video|source)\b[^>]*?\ssrc\s*=\s*[\"']?http://", re.I)
+
+
+def avaliar_conteudo_misto(resp):
+    if not resp.url.startswith("https://"):
+        return Resultado("conteudo_misto", FAIL, "a pagina final e servida sem HTTPS")
+    html = resp.corpo.decode("utf-8", "replace")
+    if "<" not in html:
+        return Resultado("conteudo_misto", ERROR, "pagina sem HTML pra analisar")
+    ativos = len(ATIVO.findall(html))
+    passivos = len(PASSIVO.findall(html))
+    if ativos:
+        return Resultado("conteudo_misto", FAIL, f"{ativos} script(s), iframe(s) ou formulario(s) por http://")
+    if passivos:
+        return Resultado("conteudo_misto", WARN, f"{passivos} imagem(ns) ou midia(s) por http://")
+    return Resultado("conteudo_misto", PASS, "nenhum recurso carregado sem criptografia")
+
+
+def _atributos_cookie(cookie):
+    nome = cookie.split("=", 1)[0].strip()
+    attrs = {a.strip().split("=", 1)[0].lower() for a in cookie.split(";")[1:]}
+    return nome, attrs
+
+
+def avaliar_cookies(cookies):
+    if not cookies:
+        return Resultado("cookies", PASS, "a pagina inicial nao define cookies")
+    sem_secure, sem_httponly = [], []
+    for c in cookies:
+        nome, attrs = _atributos_cookie(c)
+        if "secure" not in attrs:
+            sem_secure.append(nome)
+        if "httponly" not in attrs:
+            sem_httponly.append(nome)
+    if sem_secure:
+        return Resultado("cookies", FAIL, f"{len(sem_secure)} de {len(cookies)} cookie(s) sem Secure: {', '.join(sem_secure[:3])}")
+    if sem_httponly:
+        return Resultado("cookies", WARN, f"{len(sem_httponly)} de {len(cookies)} cookie(s) sem HttpOnly")
+    return Resultado("cookies", PASS, f"{len(cookies)} cookie(s) com Secure e HttpOnly")
+
+
+def avaliar_validade(expira, agora=None):
+    """Complementa o check de HTTPS: certificado valido mas vencendo logo vira parcial."""
+    if expira is None:
+        return Resultado("https", PASS, "certificado valido")
+    dias = round((expira - (agora or time.time())) / 86400)
+    if dias < CERT_DIAS_AVISO:
+        return Resultado("https", WARN, f"certificado valido, mas vence em {dias} dia(s)")
+    return Resultado("https", PASS, f"certificado valido por mais {dias} dias")
 
 
 def avaliar_security_txt(resp):
@@ -187,16 +293,17 @@ def checar_web(host, cliente):
     cert_ok = False
     erro_https = None
 
+    # o corpo ja vem nessa primeira requisicao, pra nao precisar baixar a pagina de novo
     try:
-        resp_https = cliente.get(f"https://{host}/", verificar=True)
+        resp_https = cliente.get(f"https://{host}/", verificar=True, ler=CORPO_MAXIMO)
         cert_ok = True
-        resultados.append(Resultado("https", PASS, "certificado valido"))
+        resultados.append(avaliar_validade(resp_https.expira))
     except ErroConexao as e:
         erro_https = e
         if e.tipo == "certificado":
             resultados.append(Resultado("https", FAIL, f"certificado invalido: {e.msg}"))
             try:
-                resp_https = cliente.get(f"https://{host}/", verificar=False)
+                resp_https = cliente.get(f"https://{host}/", verificar=False, ler=CORPO_MAXIMO)
             except ErroConexao:
                 pass
         elif e.tipo in ("recusada", "dns"):
@@ -209,7 +316,7 @@ def checar_web(host, cliente):
     redirect, http_respondeu = _checar_redirect(host, cliente, resp_https is not None)
     resultados.append(redirect)
 
-    # TLS
+    # TLS negociado
     if resp_https is not None:
         if resp_https.tls in TLS_OK:
             resultados.append(Resultado("tls", PASS, resp_https.tls))
@@ -223,19 +330,40 @@ def checar_web(host, cliente):
     else:
         resultados.append(Resultado("tls", FAIL, "sem HTTPS"))
 
+    # TLS antigo: o servidor ainda aceita 1.0 ou 1.1?
+    if resp_https is not None or (erro_https is not None and erro_https.tipo == "tls"):
+        try:
+            antigo = cliente.aceita_tls_antigo(host)
+            if antigo:
+                resultados.append(Resultado("tls_antigo", FAIL, f"ainda aceita {antigo}"))
+            else:
+                resultados.append(Resultado("tls_antigo", PASS, "recusa TLS 1.0 e 1.1"))
+        except ErroConexao as e:
+            resultados.append(Resultado("tls_antigo", ERROR, str(e)))
+    elif erro_https is not None and erro_https.tipo in ("timeout", "outro"):
+        resultados.append(Resultado("tls_antigo", ERROR, str(erro_https)))
+    else:
+        resultados.append(Resultado("tls_antigo", FAIL, "sem HTTPS"))
+
     # HSTS so conta com certificado valido, navegador ignora no resto
     if cert_ok:
         resultados.append(avaliar_hsts(resp_https.headers.get("strict-transport-security")))
     else:
         resultados.append(Resultado("hsts", FAIL, "sem HTTPS valido"))
 
-    # headers da pagina final, depois dos redirects
-    base = f"https://{host}/" if resp_https is not None else f"http://{host}/"
+    # pagina final, depois dos redirects (reaproveita a resposta https quando ela ja e a final)
     try:
-        final = seguir(cliente, base)
+        if resp_https is not None:
+            final = seguir(cliente, None, ler=CORPO_MAXIMO, inicio=resp_https)
+        else:
+            final = seguir(cliente, f"http://{host}/", ler=CORPO_MAXIMO)
         resultados.append(avaliar_headers(final.headers))
+        resultados.append(avaliar_conteudo_misto(final))
+        cookies = (resp_https.cookies if resp_https is not None else []) + (final.cookies if final is not resp_https else [])
+        resultados.append(avaliar_cookies(cookies))
     except ErroConexao as e:
-        resultados.append(Resultado("headers", ERROR, str(e)))
+        for nome in ("headers", "conteudo_misto", "cookies"):
+            resultados.append(Resultado(nome, ERROR, str(e)))
 
     if resp_https is not None:
         try:

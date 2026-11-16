@@ -8,10 +8,14 @@ NOMES = {
     "https": "HTTPS com certificado válido",
     "redirect": "HTTP redireciona para HTTPS",
     "tls": "TLS 1.2 ou superior",
+    "tls_antigo": "Recusa TLS 1.0 e 1.1",
     "hsts": "HSTS (1 ano ou mais)",
     "headers": "Headers de segurança",
+    "conteudo_misto": "Sem conteúdo misto",
+    "cookies": "Cookies com Secure e HttpOnly",
     "security_txt": "security.txt",
     "dnssec": "DNSSEC",
+    "caa": "CAA (quem pode emitir certificado)",
     "spf": "SPF",
     "dmarc": "DMARC bloqueando e-mail falso",
 }
@@ -110,3 +114,32 @@ def qualidade_da_coleta(todos):
         mais_comum = motivos.most_common(1)[0][0] if motivos else "-"
         linhas.append(f"| {check} | {sum(motivos.values())} | {mais_comum} |")
     return linhas
+
+
+def linhas_movimento(dados, snapshots, top=10):
+    """Quem mais subiu e quem mais caiu no ranking desde a semana anterior."""
+    from . import historico
+
+    atual = historico.compactar(dados)
+    anteriores = [s for s in snapshots if s["data"] < atual["data"]]
+    if not anteriores:
+        return []
+    antes = historico.avaliar_snapshot(anteriores[-1])
+    agora = historico.avaliar_snapshot(atual)
+    nomes = {r["ibge"]: (r["municipio"], r["uf"]) for r in dados["resultados"]}
+    mudancas = historico.variacoes(antes, agora)
+    subiram = sorted(mudancas, key=lambda m: m[2] - m[1])[:top]
+    cairam = sorted(mudancas, key=lambda m: m[1] - m[2])[:top]
+
+    def tabela(titulo, itens, seta):
+        linhas = ["", f"## {titulo}", "", "| Município | UF | Posição | Variação |", "|---|---|---|---|"]
+        for ibge, pos_antes, pos in itens:
+            nome, uf = nomes.get(ibge, (ibge, ""))
+            linhas.append(f"| {nome} | {uf} | {pos_antes}º → {pos}º | {seta} {abs(pos_antes - pos)} |")
+        return linhas
+
+    return (
+        [f"", f"Comparação com a varredura de {anteriores[-1]['data']}: {len(mudancas)} cidades mudaram de posição."]
+        + tabela("Quem mais subiu", [m for m in subiram if m[2] < m[1]], "↑")
+        + tabela("Quem mais caiu", [m for m in cairam if m[2] > m[1]], "↓")
+    )

@@ -129,3 +129,73 @@ def test_timeout_vira_error():
     assert not acessivel
     assert r["https"].status == ERROR
     assert r["tls"].status == ERROR
+
+
+def test_conteudo_misto():
+    from farol.checks.web import avaliar_conteudo_misto
+    ok = resp(HTTPS, corpo=b'<html><script src="https://cdn/x.js"></script><a href="http://outro.gov.br">link</a></html>')
+    assert avaliar_conteudo_misto(ok).status == PASS
+
+    script = resp(HTTPS, corpo=b'<html><script type="text/javascript" src="http://cdn/x.js"></script></html>')
+    assert avaliar_conteudo_misto(script).status == FAIL
+
+    css = resp(HTTPS, corpo=b"<link href='http://x/a.css' rel='stylesheet'>")
+    assert avaliar_conteudo_misto(css).status == FAIL
+
+    imagem = resp(HTTPS, corpo=b"<img alt=logo src=http://x/logo.png>")
+    assert avaliar_conteudo_misto(imagem).status == WARN
+
+    assert avaliar_conteudo_misto(resp(HTTP, corpo=b"<html>")).status == FAIL
+    assert avaliar_conteudo_misto(resp(HTTPS, corpo=b"")).status == ERROR
+
+
+def test_cookies():
+    from farol.checks.web import avaliar_cookies
+    assert avaliar_cookies([]).status == PASS
+    assert avaliar_cookies(["s=1; Path=/; Secure; HttpOnly; SameSite=Lax"]).status == PASS
+    assert avaliar_cookies(["s=1; Secure"]).status == WARN
+    # o Expires tem virgula, nao pode confundir o parser
+    r = avaliar_cookies(["PHPSESSID=abc; expires=Wed, 21 Oct 2026 07:28:00 GMT; path=/"])
+    assert r.status == FAIL
+    assert "PHPSESSID" in r.detalhe
+
+
+def test_certificado_vencendo():
+    from farol.checks.web import avaliar_validade
+    agora = 1_800_000_000
+    assert avaliar_validade(agora + 90 * 86400, agora).status == PASS
+    vencendo = avaliar_validade(agora + 5 * 86400, agora)
+    assert vencendo.status == WARN
+    assert "5 dia" in vencendo.detalhe
+
+
+def test_tls_antigo_aceito():
+    cliente = FakeCliente({
+        HTTPS: resp(HTTPS, headers=HEADERS_BONS),
+        HTTP: resp(HTTP, status=301, headers={"location": HTTPS}),
+    }, tls_antigo="TLSv1.1")
+    _, resultados = checar_web(HOST, cliente)
+    r = _por_check(resultados)
+    assert r["tls_antigo"].status == FAIL
+    assert "TLSv1.1" in r["tls_antigo"].detalhe
+
+
+def test_pagina_inicial_nao_e_baixada_duas_vezes():
+    cliente = FakeCliente({
+        HTTPS: resp(HTTPS, headers=HEADERS_BONS),
+        HTTP: resp(HTTP, status=301, headers={"location": HTTPS}),
+        SEC_TXT: resp(SEC_TXT, status=404),
+    })
+    checar_web(HOST, cliente)
+    assert [u for u, _ in cliente.chamadas].count(HTTPS) == 1
+
+
+def test_cookies_da_primeira_resposta_contam():
+    final = "https://www.cidade.sp.gov.br/portal/"
+    cliente = FakeCliente({
+        HTTPS: resp(HTTPS, status=302, headers={"location": final}, cookies=["sessao=1; path=/"]),
+        final: resp(final, headers=HEADERS_BONS),
+        HTTP: resp(HTTP, status=301, headers={"location": HTTPS}),
+    })
+    _, resultados = checar_web(HOST, cliente)
+    assert _por_check(resultados)["cookies"].status == FAIL

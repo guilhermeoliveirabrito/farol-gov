@@ -3,6 +3,7 @@ from farol.dominios import Entidade, dominio_email, normalizar_host, uf_do_ibge
 from farol.nota import PESOS, calcular_nota, conceito
 from farol.resumo import gerar_markdown, linhas_revisao
 from farol.scanner import avaliar, varrer
+from farol.checks.web import ErroConexao
 from tests.fakes import FakeCliente, FakeResolver, resp
 
 
@@ -137,3 +138,57 @@ def test_coordenadas_vao_pro_resultado():
 
     sem = avaliar(ent, resolver, cliente)
     assert sem["lat"] is None
+
+
+def test_item_nao_verificado_nao_vale_zero():
+    # tudo certo, mas o DMARC deu timeout do nosso lado: a nota nao pode cair por isso
+    resultados = [Resultado(c, PASS) for c in PESOS if c != "dmarc"] + [Resultado("dmarc", "error", "LifetimeTimeout")]
+    assert calcular_nota(resultados) == 100.0
+
+
+def test_sem_nota_quando_falta_verificar_demais():
+    resultados = [Resultado(c, "error", "timeout") for c in PESOS]
+    resultados[0] = Resultado("https", PASS)
+    assert calcular_nota(resultados) is None
+
+
+def test_repescagem_recupera_quem_deu_timeout():
+    ent, resolver, cliente = _ambiente()
+    https = f"https://{ent.dominio}/"
+
+    class ClienteInstavel(FakeCliente):
+        def get(self, url, verificar=True, ler=0):
+            raise ErroConexao("timeout")
+
+    instavel = ClienteInstavel({})
+    dados = varrer([ent], lambda: resolver, instavel, workers=1, cliente_lento=cliente)
+    r = dados["resultados"][0]
+    assert dados["repescagem"] == {"tentados": 1, "recuperados": 1}
+    assert r["checks"]["https"]["status"] != "error"
+    assert r["acessivel"]
+
+
+def test_limite_por_servidor():
+    import threading
+    import time
+    from farol.scanner import LimitePorServidor
+
+    limite = LimitePorServidor(por_ip=2)
+    ativos, maximo = [0], [0]
+    trava = threading.Lock()
+
+    def usa():
+        with limite("10.0.0.1"):
+            with trava:
+                ativos[0] += 1
+                maximo[0] = max(maximo[0], ativos[0])
+            time.sleep(0.02)
+            with trava:
+                ativos[0] -= 1
+
+    threads = [threading.Thread(target=usa) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert maximo[0] == 2

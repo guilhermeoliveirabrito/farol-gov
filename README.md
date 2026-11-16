@@ -16,13 +16,17 @@ Em 2019 um levantamento da DigiCert apontou que [47% dos domínios .gov do Brasi
 
 | Check | O que olha | Por que importa |
 |---|---|---|
-| `https` | O site responde em HTTPS com certificado válido | Sem isso, dados de formulário trafegam em texto puro |
+| `https` | O site responde em HTTPS com certificado válido (e que não vence nos próximos 14 dias) | Sem isso, dados de formulário trafegam em texto puro |
 | `redirect` | `http://` redireciona para `https://` | Quem digita o endereço sem `https` continua desprotegido |
 | `tls` | Versão negociada é TLS 1.2 ou 1.3 | TLS 1.0 e 1.1 estão obsoletos ([RFC 8996](https://www.rfc-editor.org/rfc/rfc8996)) |
+| `tls_antigo` | O servidor recusa TLS 1.0 e 1.1 quando alguém pede | Impede que um atacante force a versão mais fraca |
 | `hsts` | Header `Strict-Transport-Security` com pelo menos 1 ano | Impede downgrade para HTTP |
 | `headers` | `X-Content-Type-Options` e proteção contra clickjacking | Proteções baratas que evitam ataques comuns |
+| `conteudo_misto` | A página em HTTPS não carrega scripts ou imagens por `http://` | Um script sem criptografia pode ser trocado e alterar a página |
+| `cookies` | Cookies com `Secure` e `HttpOnly` | Protege a sessão de quem faz login no site |
 | `security_txt` | Existe `/.well-known/security.txt` com contato | Dá um canal para reportar falhas ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)) |
 | `dnssec` | Respostas DNS do domínio são validadas | Dificulta sequestro de DNS |
+| `caa` | Registro CAA dizendo quem pode emitir certificado | Impede certificado falso emitido por outra autoridade |
 | `spf` | Registro SPF que não aceita qualquer remetente | Primeira barreira contra e-mail falso |
 | `dmarc` | Política DMARC `quarantine` ou `reject` | Sem isso, qualquer um manda e-mail "da prefeitura" |
 
@@ -48,7 +52,8 @@ python scripts/coletar_dominios.py
 
 # rodar a varredura completa
 farol scan data/dominios.csv -o data/resultados/latest.json
-farol resumo data/resultados/latest.json
+farol resumo data/resultados/latest.json --historico data/historico
+farol arquivar data/resultados/latest.json   # guarda a semana no histórico
 ```
 
 ### Vendo a página localmente
@@ -70,9 +75,11 @@ A lista de municípios e seus sites oficiais vem do [Wikidata](https://www.wikid
 - [x] Página com ranking por estado e município (GitHub Pages)
 - [x] Guia de correção para cada item ([docs/como-corrigir.md](docs/como-corrigir.md))
 - [x] Detecção de cadastros suspeitos no Wikidata
-- [ ] Histórico e gráfico de evolução
+- [x] Histórico semanal, gráfico de evolução e variação de posição de cada cidade
+- [x] Testar se o servidor ainda aceita TLS 1.0/1.1
+- [x] Conteúdo misto, cookies e CAA
 - [ ] Domínios estaduais e federais
-- [ ] Testar se o servidor ainda aceita TLS 1.0/1.1
+- [ ] DMARC herdado do domínio organizacional
 
 ## Contribuindo
 

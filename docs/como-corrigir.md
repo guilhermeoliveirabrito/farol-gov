@@ -6,7 +6,7 @@ Depois de corrigir, você pode conferir na hora com `farol check seu.dominio.gov
 
 ## https
 
-**O problema:** o site não responde em HTTPS ou o certificado é inválido (vencido, autoassinado ou emitido para outro nome).
+**O problema:** o site não responde em HTTPS ou o certificado é inválido (vencido, autoassinado ou emitido para outro nome). Quando o certificado é válido mas vence em menos de 14 dias, o item fica parcial.
 
 **Como resolver:** emita um certificado gratuito com [Let's Encrypt](https://letsencrypt.org/pt-br/getting-started/) usando o `certbot`, que também configura a renovação automática:
 
@@ -49,6 +49,18 @@ server {
 
 O [gerador de configuração da Mozilla](https://ssl-config.mozilla.org/) monta o bloco completo para o seu servidor.
 
+## tls_antigo
+
+**O problema:** mesmo negociando TLS 1.2 com navegadores modernos, o servidor ainda aceita TLS 1.0 ou 1.1 se alguém pedir. Um atacante na rede pode forçar essa versão mais fraca.
+
+**Como resolver:** a mesma configuração do item anterior desliga as versões antigas: `ssl_protocols TLSv1.2 TLSv1.3;` no Nginx ou `SSLProtocol -all +TLSv1.2 +TLSv1.3` no Apache. Para conferir:
+
+```bash
+openssl s_client -connect prefeitura.uf.gov.br:443 -tls1_1 </dev/null
+```
+
+Se aparecer um certificado na resposta, o servidor ainda aceita TLS 1.1.
+
 ## hsts
 
 **O problema:** sem HSTS, um atacante na mesma rede (Wi-Fi público, por exemplo) consegue forçar o navegador a usar HTTP.
@@ -77,6 +89,31 @@ Header always set X-Frame-Options "SAMEORIGIN"
 
 `X-Frame-Options` impede que o site seja carregado dentro de um iframe em outro domínio (clickjacking). Quem já usa Content-Security-Policy pode usar `frame-ancestors 'self'` no lugar.
 
+## conteudo_misto
+
+**O problema:** a página abre em HTTPS, mas puxa scripts, estilos, iframes ou imagens por `http://`. Esse pedaço viaja sem criptografia e pode ser trocado no caminho; no caso de um script, isso permite alterar a página inteira.
+
+**Como resolver:** troque `http://` por `https://` nos endereços dos recursos (ou use endereços relativos, como `/js/site.js`). Para achar os culpados, abra o site no navegador, aperte F12 e veja os avisos de "Mixed Content" no console. Uma rede de segurança é adicionar o header:
+
+```nginx
+add_header Content-Security-Policy "upgrade-insecure-requests" always;
+```
+
+## cookies
+
+**O problema:** cookies sem `Secure` podem viajar por conexão sem criptografia; sem `HttpOnly`, podem ser lidos por qualquer script na página (inclusive um injetado por ataque). Se for o cookie de sessão, alguém pode sequestrar o login.
+
+**Como resolver:** em PHP, que é o mais comum em sites de prefeitura:
+
+```ini
+; php.ini
+session.cookie_secure = 1
+session.cookie_httponly = 1
+session.cookie_samesite = "Lax"
+```
+
+Em outras plataformas, procure a opção de "secure cookies" ou adicione `Secure; HttpOnly; SameSite=Lax` ao `Set-Cookie`.
+
 ## security_txt
 
 **O problema:** um pesquisador que encontra uma falha no site não sabe para quem avisar.
@@ -101,6 +138,19 @@ O campo `Expires` é obrigatório. Lembre de atualizar a data antes de vencer.
 - **Subdomínio do estado** (ex.: `cidade.pe.gov.br`, o caso da maioria das prefeituras): o DS precisa ser publicado na zona do estado (`pe.gov.br`), que é administrada pelo governo estadual. Assine a sua zona e peça ao órgão de TI do estado para publicar o DS. Isso explica parte da baixa adoção: depende de duas equipes diferentes.
 
 Os [tutoriais de DNS e DNSSEC do Registro.br](https://registro.br/tecnologia/dnssec/tutoriais/) explicam a parte técnica. Atenção: DS errado ou assinatura vencida deixam o domínio **fora do ar** para quem usa resolvedor validador, então teste antes com o [DNSViz](https://dnsviz.net/).
+
+## caa
+
+**O problema:** sem registro CAA, qualquer autoridade certificadora do mundo pode emitir um certificado para o domínio. Com CAA, só as que você escolher.
+
+**Como resolver:** publique um registro CAA com a autoridade que você usa (Let's Encrypt, por exemplo) e um e-mail para avisos:
+
+```
+prefeitura.uf.gov.br.  CAA  0 issue "letsencrypt.org"
+prefeitura.uf.gov.br.  CAA  0 iodef "mailto:seguranca@prefeitura.uf.gov.br"
+```
+
+O CAA vale para os subdomínios, então um registro em `uf.gov.br`, publicado pelo governo do estado, já protege todas as prefeituras abaixo dele.
 
 ## spf
 

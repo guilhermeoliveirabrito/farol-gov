@@ -7,8 +7,12 @@ O objetivo do farol-gov é dar transparência e incentivar melhorias, não expor
 Para cada domínio fazemos apenas:
 
 - consultas DNS públicas (`A`, `TXT`, `_dmarc`);
-- uma conexão TLS na porta 443;
+- uma conexão TLS na porta 443, e um segundo handshake oferecendo só TLS 1.0/1.1 para saber se o servidor ainda aceita versões antigas (sem nenhuma requisição depois);
 - requisições `GET` para `/` (em HTTP e HTTPS) e para `/.well-known/security.txt`, que é um caminho feito justamente para ser lido por terceiros.
+
+Da página inicial, lemos só o HTML que qualquer visitante recebe, para ver se ela carrega recursos sem criptografia e como define cookies. Os valores dos cookies não são guardados nem publicados, só o nome e os atributos.
+
+Para não sobrecarregar ninguém, a varredura verifica no máximo 3 sites por servidor ao mesmo tempo.
 
 Isso é o mesmo que um navegador ou um servidor de e-mail faz todos os dias.
 

@@ -127,8 +127,11 @@ function quandoAparecer(alvo, fn) {
   obs.observe(alvo);
 }
 
+// os dados ganham ?v=<versao> pra nao ficar preso no cache do GitHub Pages depois de uma varredura nova
+const VERSAO_DADOS = document.querySelector('meta[name="versao-dados"]')?.content;
+
 async function buscarJson(url) {
-  const resp = await fetch(url);
+  const resp = await fetch(VERSAO_DADOS ? `${url}?v=${encodeURIComponent(VERSAO_DADOS)}` : url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   return resp.json();
 }
@@ -893,12 +896,22 @@ function itens(ok) {
   quandoAparecer(lista, () => barras.forEach(([i, v]) => (i.style.width = v + "%")));
 }
 
-function estados(ok) {
+function estados(ok, semanas = []) {
   const porUf = {};
   for (const r of ok) (porUf[r.uf] ??= []).push(r.nota);
   const linhas = Object.entries(porUf)
     .map(([uf, notas]) => ({ uf, media: notas.reduce((a, b) => a + b, 0) / notas.length, n: notas.length }))
     .sort((a, b) => b.media - a.media);
+
+  // posicao de cada estado na semana anterior, pra mostrar quem subiu e quem caiu
+  const anterior = semanas.length > 1 ? semanas[semanas.length - 2].ufs : null;
+  if (anterior) {
+    const ordemAntes = Object.entries(anterior).sort((a, b) => b[1] - a[1]).map(([uf]) => uf);
+    linhas.forEach((l, i) => {
+      const antes = ordemAntes.indexOf(l.uf);
+      l.variacao = antes >= 0 ? antes - i : null;
+    });
+  }
 
   const caixa = $("ladrilhos");
   const ranking = $("ranking-uf");
@@ -909,7 +922,14 @@ function estados(ok) {
     ...linhas.map((l) => {
       const i = el("i", { class: "ok" });
       barras.push([i, l.media]);
-      const li = el("li", {}, el("strong", { text: l.uf }), el("div", { class: "trilho", "aria-hidden": "true" }, i), el("span", { class: "media", text: fmtNota(l.media) }));
+      const li = el(
+        "li",
+        {},
+        el("strong", { text: l.uf }),
+        el("div", { class: "trilho", "aria-hidden": "true" }, i),
+        el("span", { class: "media", text: fmtNota(l.media) }),
+        el("span", { class: "mov" }, seta({ variacao: l.variacao ?? null })),
+      );
       noRanking[l.uf] = li;
       return li;
     }),
@@ -1125,6 +1145,37 @@ function evolucao(semanas) {
   $("evolucao").hidden = false;
 }
 
+// ---------- quem mais subiu e quem mais caiu ----------
+
+function movimento(resumo) {
+  const comVariacao = ranqueados.filter((r) => r.variacao != null && r.variacao !== 0);
+  if (!comVariacao.length) return;
+  const subiram = [...comVariacao].filter((r) => r.variacao > 0).sort((a, b) => b.variacao - a.variacao || b.nota - a.nota).slice(0, 8);
+  const cairam = [...comVariacao].filter((r) => r.variacao < 0).sort((a, b) => a.variacao - b.variacao || a.nota - b.nota).slice(0, 8);
+
+  const item = (r) => {
+    const antes = r.posBr + r.variacao;
+    const botao = el(
+      "button",
+      { type: "button", class: "mov-linha" },
+      el("span", { class: "mov-nome" }, r.municipio, el("span", { class: "uf", text: r.uf })),
+      el("span", { class: "mov-pos", text: `${num(antes)}º → ${num(r.posBr)}º` }),
+      seta(r),
+    );
+    botao.addEventListener("click", () => abrirFicha(r));
+    return el("li", {}, botao);
+  };
+  $("subiram").replaceChildren(...subiram.map(item));
+  $("cairam").replaceChildren(...cairam.map(item));
+
+  const subiuTotal = comVariacao.filter((r) => r.variacao > 0).length;
+  const caiuTotal = comVariacao.length - subiuTotal;
+  $("movimento-texto").textContent =
+    `Comparação com a varredura de ${fmtData(resumo.anterior, { day: "numeric", month: "long" })}: ` +
+    `${num(subiuTotal)} cidades subiram e ${num(caiuTotal)} caíram no ranking. Toque em uma para ver o detalhe.`;
+  $("movimento").hidden = false;
+}
+
 // ---------- topo ----------
 
 function contarAte(elemento, valor) {
@@ -1166,7 +1217,7 @@ function legendaMapa(semSite) {
 
 function semDados() {
   $("meta").textContent = "Ainda não há resultados publicados. A primeira varredura completa sai na próxima segunda-feira.";
-  for (const id of ["itens", "evolucao", "estados", "cidades", "busca-caixa"]) $(id).hidden = true;
+  for (const id of ["itens", "evolucao", "movimento", "estados", "cidades", "busca-caixa"]) $(id).hidden = true;
 }
 
 async function iniciar() {
@@ -1215,11 +1266,15 @@ async function iniciar() {
   $("mais").addEventListener("click", mostrarMais);
   window.addEventListener("hashchange", abrirDoLink);
 
+  const pedidoHistorico = buscarJson("dados/historico.json").catch(() => []);
   const depois = window.requestIdleCallback || ((f) => setTimeout(f, 120));
-  depois(() => {
+  depois(async () => {
     itens(ranqueados);
-    estados(ranqueados);
-    buscarJson("dados/historico.json").then(evolucao).catch(() => {});
+    const semanas = await pedidoHistorico;
+    const lista = Array.isArray(semanas) ? semanas : [];
+    estados(ranqueados, lista);
+    evolucao(lista);
+    if (resumo.anterior) movimento(resumo);
     abrirDoLink();
   });
 }

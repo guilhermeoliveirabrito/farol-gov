@@ -198,13 +198,14 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 
 .ranking-uf { list-style: none; margin: 0; padding: 0; counter-reset: pos; columns: 2 220px; column-gap: 32px; }
 .ranking-uf li {
-  break-inside: avoid; counter-increment: pos; display: grid; grid-template-columns: 24px 34px 1fr 44px; gap: 10px; align-items: center;
+  break-inside: avoid; counter-increment: pos; display: grid; grid-template-columns: 24px 34px 1fr 44px 46px; gap: 10px; align-items: center;
   padding: 7px 0; border-bottom: 1px solid var(--linha); font-variant-numeric: tabular-nums; font-size: .94rem; transition: background .2s;
 }
 .ranking-uf li::before { content: counter(pos); color: var(--suave); font-size: .8rem; }
 .ranking-uf li.ativo { background: color-mix(in srgb, var(--cC) 18%, transparent); }
 .ranking-uf .media { text-align: right; font-weight: 600; }
 .ranking-uf .trilho { height: 6px; }
+.ranking-uf .mov { font-size: .8rem; text-align: right; }
 
 /* cidades */
 .distribuicao { flex: 1 1 340px; max-width: 480px; }
@@ -277,6 +278,24 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 }
 .sugestoes .seta { font-size: .8rem; }
 .sugestoes .seta.sobe { color: #12805f; } .sugestoes .seta.desce { color: #c4362a; }
+
+/* quem subiu e quem caiu */
+.movimento-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 56px; }
+.mov-titulo { font-size: 1.25rem; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+.mov-titulo.sobe::before, .mov-titulo.desce::before { font-family: var(--texto); font-size: 1.1rem; }
+.mov-titulo.sobe::before { content: "↑"; color: #12805f; }
+.mov-titulo.desce::before { content: "↓"; color: #c4362a; }
+.mov-lista { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); counter-reset: mov; }
+.mov-linha {
+  width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto 76px; gap: 14px; align-items: center;
+  padding: 11px 6px; background: none; border: 0; border-bottom: 1px solid var(--linha); text-align: left; cursor: pointer; transition: background .15s;
+}
+.mov-linha:hover { background: var(--papel); }
+.mov-nome { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mov-nome .uf { color: var(--suave); font-weight: 400; font-size: .85rem; margin-left: 6px; }
+.mov-pos { color: var(--suave); font-size: .86rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mov-linha .seta { justify-content: flex-end; }
+@media (max-width: 760px) { .movimento-grade { grid-template-columns: 1fr; } }
 
 /* evolucao semana a semana */
 .controles-grafico { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; color: var(--suave); font-size: .92rem; }

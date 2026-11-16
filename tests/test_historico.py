@@ -59,3 +59,21 @@ def test_salvar_e_carregar(tmp_path):
     historico.salvar(dados, tmp_path)
     historico.salvar({**dados, "gerado_em": "2026-11-09T09:00:00+00:00"}, tmp_path)
     assert [s["data"] for s in historico.carregar(tmp_path)] == ["2026-11-09", "2026-11-16"]
+
+
+def test_uma_varredura_por_dia(tmp_path):
+    manha = {"gerado_em": "2026-11-16T09:00:00+00:00", "resultados": [_r("1", "fail")]}
+    tarde = {"gerado_em": "2026-11-16T18:30:00+00:00", "resultados": [_r("1", "pass")]}
+    historico.salvar(manha, tmp_path)
+    historico.salvar(tarde, tmp_path)
+    snaps = historico.carregar(tmp_path)
+    # um arquivo so, com a ultima varredura do dia
+    assert len(snaps) == 1
+    assert snaps[0]["m"]["1"][1] == "p" * len(PESOS)
+
+
+def test_dia_no_horario_de_brasilia():
+    # 01:30 UTC do dia 17 ainda e 22:30 do dia 16 no Brasil
+    assert historico.dia_da_varredura("2026-11-17T01:30:00+00:00") == "2026-11-16"
+    assert historico.dia_da_varredura("2026-11-16T15:00:00+00:00") == "2026-11-16"
+    assert historico.dia_da_varredura("x") == "x"

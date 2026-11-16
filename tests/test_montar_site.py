@@ -125,3 +125,14 @@ def test_cache_busting(tmp_path):
     assert '"app.js?v=' in html and '"estilo.css?v=' in html
     assert 'dados/resumo.json?v=' in html
     assert '<meta name="versao-dados"' in html
+
+
+def test_varredura_nova_no_mesmo_dia_substitui_no_grafico():
+    from farol import historico
+    manha = {"gerado_em": "2026-11-16T09:00:00+00:00", "total": 1, "resultados": [_resultado("2611606", "PE", status="fail")]}
+    tarde = {"gerado_em": "2026-11-16T18:00:00+00:00", "total": 1, "resultados": [_resultado("2611606", "PE")]}
+    resumo, por_uf, evolucao = montar_site.resumir(tarde, [historico.compactar(manha)])
+    assert [e["data"] for e in evolucao] == ["2026-11-16"]
+    assert evolucao[0]["media"] == 100.0
+    assert resumo["anterior"] is None
+    assert len(por_uf["PE"]["2611606"]["h"]) == 1

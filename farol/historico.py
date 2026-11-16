@@ -9,6 +9,7 @@ assim a série fica comparável. Itens que ainda não existiam numa semana simpl
 não entram na conta daquela semana.
 """
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .checks import Resultado
@@ -22,6 +23,24 @@ ACESSIVEL = 1
 ELEGIVEL = 2  # sem aviso que tira do ranking (dominio fora do .gov.br, repetido...)
 
 AVISOS_FORA = {"fora_do_gov_br", "dominio_compartilhado"}
+
+# o Brasil nao tem mais horario de verao desde 2019, entao -3 fixo resolve sem depender de tzdata
+BRASILIA = timezone(timedelta(hours=-3))
+
+
+def dia_da_varredura(gerado_em):
+    """Data (no horario de Brasilia) que identifica a varredura no historico.
+
+    Uma varredura por dia: se rodar de novo no mesmo dia, o arquivo daquele dia e
+    substituido, entao o grafico nunca tem dois pontos na mesma data.
+    """
+    try:
+        momento = datetime.fromisoformat(gerado_em)
+    except (TypeError, ValueError):
+        return str(gerado_em)[:10]
+    if momento.tzinfo is None:
+        momento = momento.replace(tzinfo=timezone.utc)
+    return momento.astimezone(BRASILIA).date().isoformat()
 
 
 def compactar(dados):
@@ -39,7 +58,7 @@ def compactar(dados):
         status = "".join(CODIGO.get(r["checks"].get(c, {}).get("status"), "-") for c in checks)
         municipios[r["ibge"]] = [flags, status]
     return {
-        "data": dados["gerado_em"][:10],
+        "data": dia_da_varredura(dados["gerado_em"]),
         "metodologia": dados.get("metodologia", 1),
         "checks": checks,
         "m": municipios,
@@ -47,6 +66,7 @@ def compactar(dados):
 
 
 def salvar(dados, pasta):
+    """Grava a varredura em data/historico/AAAA-MM-DD.json, substituindo a do mesmo dia."""
     snap = compactar(dados)
     destino = Path(pasta) / f"{snap['data']}.json"
     destino.parent.mkdir(parents=True, exist_ok=True)

@@ -41,6 +41,7 @@
       </a>
       <nav aria-label="Seções">
         <a href="#itens">O que falta</a>
+        <a href="#evolucao">Evolução</a>
         <a href="#estados">Estados</a>
         <a href="#cidades">Cidades</a>
         <a href="https://github.com/guilhermeoliveirabrito/farol-gov" rel="noopener">Código</a>
@@ -85,6 +86,19 @@
       <ol class="itens" id="lista-itens"></ol>
     </section>
 
+    <section class="secao largura" id="evolucao" hidden>
+      <div class="cabeca">
+        <h2>Semana a semana</h2>
+        <p id="evolucao-texto"></p>
+      </div>
+      <div class="controles-grafico">
+        <label for="metrica">Mostrar</label>
+        <select id="metrica"></select>
+      </div>
+      <div class="grafico-evolucao" id="grafico-evolucao"></div>
+      <p class="nota-grafico">As notas de todas as semanas são recalculadas com as regras atuais. Quando um item novo passa a ser verificado, ele só entra na conta a partir daquela semana.</p>
+    </section>
+
     <section class="secao largura" id="estados">
       <div class="cabeca">
         <h2>Estado por estado</h2>
@@ -122,8 +136,21 @@
             <option value="-">Sem nota</option>
           </select>
         </label>
+        <label>
+          <span class="sr">Ordenar</span>
+          <select id="ordem">
+            <option value="nota">Maior nota</option>
+            <option value="menor">Menor nota</option>
+            <option value="subiu">Mais subiu</option>
+            <option value="caiu">Mais caiu</option>
+            <option value="nome">Nome (A a Z)</option>
+          </select>
+        </label>
       </div>
-      <p class="contagem" id="contagem" aria-live="polite"></p>
+      <div class="linha-contagem">
+        <p class="contagem" id="contagem" aria-live="polite"></p>
+        <button type="button" class="baixar" id="baixar-csv">Baixar CSV desta lista</button>
+      </div>
       <ul class="cidades" id="lista"></ul>
       <button class="mais" id="mais" type="button" hidden>Mostrar mais cidades</button>
 

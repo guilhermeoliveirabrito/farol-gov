@@ -1,12 +1,16 @@
 """
 Monta a pasta publicada no GitHub Pages a partir de site/ e dos dados da varredura.
 
-O json completo da varredura tem uns 3 MB. A pagina nao precisa de tudo isso pra abrir,
+O json completo da varredura tem uns 4 MB. A pagina nao precisa de tudo isso pra abrir,
 entao aqui ele vira:
-  dados/resumo.json   -> uma linha por municipio, so o necessario pra lista, mapa e ranking
-  dados/uf/XX.json    -> detalhe de cada check, carregado so quando alguem abre uma cidade
-  dados/sem_site.json -> municipios sem site cadastrado (pontos apagados no mapa)
-  dados/latest.json   -> o json completo, minificado, pra quem quiser baixar os dados
+  dados/resumo.json     -> uma linha por municipio: lista, mapa, ranking e variacao de posicao
+  dados/uf/XX.json      -> detalhe de cada check e historico da cidade, carregado so quando alguem abre uma
+  dados/historico.json  -> uma linha por semana pro grafico de evolucao
+  dados/sem_site.json   -> municipios sem site cadastrado (pontos apagados no mapa)
+  dados/latest.json     -> o json completo, minificado, pra quem quiser baixar os dados
+
+Nota, conceito e posicao sao recalculados aqui com as regras atuais (farol.nota), inclusive
+pras semanas antigas, pra que a comparacao entre semanas faca sentido.
 
 Uso:
     python scripts/montar_site.py [--saida _site]
@@ -15,15 +19,22 @@ import argparse
 import csv
 import json
 import shutil
+import sys
 from collections import defaultdict
 from pathlib import Path
 
-# mesma ordem de farol.nota.PESOS; fica duplicado aqui pra o script nao depender do pacote
-CHECKS = ["https", "redirect", "tls", "hsts", "headers", "security_txt", "dnssec", "spf", "dmarc"]
-CODIGO = {"pass": "p", "warn": "w", "fail": "f", "error": "e"}
+# roda direto do repositorio, sem precisar de pip install
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from farol import historico  # noqa: E402
+from farol.nota import PESOS  # noqa: E402
+
+CHECKS = list(PESOS)
+CODIGO = historico.CODIGO
 
 ACESSIVEL = 1
 RANKING = 2
+SEMANAS_POR_CIDADE = 12
 
 
 def compacto(obj, caminho):
@@ -32,33 +43,58 @@ def compacto(obj, caminho):
         json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
 
 
-def resumir(dados):
-    """Devolve (resumo, detalhes_por_uf)."""
+def linha_do_tempo(dados, snapshots):
+    """Junta o historico com a semana atual e avalia tudo com as regras de hoje.
+
+    Devolve (lista de (data, avaliacao)), em ordem de data.
+    """
+    atual = historico.compactar(dados)
+    por_data = {s["data"]: s for s in snapshots}
+    por_data[atual["data"]] = atual  # a varredura atual sempre vence
+    return [(data, por_data[data], historico.avaliar_snapshot(por_data[data])) for data in sorted(por_data)]
+
+
+def resumir(dados, snapshots=()):
+    """Devolve (resumo, detalhes_por_uf, evolucao_nacional)."""
+    tempo = linha_do_tempo(dados, snapshots)
+    _, _, agora = tempo[-1]
+    antes = tempo[-2][2] if len(tempo) > 1 else {}
+
     linhas = []
     por_uf = defaultdict(dict)
     for r in dados["resultados"]:
         checks = r.get("checks", {})
-        status = "".join(CODIGO.get(checks.get(c, {}).get("status"), "e") for c in CHECKS)
-        flags = (ACESSIVEL if r.get("acessivel") else 0) | (RANKING if r.get("ranking", r.get("acessivel")) else 0)
+        # "-" = item que ainda nao existia quando essa varredura rodou
+        status = "".join(CODIGO.get(checks[c].get("status"), "e") if c in checks else "-" for c in CHECKS)
+        nota, conceito, pos = agora.get(r["ibge"], [None, None, None])
+        pos_antes = antes.get(r["ibge"], [None, None, None])[2]
+        # positivo = subiu no ranking
+        variacao = pos_antes - pos if (pos is not None and pos_antes is not None) else None
+        flags = (ACESSIVEL if r.get("acessivel") else 0) | (RANKING if pos is not None else 0)
         linhas.append([
             r["ibge"], r["municipio"], r["uf"], r["dominio"],
-            r.get("lat"), r.get("lon"), r.get("nota"), r.get("conceito"),
-            flags, status,
+            r.get("lat"), r.get("lon"), nota, conceito,
+            flags, status, pos, variacao,
         ])
+        semanas = [[data, aval[r["ibge"]][0], aval[r["ibge"]][2]] for data, _, aval in tempo if r["ibge"] in aval]
         por_uf[r["uf"] or "XX"][r["ibge"]] = {
             "d": [checks.get(c, {}).get("detalhe", "") for c in CHECKS],
             "a": r.get("avisos", []),
+            "h": semanas[-SEMANAS_POR_CIDADE:],
         }
 
     resumo = {
         "gerado_em": dados["gerado_em"],
         "total": dados.get("total", len(linhas)),
         "amostra": dados.get("amostra"),
+        "anterior": tempo[-2][0] if len(tempo) > 1 else None,
+        "ranqueados": sum(1 for v in agora.values() if v[2] is not None),
         "checks": CHECKS,
-        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status"],
+        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var"],
         "municipios": linhas,
     }
-    return resumo, por_uf
+    evolucao = [l for l in (historico.resumo_nacional(snap, aval) for _, snap, aval in tempo) if l]
+    return resumo, por_uf, evolucao
 
 
 PERGUNTA = '<h1 id="manchete">O site da sua prefeitura protege você?</h1>'
@@ -68,10 +104,12 @@ TOTAL = '<strong id="n-total">milhares de</strong>'
 def manchete(resumo):
     """Frase de abertura com o dado da semana. Vai direto no HTML pra nao piscar ao carregar."""
     i_dmarc = resumo["checks"].index("dmarc")
-    ranqueados = [m for m in resumo["municipios"] if m[-2] & (ACESSIVEL | RANKING) == ACESSIVEL | RANKING]
+    i_flags = resumo["campos"].index("flags")
+    i_status = resumo["campos"].index("status")
+    ranqueados = [m for m in resumo["municipios"] if m[i_flags] & (ACESSIVEL | RANKING) == ACESSIVEL | RANKING]
     if not ranqueados:
         return None
-    sem_dmarc = sum(1 for m in ranqueados if m[-1][i_dmarc] != "p") / len(ranqueados)
+    sem_dmarc = sum(1 for m in ranqueados if m[i_status][i_dmarc] != "p") / len(ranqueados)
     em_dez = round(sem_dmarc * 10)
     if em_dez < 3:
         return None
@@ -103,8 +141,10 @@ def montar(raiz, saida):
     resultados = raiz / "data" / "resultados" / "latest.json"
     if resultados.exists():
         dados = json.loads(resultados.read_text(encoding="utf-8"))
-        resumo, por_uf = resumir(dados)
+        snapshots = historico.carregar(raiz / "data" / "historico")
+        resumo, por_uf, evolucao = resumir(dados, snapshots)
         compacto(resumo, saida / "dados" / "resumo.json")
+        compacto(evolucao, saida / "dados" / "historico.json")
         for uf, detalhes in por_uf.items():
             compacto(detalhes, saida / "dados" / "uf" / f"{uf}.json")
         compacto(dados, saida / "dados" / "latest.json")
@@ -117,7 +157,7 @@ def montar(raiz, saida):
                 html = html.replace(PERGUNTA, f'<h1 id="manchete">{frase}</h1>')
             html = html.replace(TOTAL, f'<strong id="n-total">{numero_br(resumo["total"])}</strong>')
             index.write_text(html, encoding="utf-8")
-        print(f"{len(resumo['municipios'])} municipios no resumo, {len(por_uf)} arquivos de detalhe")
+        print(f"{len(resumo['municipios'])} municipios no resumo, {len(evolucao)} semanas no historico")
     else:
         print("sem resultados ainda, a pagina vai mostrar aviso")
 

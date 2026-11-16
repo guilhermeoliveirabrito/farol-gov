@@ -167,6 +167,7 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .itens h3 a { text-decoration: none; }
 .itens h3 a:hover { text-decoration: underline; }
 .itens p { margin: 0; color: var(--suave); font-size: .92rem; line-height: 1.45; }
+.itens .valor.novo { font-family: var(--texto); font-size: .95rem; font-weight: 600; color: var(--suave); letter-spacing: 0; }
 .itens .valor { font-family: var(--titulo); font-weight: 800; font-size: 2rem; letter-spacing: -.03em; text-align: right; font-variant-numeric: tabular-nums; }
 
 .trilho { position: relative; height: 14px; border-radius: 99px; background: color-mix(in srgb, var(--linha) 70%, transparent); overflow: hidden; display: flex; }
@@ -213,17 +214,20 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .dist-legenda b { color: var(--tinta); font-weight: 600; margin-right: 4px; }
 
 .filtros { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
-.filtros label { flex: 0 1 210px; }
+.filtros label { flex: 0 1 180px; }
 .filtros .filtro-texto { flex: 1 1 300px; }
 .filtros input, .filtros select {
   font: inherit; color: inherit; background: var(--papel); width: 100%;
   border: 1px solid var(--linha); border-radius: 10px; padding: 12px 14px;
 }
-.contagem { color: var(--suave); font-size: .88rem; margin: 8px 0 12px; }
+.linha-contagem { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 20px; margin: 8px 0 12px; }
+.contagem { color: var(--suave); font-size: .88rem; margin: 0; }
+.baixar { background: none; border: 0; padding: 0; font-size: .88rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.baixar:hover { color: var(--cA); }
 
 .cidades { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); }
 .linha {
-  width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 40px 150px 44px 40px; gap: 18px; align-items: center;
+  width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 36px 190px 40px 64px 40px; gap: 16px; align-items: center;
   padding: 12px 8px; background: none; border: 0; border-bottom: 1px solid var(--linha); text-align: left; cursor: pointer;
   transition: background .15s;
 }
@@ -232,14 +236,16 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .linha .dominio { display: block; color: var(--suave); font-weight: 400; font-size: .84rem; overflow-wrap: anywhere; }
 .linha .uf, .linha .situacao { color: var(--suave); font-size: .86rem; }
 .linha .nota { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-.linha .situacao { grid-column: span 2; text-align: right; }
+.linha .situacao { grid-column: span 3; text-align: right; }
+.linha .mov { font-size: .84rem; }
 
 /* as 9 luzes, uma por item verificado */
-.luzes { display: flex; gap: 5px; }
-.luzes i { width: 10px; height: 10px; border-radius: 50%; background: var(--cX); opacity: .35; }
+.luzes { display: flex; gap: 4px; }
+.luzes i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--cX); opacity: .35; }
 .luzes i.pass { background: var(--cA); opacity: 1; }
 .luzes i.warn { background: var(--cC); opacity: 1; }
 .luzes i.fail { background: var(--cF); opacity: 1; }
+.luzes i.na { background: transparent; box-shadow: inset 0 0 0 1.5px var(--cX); opacity: .5; }
 
 .conceito {
   display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
@@ -259,6 +265,35 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .explica { margin-top: 32px; font-size: .94rem; color: var(--suave); max-width: 72ch; }
 .explica summary { cursor: pointer; font-weight: 600; color: var(--tinta); width: fit-content; }
 .explica p { margin: 8px 0 0; }
+
+/* setas de posicao: verde subiu, cinza igual, vermelha caiu */
+.seta { display: inline-flex; align-items: center; gap: 2px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.seta.sobe { color: #12805f; }
+.seta.desce { color: #c4362a; }
+.seta.igual, .seta.nova { color: var(--suave); font-weight: 400; }
+@media (prefers-color-scheme: dark) {
+  .seta.sobe { color: #4fd1a5; }
+  .seta.desce { color: #ff7a6b; }
+}
+.sugestoes .seta { font-size: .8rem; }
+.sugestoes .seta.sobe { color: #12805f; } .sugestoes .seta.desce { color: #c4362a; }
+
+/* evolucao semana a semana */
+.controles-grafico { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; color: var(--suave); font-size: .92rem; }
+.controles-grafico select { font: inherit; color: var(--tinta); background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 9px 12px; }
+.grafico-evolucao { background: var(--papel); border-radius: 16px; padding: 16px 12px 8px; }
+.grafico-evolucao svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grafico-evolucao .guia, .grafico-cidade .guia { stroke: var(--linha); stroke-width: 1; }
+.grafico-evolucao .eixo, .grafico-cidade .eixo { fill: var(--suave); font-size: 13px; font-family: var(--texto); }
+.grafico-evolucao .marco { stroke: var(--cC); stroke-dasharray: 4 4; }
+.grafico-evolucao .marco-texto { fill: #a8740f; font-size: 12px; }
+.linha-evolucao { fill: none; stroke: var(--cA); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; transition: stroke-dashoffset 1.4s var(--suave-mov); }
+.marcador circle { fill: var(--papel); stroke: var(--cA); stroke-width: 3; transition: r .15s; }
+.marcador:hover circle, .marcador:focus circle { r: 8; }
+.marcador:focus { outline: none; }
+.valor-ponto { fill: var(--tinta); font-family: var(--titulo); font-weight: 800; font-size: 16px; }
+.nota-grafico { color: var(--suave); font-size: .85rem; margin: 10px 0 0; max-width: 80ch; }
+.vazio { color: var(--suave); padding: 40px; text-align: center; }
 
 /* ---------------- ficha da cidade ---------------- */
 
@@ -285,6 +320,18 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .placar div span { color: var(--suave); font-size: .92rem; }
 @keyframes surge { from { transform: scale(.4); opacity: 0; } }
 
+.posicoes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 14px 0; border-bottom: 1px solid var(--linha); font-size: .94rem; color: var(--suave); }
+.posicoes b { color: var(--tinta); font-family: var(--titulo); font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; }
+.sinais .compara { font-size: .8rem; color: var(--suave); margin-top: 2px; opacity: .85; }
+.historico-cidade { margin-top: 28px; }
+.historico-cidade h3 { font-size: 1.3rem; margin: 0 0 10px; }
+.grafico-cidade { display: block; width: 100%; height: auto; margin-bottom: 8px; }
+.grafico-cidade .linha-nota { fill: none; stroke: var(--cA); stroke-width: 2.5; stroke-linejoin: round; }
+.grafico-cidade .ponto-nota { fill: var(--papel); stroke: var(--cA); stroke-width: 2.5; }
+.historico-cidade table { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
+.historico-cidade th { text-align: left; font-size: .8rem; color: var(--suave); font-weight: 600; padding: 6px 0; border-bottom: 1px solid var(--linha); }
+.historico-cidade td { padding: 8px 0; border-bottom: 1px solid var(--linha); }
+.historico-cidade .num { text-align: right; }
 .ficha .avisos { font-size: .9rem; margin: 14px 0 0; padding: 10px 14px; background: color-mix(in srgb, var(--cC) 18%, transparent); border-radius: 10px; }
 
 .sinais { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -295,11 +342,12 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 }
 .sinais .luz.pass { background: var(--cA); box-shadow: 0 0 0 4px color-mix(in srgb, var(--cA) 22%, transparent); }
 .sinais .luz.warn { background: var(--cC); box-shadow: 0 0 0 4px color-mix(in srgb, var(--cC) 25%, transparent); }
+.sinais .luz.na { background: transparent; box-shadow: inset 0 0 0 2px var(--cX); }
 .sinais .luz.fail { background: var(--cF); box-shadow: 0 0 0 4px color-mix(in srgb, var(--cF) 22%, transparent); }
 @keyframes acende { from { transform: scale(.2); opacity: 0; } 60% { transform: scale(1.25); } }
 .sinais strong { display: block; font-weight: 600; }
 .sinais .estado { font-size: .82rem; font-weight: 600; margin-left: 8px; }
-.sinais .estado.pass { color: var(--cA); } .sinais .estado.warn { color: #b8810f; } .sinais .estado.fail { color: var(--cF); } .sinais .estado.error { color: var(--suave); }
+.sinais .estado.pass { color: var(--cA); } .sinais .estado.warn { color: #b8810f; } .sinais .estado.fail { color: var(--cF); } .sinais .estado.error, .sinais .estado.na { color: var(--suave); }
 .sinais .info { color: var(--suave); font-size: .92rem; overflow-wrap: anywhere; }
 .sinais .carregando { opacity: .5; }
 
@@ -333,9 +381,9 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
   .largura { padding-inline: 20px; }
   .topo nav a:not(:last-child) { display: none; }
   .mapa { height: 360px; }
-  .linha { grid-template-columns: minmax(0, 1fr) 40px 36px; gap: 12px; }
+  .linha { grid-template-columns: minmax(0, 1fr) 36px 52px 34px; gap: 10px; }
   .linha .uf, .linha .luzes { display: none; }
-  .linha .situacao { grid-column: auto; font-size: .8rem; }
+  .linha .situacao { grid-column: span 2; font-size: .8rem; }
   .linha .conceito { width: 32px; height: 32px; }
   #ficha-corpo { padding: 0 22px 32px; }
   .filtros label { flex: 1 1 140px; }

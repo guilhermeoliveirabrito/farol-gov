@@ -29,13 +29,17 @@ def test_resumo_compacto():
         _resultado("2611606", "PE"),
         _resultado("3550308", "SP", status="warn"),
     ]}
-    resumo, por_uf = montar_site.resumir(dados)
+    resumo, por_uf, evolucao = montar_site.resumir(dados)
+    campo = {c: i for i, c in enumerate(resumo["campos"])}
 
     pe = resumo["municipios"][0]
     assert pe[0] == "2611606"
-    assert pe[-1] == "p" * 9
-    assert pe[-2] == montar_site.ACESSIVEL | montar_site.RANKING
-    assert resumo["municipios"][1][-1] == "w" * 9
+    assert pe[campo["status"]] == "p" * len(PESOS)
+    assert pe[campo["flags"]] == montar_site.ACESSIVEL | montar_site.RANKING
+    assert pe[campo["pos"]] == 1
+    assert pe[campo["var"]] is None  # sem semana anterior
+    assert resumo["municipios"][1][campo["status"]] == "w" * len(PESOS)
+    assert len(evolucao) == 1
 
     assert set(por_uf) == {"PE", "SP"}
     assert por_uf["PE"]["2611606"]["d"][0] == "detalhe https"
@@ -68,7 +72,7 @@ def test_manchete_com_dado_da_semana():
         if i < 7:
             r["checks"]["dmarc"]["status"] = "warn" if i % 2 else "fail"
         dados["resultados"].append(r)
-    resumo, _ = montar_site.resumir(dados)
+    resumo, _, _ = montar_site.resumir(dados)
     assert montar_site.manchete(resumo).startswith("7 em cada 10 prefeituras")
 
 
@@ -82,3 +86,26 @@ def test_manchete_injetada_no_html(tmp_path):
     html = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
     assert "10 em cada 10" in html
     assert ">3.633<" in html
+
+
+def test_variacao_de_posicao_e_historico_da_cidade():
+    from farol import historico
+
+    def semana(data, status_recife):
+        resultados = [_resultado("2611606", "PE", status=status_recife), _resultado("2611700", "PE", status="warn")]
+        return {"gerado_em": f"{data}T09:00:00+00:00", "total": 2, "resultados": resultados}
+
+    # na primeira semana Recife estava atras; na segunda passou a frente
+    antiga = historico.compactar(semana("2026-11-09", "fail"))
+    atual = semana("2026-11-16", "pass")
+    resumo, por_uf, evolucao = montar_site.resumir(atual, [antiga])
+    campo = {c: i for i, c in enumerate(resumo["campos"])}
+    recife = next(m for m in resumo["municipios"] if m[0] == "2611606")
+    outra = next(m for m in resumo["municipios"] if m[0] == "2611700")
+
+    assert recife[campo["pos"]] == 1 and recife[campo["var"]] == 1
+    assert outra[campo["pos"]] == 2 and outra[campo["var"]] == -1
+    assert resumo["anterior"] == "2026-11-09"
+    assert [h[0] for h in por_uf["PE"]["2611606"]["h"]] == ["2026-11-09", "2026-11-16"]
+    assert por_uf["PE"]["2611606"]["h"][0][2] == 2
+    assert [e["data"] for e in evolucao] == ["2026-11-09", "2026-11-16"]

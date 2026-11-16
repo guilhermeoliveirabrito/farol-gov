@@ -14,16 +14,20 @@ const ITENS = {
   https: ["HTTPS com certificado válido", "Garante que o que você digita no site não viaja aberto pela rede."],
   redirect: ["HTTP leva para HTTPS", "Quem digita o endereço sem https cai na versão protegida."],
   tls: ["TLS 1.2 ou superior", "Usa versões atuais da criptografia, sem as que já foram quebradas."],
+  tls_antigo: ["Recusa TLS 1.0 e 1.1", "Não aceita conectar com versões de criptografia que já foram quebradas."],
   hsts: ["HSTS", "Avisa o navegador para nunca aceitar a versão sem criptografia."],
   headers: ["Headers de segurança", "Bloqueia truques comuns, como esconder o site dentro de outro."],
+  conteudo_misto: ["Sem conteúdo misto", "A página protegida não puxa scripts e imagens por conexão aberta."],
+  cookies: ["Cookies protegidos", "Os cookies só viajam com criptografia e scripts de terceiros não leem."],
   security_txt: ["security.txt", "Diz a quem encontrar uma falha para onde mandar o aviso."],
   dnssec: ["DNSSEC", "Assina o endereço do site para ninguém desviar você para outro lugar."],
+  caa: ["CAA", "Diz quais empresas podem emitir certificado para o site."],
   spf: ["SPF", "Lista quais servidores podem mandar e-mail em nome da prefeitura."],
   dmarc: ["DMARC", "Manda os provedores recusarem e-mail falso com o nome da prefeitura."],
 };
 
-const STATUS = { pass: "cumpre", warn: "parcial", fail: "não cumpre", error: "não verificado" };
-const CODIGOS = { p: "pass", w: "warn", f: "fail", e: "error" };
+const STATUS = { pass: "cumpre", warn: "parcial", fail: "não cumpre", error: "não verificado", na: "novo, ainda não verificado" };
+const CODIGOS = { p: "pass", w: "warn", f: "fail", e: "error", "-": "na" };
 const CONCEITOS = ["A", "B", "C", "D", "F"];
 
 const AVISOS = {
@@ -31,6 +35,7 @@ const AVISOS = {
   dominio_alternativo: "O domínio cadastrado não funciona; avaliamos a versão com ou sem www.",
   fora_do_gov_br: "Domínio fora do .gov.br. Fica fora do ranking até alguém confirmar que é o site oficial.",
   dominio_compartilhado: "O mesmo domínio aparece para outro município. Fica fora do ranking até revisão.",
+  verificacao_incompleta: "Parte dos itens não pôde ser verificada nesta semana (o servidor não respondeu a tempo). Sem nota até a próxima varredura.",
 };
 
 // posicao aproximada de cada estado num mapa de ladrilhos (coluna, linha)
@@ -53,6 +58,7 @@ const reduzirMovimento = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let todos = [];
 let ranqueados = [];
+let totalRanking = 0;
 let filtrados = [];
 let mostrando = 0;
 
@@ -87,6 +93,20 @@ function conceitoDaNota(n) {
   if (n >= 55) return "C";
   if (n >= 35) return "D";
   return "F";
+}
+
+const fmtData = (iso, opcoes = { day: "2-digit", month: "2-digit" }) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", opcoes);
+
+// seta de posicao em relacao a semana anterior: verde subiu, cinza igual, vermelha caiu
+function seta(r, comTexto = false) {
+  if (r.variacao == null) return comTexto ? el("span", { class: "seta nova", text: "sem comparação" }) : null;
+  const v = r.variacao;
+  const classe = v > 0 ? "sobe" : v < 0 ? "desce" : "igual";
+  const simbolo = v > 0 ? "↑" : v < 0 ? "↓" : "=";
+  const texto = v === 0 ? (comTexto ? "mesma posição" : "") : num(Math.abs(v));
+  const titulo = v > 0 ? `subiu ${num(v)} posições` : v < 0 ? `caiu ${num(-v)} posições` : "mesma posição da semana anterior";
+  return el("span", { class: `seta ${classe}`, title: titulo, "aria-label": titulo }, simbolo, texto && " ", texto, comTexto && v !== 0 ? (v > 0 ? " posições acima" : " posições abaixo") : null);
 }
 
 function selo(r) {
@@ -131,6 +151,8 @@ function decodificar(resumo) {
       conceito: conceitoSeguro(l[idx.conceito]),
       acessivel: Boolean(l[idx.flags] & 1),
       ranking: Boolean(l[idx.flags] & 2),
+      posBr: typeof l[idx.pos] === "number" ? l[idx.pos] : null,
+      variacao: typeof l[idx.var] === "number" ? l[idx.var] : null,
       st,
       _busca: semAcento(`${municipio} ${dominio}`),
       _nome: semAcento(municipio),
@@ -555,7 +577,24 @@ function linkCorrigir(check) {
   return el("a", { href: `${REPO}/blob/main/docs/como-corrigir.md#${check}`, rel: "noopener", text: "como corrigir" });
 }
 
+// parte das cidades de cada estado que cumpre cada item (pra comparar na ficha)
+let porEstado = {};
+
+function calcularPorEstado(ok) {
+  const grupos = {};
+  for (const r of ok) (grupos[r.uf] ??= []).push(r);
+  porEstado = {};
+  for (const [uf, lista] of Object.entries(grupos)) {
+    porEstado[uf] = { n: lista.length };
+    for (const check of Object.keys(ITENS)) {
+      const avaliados = lista.filter((r) => r.st[check] !== "na").length;
+      porEstado[uf][check] = avaliados ? pct(conta(lista, check), avaliados) : null;
+    }
+  }
+}
+
 function listaSinais(r) {
+  const estado = porEstado[r.uf];
   return el(
     "ul",
     { class: "sinais" },
@@ -563,6 +602,9 @@ function listaSinais(r) {
       const st = statusSeguro(r.st[check]);
       const luz = el("span", { class: `luz ${st}`, "aria-hidden": "true" });
       luz.style.setProperty("--n", i);
+      const comparacao = estado && estado.n > 1 && estado[check] != null && st !== "na"
+        ? el("div", { class: "compara", text: `${fmtPct(estado[check])} das cidades de ${r.uf} cumprem` })
+        : null;
       return el(
         "li",
         {},
@@ -571,10 +613,72 @@ function listaSinais(r) {
           "div",
           {},
           el("strong", {}, nome, el("span", { class: `estado ${st}`, text: STATUS[st] })),
-          el("div", { class: "info carregando", "data-check": check }, "carregando detalhe…"),
+          st === "na"
+            ? el("div", { class: "info", text: "Item novo: entra na conta a partir da próxima varredura." })
+            : el("div", { class: "info carregando", "data-check": check }, "carregando detalhe…"),
+          comparacao,
         ),
       );
     }),
+  );
+}
+
+// grafico pequeno da nota da cidade semana a semana, com a data de cada ponto
+function graficoCidade(semanas) {
+  const pontos = semanas.filter(([, nota]) => typeof nota === "number");
+  if (pontos.length < 2) return null;
+  const L = 440, A = 150, m = { e: 30, d: 14, t: 18, b: 28 };
+  const xs = (i) => m.e + (i * (L - m.e - m.d)) / (pontos.length - 1);
+  const ys = (n) => m.t + ((100 - n) * (A - m.t - m.b)) / 100;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${L} ${A}`);
+  svg.setAttribute("class", "grafico-cidade");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Nota da cidade por semana: " + pontos.map(([d, n]) => `${fmtData(d)} ${fmtNota(n)}`).join(", "));
+  const novo = (tag, attrs, texto) => {
+    const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (texto != null) e.textContent = texto;
+    svg.append(e);
+    return e;
+  };
+  for (const g of [0, 50, 100]) {
+    novo("line", { x1: m.e, x2: L - m.d, y1: ys(g), y2: ys(g), class: "guia" });
+    novo("text", { x: m.e - 6, y: ys(g) + 4, class: "eixo", "text-anchor": "end" }, String(g));
+  }
+  novo("polyline", { points: pontos.map(([, n], i) => `${xs(i)},${ys(n)}`).join(" "), class: "linha-nota" });
+  pontos.forEach(([data, nota], i) => {
+    novo("circle", { cx: xs(i), cy: ys(nota), r: 4, class: "ponto-nota" });
+    novo("text", { x: xs(i), y: A - 8, class: "eixo", "text-anchor": "middle" }, fmtData(data));
+  });
+  return svg;
+}
+
+function blocoHistorico(semanas) {
+  if (!semanas || !semanas.length) return null;
+  const linhas = [...semanas].reverse().map(([data, nota, pos], i, todas) => {
+    const anterior = todas[i + 1];
+    let mudanca = null;
+    if (anterior && pos != null && anterior[2] != null) mudanca = seta({ variacao: anterior[2] - pos });
+    return el(
+      "tr",
+      {},
+      el("td", { text: fmtData(data, { day: "2-digit", month: "2-digit", year: "numeric" }) }),
+      el("td", { class: "num", text: typeof nota === "number" ? fmtNota(nota) : "sem nota" }),
+      el("td", { class: "num" }, pos != null ? `${num(pos)}º` : "fora do ranking", mudanca ? " " : null, mudanca),
+    );
+  });
+  return el(
+    "section",
+    { class: "historico-cidade" },
+    el("h3", { text: "Histórico" }),
+    graficoCidade(semanas),
+    el(
+      "table",
+      {},
+      el("thead", {}, el("tr", {}, el("th", { text: "Varredura" }), el("th", { class: "num", text: "Nota" }), el("th", { class: "num", text: "Posição no Brasil" }))),
+      el("tbody", {}, ...linhas),
+    ),
   );
 }
 
@@ -582,13 +686,23 @@ function abrirFicha(r) {
   const dialogo = $("ficha");
   const corpo = $("ficha-corpo");
 
+  const posicoes = r.posBr != null
+    ? el(
+        "div",
+        { class: "posicoes" },
+        el("span", {}, el("b", { text: `${num(r.posBr)}º` }), ` de ${num(totalRanking)} no Brasil`),
+        el("span", {}, el("b", { text: `${r.pos}º` }), ` de ${r.totalUf} em ${r.uf}`),
+        seta(r, true),
+      )
+    : null;
+
   const placar = el(
     "div",
     { class: "placar" },
     selo(r),
     r.nota != null
-      ? el("div", {}, el("strong", { text: fmtNota(r.nota) }), el("span", { text: r.pos ? `${r.pos}º de ${r.totalUf} cidades em ${r.uf}` : "fora do ranking" }))
-      : el("div", {}, el("strong", { text: "Sem nota" }), el("span", { text: r.acessivel ? "o domínio precisa de revisão" : "o site não respondeu à verificação" })),
+      ? el("div", {}, el("strong", { text: fmtNota(r.nota) }), el("span", { text: r.ranking ? "de 100 pontos" : "fora do ranking" }))
+      : el("div", {}, el("strong", { text: "Sem nota" }), el("span", { text: r.acessivel ? "verificação incompleta ou domínio em revisão" : "o site não respondeu à verificação" })),
   );
 
   const copiar = el("button", { type: "button" }, "Copiar link");
@@ -605,12 +719,15 @@ function abrirFicha(r) {
   const acoes = el("div", { class: "acoes" }, copiar, el("a", { href: `${REPO}/issues/new?title=${titulo}`, rel: "noopener", text: "Contestar resultado" }));
 
   const avisos = el("div");
+  const historicoCaixa = el("div");
   corpo.replaceChildren(
     el("h2", { id: "ficha-nome", text: r.municipio }),
     el("p", { class: "onde", text: `${r.uf}, ${r.dominio}` }),
     placar,
+    posicoes,
     avisos,
     listaSinais(r),
+    historicoCaixa,
     acoes,
   );
 
@@ -619,13 +736,16 @@ function abrirFicha(r) {
       const extra = dados[r.ibge];
       if (!extra || !corpo.contains(avisos)) return;
       // so troca os textos; as luzes ja acenderam e nao precisam animar de novo
-      corpo.querySelectorAll(".sinais .info").forEach((info, i) => {
+      corpo.querySelectorAll(".sinais .info[data-check]").forEach((info) => {
         const check = info.dataset.check;
+        const detalhe = String(extra.d[Object.keys(ITENS).indexOf(check)] ?? "");
         info.classList.remove("carregando");
-        info.replaceChildren(String(extra.d[i] ?? ""));
-        if (statusSeguro(r.st[check]) !== "pass") info.append(", ", linkCorrigir(check));
+        info.replaceChildren(detalhe);
+        if (statusSeguro(r.st[check]) !== "pass") info.append(detalhe ? ", " : "", linkCorrigir(check));
       });
       avisos.replaceChildren(...(extra.a || []).filter((a) => AVISOS[a]).map((a) => el("p", { class: "avisos", text: AVISOS[a] })));
+      const hist = blocoHistorico(extra.h);
+      if (hist) historicoCaixa.replaceChildren(hist);
     })
     .catch(() => {
       corpo.querySelectorAll(".sinais .carregando").forEach((i) => (i.textContent = "detalhe indisponível agora, tente abrir de novo"));
@@ -706,7 +826,7 @@ function iniciarBusca() {
             { id: `sug-${i}`, role: "option", "aria-selected": "false" },
             selo(r),
             el("span", { class: "nome" }, r.municipio, el("span", { class: "uf", text: r.uf })),
-            el("span", { class: "nota", text: r.nota != null ? fmtNota(r.nota) : "sem nota" }),
+            el("span", { class: "nota" }, r.nota != null ? fmtNota(r.nota) : "sem nota", seta(r) && " ", seta(r)),
           );
           li.addEventListener("mousedown", (ev) => {
             ev.preventDefault();
@@ -745,8 +865,12 @@ function iniciarBusca() {
 
 function itens(ok) {
   const linhas = Object.entries(ITENS)
-    .map(([check, [nome, texto]]) => ({ check, nome, texto, cumpre: pct(conta(ok, check), ok.length), parcial: pct(conta(ok, check, "warn"), ok.length) }))
-    .sort((a, b) => a.cumpre - b.cumpre); // o que mais falta primeiro
+    .map(([check, [nome, texto]]) => {
+      const avaliados = ok.filter((r) => r.st[check] !== "na").length;
+      return { check, nome, texto, novo: !avaliados, cumpre: pct(conta(ok, check), avaliados), parcial: pct(conta(ok, check, "warn"), avaliados) };
+    })
+    // o que mais falta primeiro; itens novos, ainda sem dado, vao pro fim
+    .sort((a, b) => a.novo - b.novo || a.cumpre - b.cumpre);
 
   const barras = [];
   const lista = $("lista-itens");
@@ -762,7 +886,7 @@ function itens(ok) {
         {},
         el("div", {}, el("h3", {}, el("a", { href: `${REPO}/blob/main/docs/como-corrigir.md#${l.check}`, rel: "noopener", text: l.nome })), el("p", { text: l.texto })),
         el("div", { class: "trilho", role: "img", "aria-label": `${fmtPct(l.cumpre)} cumprem, ${fmtPct(l.parcial)} cumprem em parte` }, a, b),
-        el("span", { class: "valor", text: fmtPct(l.cumpre) }),
+        l.novo ? el("span", { class: "valor novo", text: "novo" }) : el("span", { class: "valor", text: fmtPct(l.cumpre) }),
       );
     }),
   );
@@ -849,7 +973,7 @@ function linhaCidade(r) {
     el("span", { class: "nome" }, r.municipio || r.dominio, el("span", { class: "dominio", text: r.dominio })),
     el("span", { class: "uf", text: r.uf }),
     ...(r.nota != null
-      ? [luzes, el("span", { class: "nota", text: Math.round(r.nota) })]
+      ? [luzes, el("span", { class: "nota", text: Math.round(r.nota) }), el("span", { class: "mov" }, seta(r))]
       : [el("span", { class: "situacao", text: r.acessivel ? "fora do ranking" : "não respondeu" })]),
     selo(r),
   );
@@ -868,6 +992,13 @@ function aplicarFiltros() {
     if (termo && !r._busca.includes(termo)) return false;
     return true;
   });
+  const ordem = $("ordem").value;
+  // todos ja vem da maior nota pra menor; os outros criterios reordenam a copia filtrada
+  const semValor = (v, fallback) => (v == null ? fallback : v);
+  if (ordem === "menor") filtrados.sort((a, b) => semValor(a.nota, 999) - semValor(b.nota, 999));
+  else if (ordem === "subiu") filtrados.sort((a, b) => semValor(b.variacao, -1e9) - semValor(a.variacao, -1e9));
+  else if (ordem === "caiu") filtrados.sort((a, b) => semValor(a.variacao, 1e9) - semValor(b.variacao, 1e9));
+  else if (ordem === "nome") filtrados.sort((a, b) => ordemAlfabetica(a.municipio, b.municipio));
   mostrando = 0;
   $("lista").replaceChildren();
   mostrarMais();
@@ -877,10 +1008,121 @@ function mostrarMais() {
   const proximos = filtrados.slice(mostrando, mostrando + POR_PAGINA);
   $("lista").append(...proximos.map(linhaCidade));
   mostrando += proximos.length;
+  const criterio = { nota: "da maior nota para a menor", menor: "da menor nota para a maior", subiu: "das que mais subiram", caiu: "das que mais caíram", nome: "em ordem alfabética" }[$("ordem").value];
   $("contagem").textContent = filtrados.length
-    ? `${num(filtrados.length)} cidades, da maior nota para a menor. Toque em uma para ver o detalhe.`
+    ? `${num(filtrados.length)} cidades, ${criterio}. Toque em uma para ver o detalhe.`
     : "Nenhuma cidade com esse filtro. Confira a grafia ou procure pelo domínio do site.";
   $("mais").hidden = mostrando >= filtrados.length;
+}
+
+// ---------- baixar csv ----------
+
+// celula que comeca com = + - @ vira formula no Excel/Sheets (CSV injection); o apostrofo neutraliza
+function celulaCsv(valor) {
+  let v = valor == null ? "" : String(valor);
+  if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+  return /[",;\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
+function baixarCsv() {
+  const checks = Object.keys(ITENS);
+  const cabecalho = ["ibge", "municipio", "uf", "dominio", "nota", "conceito", "posicao_brasil", "variacao_posicao", ...checks];
+  const linhas = filtrados.map((r) => [r.ibge, r.municipio, r.uf, r.dominio, r.nota, r.conceito, r.posBr, r.variacao, ...checks.map((c) => r.st[c])]);
+  const texto = [cabecalho, ...linhas].map((l) => l.map(celulaCsv).join(",")).join("\r\n");
+  // BOM pro Excel abrir os acentos certo
+  const blob = new Blob(["\ufeff" + texto], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = el("a", { href: url, download: `farol-gov-${new Date().toISOString().slice(0, 10)}.csv` });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ---------- evolucao semana a semana ----------
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function desenharEvolucao(semanas, metrica) {
+  const caixa = $("grafico-evolucao");
+  const valor = (s) => (metrica === "media" ? s.media : s.adocao[metrica]);
+  const pontos = semanas.map((s) => ({ s, v: valor(s) })).filter((p) => typeof p.v === "number");
+  if (!pontos.length) {
+    caixa.replaceChildren(el("p", { class: "vazio", text: "Esse item ainda não era verificado nessas semanas." }));
+    return;
+  }
+
+  const L = 900, A = 300, m = { e: 44, d: 24, t: 28, b: 44 };
+  const passo = pontos.length > 1 ? (L - m.e - m.d) / (pontos.length - 1) : 0;
+  const xs = (i) => (pontos.length > 1 ? m.e + i * passo : L / 2);
+  const ys = (v) => m.t + ((100 - v) * (A - m.t - m.b)) / 100;
+
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${L} ${A}`);
+  svg.setAttribute("role", "img");
+  const nome = metrica === "media" ? "Nota média" : `${ITENS[metrica][0]} (% das prefeituras)`;
+  svg.setAttribute("aria-label", `${nome} por semana: ` + pontos.map((p) => `${fmtData(p.s.data, { day: "2-digit", month: "2-digit", year: "numeric" })}: ${fmtNota(p.v)}`).join("; "));
+  const novo = (tag, attrs, texto, pai = svg) => {
+    const e = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (texto != null) e.textContent = texto;
+    pai.append(e);
+    return e;
+  };
+
+  for (const g of [0, 25, 50, 75, 100]) {
+    novo("line", { x1: m.e, x2: L - m.d, y1: ys(g), y2: ys(g), class: "guia" });
+    novo("text", { x: m.e - 10, y: ys(g) + 4, class: "eixo", "text-anchor": "end" }, metrica === "media" ? String(g) : `${g}%`);
+  }
+
+  // marca as semanas em que a metodologia mudou (itens novos entraram na conta)
+  pontos.forEach((p, i) => {
+    if (i > 0 && p.s.metodologia !== pontos[i - 1].s.metodologia) {
+      const x = (xs(i) + xs(i - 1)) / 2;
+      novo("line", { x1: x, x2: x, y1: m.t - 10, y2: A - m.b, class: "marco" });
+      novo("text", { x: x + 6, y: m.t - 12, class: "eixo marco-texto" }, "novos itens na nota");
+    }
+  });
+
+  if (pontos.length > 1) {
+    const linha = novo("polyline", { points: pontos.map((p, i) => `${xs(i)},${ys(p.v)}`).join(" "), class: "linha-evolucao" });
+    if (!reduzirMovimento) {
+      // a linha se desenha da esquerda pra direita
+      linha.style.strokeDasharray = "2000";
+      linha.style.strokeDashoffset = "2000";
+      requestAnimationFrame(() => requestAnimationFrame(() => (linha.style.strokeDashoffset = "0")));
+    }
+  }
+
+  const poucos = pontos.length <= 10;
+  pontos.forEach((p, i) => {
+    const g = novo("g", { class: "marcador", tabindex: "0" });
+    novo("title", {}, `${fmtData(p.s.data, { day: "2-digit", month: "long", year: "numeric" })}: ${metrica === "media" ? fmtNota(p.v) : fmtPct(p.v)}`, g);
+    novo("circle", { cx: xs(i), cy: ys(p.v), r: 6 }, null, g);
+    if (poucos || i === pontos.length - 1) novo("text", { x: xs(i), y: ys(p.v) - 14, class: "valor-ponto", "text-anchor": "middle" }, metrica === "media" ? fmtNota(p.v) : fmtPct(p.v), g);
+    // datas no eixo: todas quando sao poucas, senao uma sim outra nao
+    if (poucos || i % 2 === 0 || i === pontos.length - 1) {
+      novo("text", { x: xs(i), y: A - m.b + 22, class: "eixo", "text-anchor": "middle" }, fmtData(p.s.data, { day: "2-digit", month: "2-digit", year: "2-digit" }));
+    }
+  });
+
+  caixa.replaceChildren(svg);
+}
+
+function evolucao(semanas) {
+  if (!Array.isArray(semanas) || !semanas.length) return;
+  const seletor = $("metrica");
+  const opcoes = [["media", "Nota média"], ...Object.entries(ITENS).map(([c, [nome]]) => [c, nome])];
+  seletor.replaceChildren(...opcoes.map(([v, t]) => el("option", { value: v, text: t })));
+  seletor.addEventListener("change", () => desenharEvolucao(semanas, seletor.value));
+
+  const ultima = semanas[semanas.length - 1];
+  const primeira = semanas[0];
+  $("evolucao-texto").textContent = semanas.length > 1
+    ? `${semanas.length} varreduras, de ${fmtData(primeira.data, { day: "numeric", month: "long" })} a ${fmtData(ultima.data, { day: "numeric", month: "long", year: "numeric" })}. Passe o mouse num ponto para ver o valor.`
+    : `Primeira varredura em ${fmtData(ultima.data, { day: "numeric", month: "long", year: "numeric" })}. A linha cresce a cada semana.`;
+  quandoAparecer($("grafico-evolucao"), () => desenharEvolucao(semanas, "media"));
+  $("evolucao").hidden = false;
 }
 
 // ---------- topo ----------
@@ -924,7 +1166,7 @@ function legendaMapa(semSite) {
 
 function semDados() {
   $("meta").textContent = "Ainda não há resultados publicados. A primeira varredura completa sai na próxima segunda-feira.";
-  for (const id of ["itens", "estados", "cidades", "busca-caixa"]) $(id).hidden = true;
+  for (const id of ["itens", "evolucao", "estados", "cidades", "busca-caixa"]) $(id).hidden = true;
 }
 
 async function iniciar() {
@@ -940,6 +1182,8 @@ async function iniciar() {
 
   todos = decodificar(resumo).sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1) || ordemAlfabetica(a.municipio, b.municipio));
   ranqueados = todos.filter((r) => r.acessivel && r.ranking);
+  totalRanking = resumo.ranqueados || ranqueados.length;
+  calcularPorEstado(ranqueados);
 
   // posicao de cada cidade dentro do proprio estado (todos ja esta ordenado por nota)
   const porUf = {};
@@ -966,6 +1210,8 @@ async function iniciar() {
   });
   $("filtro-uf").addEventListener("change", aplicarFiltros);
   $("filtro-conceito").addEventListener("change", aplicarFiltros);
+  $("ordem").addEventListener("change", aplicarFiltros);
+  $("baixar-csv").addEventListener("click", baixarCsv);
   $("mais").addEventListener("click", mostrarMais);
   window.addEventListener("hashchange", abrirDoLink);
 
@@ -973,6 +1219,7 @@ async function iniciar() {
   depois(() => {
     itens(ranqueados);
     estados(ranqueados);
+    buscarJson("dados/historico.json").then(evolucao).catch(() => {});
     abrirDoLink();
   });
 }

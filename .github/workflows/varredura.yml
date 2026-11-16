@@ -43,11 +43,10 @@ jobs:
           extra=""
           if [ -n "$AMOSTRA" ]; then extra="--amostra $AMOSTRA"; fi
           farol scan data/dominios.csv -o data/resultados/latest.json $extra
-          cp data/resultados/latest.json "data/resultados/$(date -u +%Y-%m-%d).json"
 
       - name: Gerar resumo
         run: |
-          farol resumo data/resultados/latest.json -o RESULTADOS.md --revisao data/revisar_wikidata.csv
+          farol resumo data/resultados/latest.json -o RESULTADOS.md --revisao data/revisar_wikidata.csv --historico data/historico
           cat RESULTADOS.md
           cat RESULTADOS.md >> "$GITHUB_STEP_SUMMARY"
 
@@ -60,10 +59,11 @@ jobs:
             data/sem_site.csv
             RESULTADOS.md
 
-      # rodada de teste (com amostra) nao vai pro repositorio
+      # rodada de teste (com amostra) nao vai pro repositorio nem pro historico
       - name: Commit dos resultados
         if: ${{ !inputs.amostra }}
         run: |
+          farol arquivar data/resultados/latest.json --pasta data/historico
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/ RESULTADOS.md

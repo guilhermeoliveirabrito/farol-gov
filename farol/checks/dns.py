@@ -43,9 +43,10 @@ class ResolverDNS:
                 if tentativa + 1 < self._tentativas:
                     time.sleep(1.5)
                     continue
-                raise ErroDNS(f"{type(e).__name__}: {e}") from e
+                # a mensagem do dnspython lista cada servidor e cada tentativa; aqui basta o motivo
+                raise ErroDNS(f"{type(e).__name__}: o DNS de {nome} nao respondeu a tempo") from e
             except dns.exception.DNSException as e:
-                raise ErroDNS(f"{type(e).__name__}: {e}") from e
+                raise ErroDNS(f"{type(e).__name__}: {str(e)[:120]}") from e
 
     def txt(self, nome):
         resp = self._resolve(nome, "TXT")

@@ -43,6 +43,15 @@ def test_resumo_nacional():
     assert linha["media"] == 50.0
     assert linha["adocao"]["dmarc"] == 50.0
     assert linha["conceitos"]["A"] == 1 and linha["conceitos"]["F"] == 1
+    # ibge "1" e "2" nao tem UF valida, entao nao entram na media por estado
+    assert linha["ufs"] == {}
+
+
+def test_media_por_estado():
+    dados = {"gerado_em": "2026-11-16T00:00:00", "resultados": [_r("2611606", "pass"), _r("2611700", "fail"), _r("3550308", "pass")]}
+    snap = historico.compactar(dados)
+    linha = historico.resumo_nacional(snap, historico.avaliar_snapshot(snap))
+    assert linha["ufs"] == {"PE": 50.0, "SP": 100.0}
 
 
 def test_salvar_e_carregar(tmp_path):

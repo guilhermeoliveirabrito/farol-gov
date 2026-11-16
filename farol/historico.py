@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from .checks import Resultado
+from .dominios import uf_do_ibge
 from .nota import calcular_nota, conceito
 
 CODIGO = {"pass": "p", "warn": "w", "fail": "f", "error": "e"}
@@ -98,6 +99,9 @@ def resumo_nacional(snap, avaliacao):
     conceitos = {c: 0 for c in "ABCDF"}
     for i in ranqueados:
         conceitos[avaliacao[i][1]] += 1
+    por_uf = {}
+    for i in ranqueados:
+        por_uf.setdefault(uf_do_ibge(i), []).append(avaliacao[i][0])
     adocao = {}
     for j, c in enumerate(snap["checks"]):
         cumpre = sum(1 for i in ranqueados if snap["m"][i][1][j] == "p")
@@ -109,6 +113,7 @@ def resumo_nacional(snap, avaliacao):
         "media": round(sum(avaliacao[i][0] for i in ranqueados) / n, 1),
         "conceitos": conceitos,
         "adocao": adocao,
+        "ufs": {uf: round(sum(v) / len(v), 2) for uf, v in sorted(por_uf.items()) if uf},
     }
 
 

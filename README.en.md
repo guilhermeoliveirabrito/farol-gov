@@ -4,7 +4,7 @@
 
 [Versão em português](README.md)
 
-Every week, farol-gov checks whether the domains of Brazilian city halls, state governments and public agencies follow basic internet security standards: real HTTPS, modern TLS, DNSSEC and protection against spoofed email (SPF and DMARC). Results are published as open data and as a ranking by state and municipality.
+Every week, farol-gov checks whether the domains of Brazilian city halls, state governments and public agencies follow basic internet security standards: real HTTPS, modern TLS, DNSSEC and protection against spoofed email (SPF and DMARC). Results are published as open data, as a ranking by state and municipality, and as a weekly history showing which cities moved up or down.
 
 ## Checks
 
@@ -13,10 +13,14 @@ Every week, farol-gov checks whether the domains of Brazilian city halls, state 
 | `https` | Site answers over HTTPS with a valid certificate |
 | `redirect` | `http://` redirects to `https://` |
 | `tls` | Negotiated protocol is TLS 1.2 or 1.3 |
+| `tls_antigo` | Server refuses TLS 1.0 and 1.1 handshakes |
 | `hsts` | `Strict-Transport-Security` with max-age of at least one year |
 | `headers` | `X-Content-Type-Options` and clickjacking protection |
+| `conteudo_misto` | HTTPS home page loads nothing over `http://` |
+| `cookies` | Cookies set with `Secure` and `HttpOnly` |
 | `security_txt` | `/.well-known/security.txt` with a contact |
 | `dnssec` | DNS answers for the domain are DNSSEC-validated |
+| `caa` | CAA record restricting which CAs may issue certificates |
 | `spf` | SPF record that does not allow any sender |
 | `dmarc` | DMARC policy set to `quarantine` or `reject` |
 

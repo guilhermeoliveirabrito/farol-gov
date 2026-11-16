@@ -576,6 +576,25 @@ function carregarUf(uf) {
   return detalhesUf.get(uf);
 }
 
+// item "nao verificado" e falha da varredura, nao da prefeitura: explica em portugues
+// e deixa a mensagem tecnica escondida pra quem quiser conferir
+function explicarErro(detalhe) {
+  const tecnico = String(detalhe || "");
+  let texto = "Não deu para verificar nesta varredura. Esse item não conta na nota.";
+  if (/^(LifetimeTimeout|NoNameservers)/.test(tecnico)) {
+    texto = "O servidor de DNS da prefeitura não respondeu a tempo nesta varredura. Esse item não conta na nota.";
+  } else if (/^timeout/.test(tecnico)) {
+    texto = "O site não respondeu a tempo nesta varredura. Esse item não conta na nota.";
+  } else if (/nao resolve/.test(tecnico)) {
+    texto = "O domínio não foi encontrado no DNS.";
+  }
+  const partes = [texto];
+  if (tecnico) {
+    partes.push(el("details", { class: "tecnico" }, el("summary", { text: "detalhe técnico" }), el("code", { text: tecnico.slice(0, 200) })));
+  }
+  return partes;
+}
+
 function linkCorrigir(check) {
   return el("a", { href: `${REPO}/blob/main/docs/como-corrigir.md#${check}`, rel: "noopener", text: "como corrigir" });
 }
@@ -605,7 +624,7 @@ function listaSinais(r) {
       const st = statusSeguro(r.st[check]);
       const luz = el("span", { class: `luz ${st}`, "aria-hidden": "true" });
       luz.style.setProperty("--n", i);
-      const comparacao = estado && estado.n > 1 && estado[check] != null && st !== "na"
+      const comparacao = estado && estado.n > 1 && estado[check] != null && st !== "na" && st !== "error"
         ? el("div", { class: "compara", text: `${fmtPct(estado[check])} das cidades de ${r.uf} cumprem` })
         : null;
       return el(
@@ -742,9 +761,14 @@ function abrirFicha(r) {
       corpo.querySelectorAll(".sinais .info[data-check]").forEach((info) => {
         const check = info.dataset.check;
         const detalhe = String(extra.d[Object.keys(ITENS).indexOf(check)] ?? "");
+        const st = statusSeguro(r.st[check]);
         info.classList.remove("carregando");
+        if (st === "error") {
+          info.replaceChildren(...explicarErro(detalhe));
+          return;
+        }
         info.replaceChildren(detalhe);
-        if (statusSeguro(r.st[check]) !== "pass") info.append(detalhe ? ", " : "", linkCorrigir(check));
+        if (st !== "pass") info.append(detalhe ? ", " : "", linkCorrigir(check));
       });
       avisos.replaceChildren(...(extra.a || []).filter((a) => AVISOS[a]).map((a) => el("p", { class: "avisos", text: AVISOS[a] })));
       const hist = blocoHistorico(extra.h);

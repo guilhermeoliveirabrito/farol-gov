@@ -369,6 +369,9 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .sinais .estado.pass { color: var(--cA); } .sinais .estado.warn { color: #b8810f; } .sinais .estado.fail { color: var(--cF); } .sinais .estado.error, .sinais .estado.na { color: var(--suave); }
 .sinais .info { color: var(--suave); font-size: .92rem; overflow-wrap: anywhere; }
 .sinais .carregando { opacity: .5; }
+.sinais .tecnico { margin-top: 4px; font-size: .8rem; }
+.sinais .tecnico summary { cursor: pointer; width: fit-content; }
+.sinais .tecnico code { display: block; margin-top: 4px; padding: 6px 8px; border-radius: 6px; background: var(--dia); overflow-wrap: anywhere; font-size: .78rem; }
 
 .acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
 .acoes a, .acoes button {

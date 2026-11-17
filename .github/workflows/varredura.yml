@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       amostra:
-        description: "Varrer so N dominios aleatorios (vazio = todos)"
+        description: "Varrer so N dominios aleatorios (vazio = todos). Amostra nunca vai pro site."
         required: false
         default: ""
+      forcar:
+        description: "Publicar mesmo se a validacao reclamar (so se voce conferiu o resumo)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -21,7 +25,8 @@ concurrency:
 jobs:
   varredura:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    # a varredura tem prazo interno de 75 min + 10 de repescagem; isso aqui e so a rede de seguranca
+    timeout-minutes: 120
     permissions:
       contents: write
     steps:
@@ -50,6 +55,7 @@ jobs:
           cat RESULTADOS.md
           cat RESULTADOS.md >> "$GITHUB_STEP_SUMMARY"
 
+      # o artefato sobe mesmo se a validacao falhar, pra dar pra investigar
       - uses: actions/upload-artifact@v7
         with:
           name: resultados
@@ -58,6 +64,20 @@ jobs:
             data/revisar_wikidata.csv
             data/sem_site.csv
             RESULTADOS.md
+
+      # rodada ruim (runner bloqueado, prazo estourado) para aqui: o site e o historico
+      # continuam com a varredura anterior e o job fica vermelho com o motivo no resumo
+      - name: Validar
+        if: ${{ !inputs.amostra }}
+        env:
+          FORCAR: ${{ inputs.forcar }}
+        run: |
+          set +e
+          farol validar data/resultados/latest.json --historico data/historico > validacao.md
+          status=$?
+          cat validacao.md
+          cat validacao.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ] && [ "$FORCAR" != "true" ]; then exit 1; fi
 
       # rodada de teste (com amostra) nao vai pro repositorio nem pro historico
       - name: Commit dos resultados
@@ -74,9 +94,10 @@ jobs:
           git commit -m "data: varredura de $(date -u +%Y-%m-%d)"
           git push
 
-  # publica a pagina com o resultado desta rodada (inclusive amostra, que aparece com aviso)
+  # publica a pagina so com varredura completa e validada; amostra e so pra teste
   site:
     needs: varredura
+    if: ${{ !inputs.amostra }}
     uses: ./.github/workflows/pages.yml
     with:
       artefato: resultados

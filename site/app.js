@@ -1272,10 +1272,17 @@ const EXPLICA_RANKING = {
     "Por isso o primeiro daqui pode não ser o primeiro de verdade.",
 };
 
+// quando quase tudo foi verificado os dois rankings ficam parecidos; conta o quanto
+function diferencaRankings() {
+  const so = ranqueados.length - oficiais.length;
+  if (so <= 0) return " Nesta varredura todas as cidades com nota tiveram os itens verificados, então os dois rankings são iguais.";
+  return ` Nesta varredura ${num(so)} ${so === 1 ? "cidade ficou" : "cidades ficaram"} com item sem verificar e ${so === 1 ? "está" : "estão"} só no geral; o resto da lista é igual nos dois.`;
+}
+
 function trocarModo(modo) {
   modoRanking = modo;
   for (const b of document.querySelectorAll("#modo-ranking button")) b.setAttribute("aria-pressed", String(b.dataset.modo === modo));
-  $("explica-ranking").textContent = EXPLICA_RANKING[modo];
+  $("explica-ranking").textContent = EXPLICA_RANKING[modo] + diferencaRankings();
   aplicarFiltros();
 }
 
@@ -1483,7 +1490,7 @@ function podio(semana, porIbge, atual, ranking) {
           b.addEventListener("click", () => abrirFicha(r));
           return b;
         })
-      : [el("span", { class: "podio-vazio", text: tipo === "prata" ? "ninguém (empate no ouro)" : "ninguém (empate acima)" })];
+      : [el("span", { class: "podio-vazio", text: "ninguém" })];
     return el("li", { class: `degrau ${tipo} ${altura}` }, el("div", { class: "podio-nomes" }, ...nomes), el("div", { class: "bloco", title: titulo(tipo) }, icone(tipo, ranking), el("span", { text: NOME_MEDALHA[tipo] })));
   };
   // prata na esquerda, ouro no meio, bronze na direita, como num podio de verdade
@@ -1679,7 +1686,7 @@ async function iniciar() {
   $("baixar-csv").addEventListener("click", baixarCsv);
   $("mais").addEventListener("click", mostrarMais);
   for (const b of document.querySelectorAll("#modo-ranking button")) b.addEventListener("click", () => trocarModo(b.dataset.modo));
-  $("explica-ranking").textContent = EXPLICA_RANKING[modoRanking];
+  $("explica-ranking").textContent = EXPLICA_RANKING[modoRanking] + diferencaRankings();
   window.addEventListener("hashchange", abrirDoLink);
 
   const pedidoHistorico = buscarJson("dados/historico.json").catch(() => []);

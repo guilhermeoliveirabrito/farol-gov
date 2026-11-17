@@ -1,0 +1,45 @@
+name: coleta da lista de municipios
+
+# atualiza data/dominios.csv (site, coordenadas e populacao do Wikidata) sem rodar a
+# varredura inteira. a varredura semanal ja faz isso sozinha antes de varrer.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: dados
+  cancel-in-progress: false
+
+jobs:
+  coleta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -e .
+      - run: python scripts/coletar_dominios.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/dominios.csv data/sem_site.csv
+          if git diff --cached --quiet; then
+            echo "nada mudou"
+            exit 0
+          fi
+          git commit -m "data: lista de municipios atualizada"
+          for tentativa in 1 2 3 4 5; do
+            git pull --rebase origin main && git push && break
+            sleep $((tentativa * 5))
+          done
+      # a pagina nao roda sozinha com mudanca em data/, entao pede pra montar de novo
+      - name: Montar a pagina
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

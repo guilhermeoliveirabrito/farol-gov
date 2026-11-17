@@ -87,9 +87,10 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 - **Duas premiações:** a oficial (medalha cheia, com fita) só aceita quem teve todos os itens verificados naquela varredura. A geral (medalha vazada) aceita todo mundo com nota. Cada uma tem o seu pódio e o seu hall da fama, e as duas aparecem ao lado do nome da cidade.
 - **Pódio:** ouro, prata e bronze vão para as três maiores notas. Nota igual desempata, nesta ordem, por:
   1. mais itens cumpridos por inteiro (dois parciais somam o mesmo que um inteiro, mas valem menos aqui);
-  2. mais pontos de excelência: DMARC com `p=reject`, SPF com `-all`, TLS 1.3, HSTS com `includeSubDomains`, HSTS com `preload`, Content-Security-Policy e CAA no próprio domínio. Eles não mudam a nota, só desempatam;
-  3. melhor média de nota nas 4 semanas anteriores.
-  Se ainda empatar, a medalha é dividida, como nas Olimpíadas: dois empatados em 1º levam ouro e o seguinte já é 3º, com bronze. Quando o desempate decide uma medalha, o pódio mostra qual critério decidiu.
+  2. mais pontos de excelência, que não mudam a nota e só desempatam: DMARC com `p=reject`, DMARC mandando relatórios (`rua=`), SPF com `-all`, TLS 1.3, HSTS com `includeSubDomains`, HSTS com `preload`, HSTS de 2 anos ou mais, Content-Security-Policy, Referrer-Policy, Permissions-Policy e CAA no próprio domínio;
+  3. melhor média de nota nas 4 semanas anteriores;
+  4. maior população, ou seja, mais gente protegida. Esse critério existe porque várias prefeituras ficam no mesmo servidor, com a configuração idêntica, e nenhum critério técnico consegue separá-las.
+  Se ainda assim empatar, a medalha é dividida e o seguinte leva a próxima: dois ouros e uma prata, nunca um pódio só de ouro. Quando o desempate decide uma medalha, o pódio mostra qual critério decidiu.
 - **Semana em andamento:** o pódio da semana atual aparece como parcial até domingo, porque uma nova varredura ainda pode mudá-lo.
 - **Hall da fama:** ouro vale 10 pontos, prata 5 e bronze 2,5. Em empate de pontos, fica na frente quem tem mais ouros e depois quem tem mais pratas. Se tudo empatar, as cidades dividem a posição.
 - As notas de semanas antigas são recalculadas com as regras atuais, então as medalhas de semanas passadas também seguem a metodologia de hoje.

@@ -169,7 +169,15 @@
         <p class="contagem" id="contagem" aria-live="polite"></p>
         <button type="button" class="baixar" id="baixar-csv">Baixar CSV desta lista</button>
       </div>
-      <ul class="cidades" id="lista"></ul>
+      <p class="legenda-luzes" id="legenda-luzes" hidden></p>
+      <ul class="cidades" id="lista" aria-busy="true">
+        <li class="esqueleto"><span></span><span></span><span></span></li>
+        <li class="esqueleto"><span></span><span></span><span></span></li>
+        <li class="esqueleto"><span></span><span></span><span></span></li>
+        <li class="esqueleto"><span></span><span></span><span></span></li>
+        <li class="esqueleto"><span></span><span></span><span></span></li>
+        <li class="esqueleto"><span></span><span></span><span></span></li>
+      </ul>
       <button class="mais" id="mais" type="button" hidden>Mostrar mais cidades</button>
 
       <details class="explica">
@@ -181,6 +189,37 @@
           Detalhes na <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/metodologia.md" rel="noopener">metodologia</a>.
         </p>
       </details>
+    </section>
+
+    <section class="secao largura" id="como-funciona">
+      <div class="cabeca">
+        <h2>Como o farol funciona</h2>
+        <p>Toda segunda-feira de madrugada um robô no GitHub refaz a varredura inteira. Ninguém mexe nos números à mão.</p>
+      </div>
+      <ol class="passos">
+        <li>
+          <h3>Lista de prefeituras</h3>
+          <p>O endereço oficial de cada prefeitura vem do Wikidata, junto com o código do IBGE. Quem não tem site cadastrado fica de fora e aparece numa lista própria.</p>
+        </li>
+        <li>
+          <h3>Visita como um navegador</h3>
+          <p>O robô abre a página inicial, consulta o DNS e lê o que qualquer visitante veria. São 13 itens, todos públicos, sem login e sem formulário.</p>
+        </li>
+        <li>
+          <h3>Nota e histórico</h3>
+          <p>Os pontos viram uma nota de 0 a 100. O resultado do dia fica guardado no repositório, e é daí que saem as setas e os gráficos.</p>
+        </li>
+      </ol>
+      <div class="limites">
+        <h3>O que o farol não faz</h3>
+        <ul>
+          <li>Não procura falhas, não testa senhas e não envia nada aos formulários.</li>
+          <li>Não acessa área restrita nem dados de cidadãos.</li>
+          <li>Não faz mais que algumas conexões por servidor ao mesmo tempo.</li>
+          <li>Não diz que um site foi invadido. Nota baixa quer dizer proteção básica faltando.</li>
+        </ul>
+        <p><a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/etica.md" rel="noopener">Leia a política de ética</a> ou <a href="https://github.com/guilhermeoliveirabrito/farol-gov" rel="noopener">veja o código no GitHub</a>.</p>
+      </div>
     </section>
   </main>
 

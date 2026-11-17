@@ -271,6 +271,32 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 }
 .mais:hover { background: var(--tinta); color: var(--dia); }
 
+/* legenda das bolinhas e esqueleto enquanto o json chega */
+.legenda-luzes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0 0 12px; color: var(--suave); font-size: .84rem; }
+.legenda-luzes > span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda-luzes .luzes { display: inline-flex; }
+
+.esqueleto { display: grid; grid-template-columns: minmax(0, 1fr) 190px 64px; gap: 16px; padding: 18px 8px; border-bottom: 1px solid var(--linha); }
+.esqueleto span {
+  height: 14px; border-radius: 7px;
+  background: linear-gradient(90deg, var(--linha) 0 40%, var(--papel) 50%, var(--linha) 60% 100%) 0 0 / 300% 100%;
+  animation: brilho 1.4s linear infinite;
+}
+.esqueleto span:first-child { width: min(260px, 70%); }
+@keyframes brilho { to { background-position: -150% 0; } }
+
+/* como funciona */
+.passos { list-style: none; counter-reset: passo; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+.passos li { counter-increment: passo; border-top: 2px solid var(--tinta); padding-top: 18px; }
+.passos li::before { content: counter(passo); display: block; font-family: var(--titulo); font-weight: 800; font-size: 2.6rem; line-height: 1; margin-bottom: 14px; color: var(--cC); }
+.passos h3 { font-size: 1.2rem; margin: 0 0 8px; }
+.passos p { margin: 0; color: var(--suave); }
+.limites { margin-top: 56px; padding: 28px 32px; border-radius: 14px; background: var(--papel); max-width: 760px; }
+.limites h3 { font-size: 1.2rem; margin: 0 0 10px; }
+.limites ul { margin: 0 0 14px; padding-left: 1.2em; }
+.limites li { margin: 4px 0; }
+.limites p { margin: 0; font-size: .94rem; }
+
 .explica { margin-top: 32px; font-size: .94rem; color: var(--suave); max-width: 72ch; }
 .explica summary { cursor: pointer; font-weight: 600; color: var(--tinta); width: fit-content; }
 .explica p { margin: 8px 0 0; }
@@ -425,6 +451,11 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
   .mapa { height: 360px; }
   .linha { grid-template-columns: minmax(0, 1fr) 36px 52px 34px; gap: 10px; }
   .linha .uf, .linha .luzes { display: none; }
+  .legenda-luzes { display: none; }
+  .esqueleto { grid-template-columns: minmax(0, 1fr) 52px; }
+  .esqueleto span:nth-child(2) { display: none; }
+  .passos { grid-template-columns: 1fr; gap: 28px; }
+  .limites { padding: 22px; }
   .linha .situacao { grid-column: span 2; font-size: .8rem; }
   .linha .conceito { width: 32px; height: 32px; }
   #ficha-corpo { padding: 0 22px 32px; }

@@ -1075,7 +1075,14 @@ function distribuicao(ok) {
 // ---------- lista de cidades ----------
 
 function linhaCidade(r) {
-  const luzes = el("span", { class: "luzes", "aria-hidden": "true" }, ...Object.keys(ITENS).map((c) => el("i", { class: statusSeguro(r.st[c]) })));
+  const luzes = el(
+    "span",
+    { class: "luzes", "aria-hidden": "true" },
+    ...Object.keys(ITENS).map((c) => {
+      const st = statusSeguro(r.st[c]);
+      return el("i", { class: st, title: `${ITENS[c][0]}: ${STATUS[st]}` });
+    }),
+  );
   const botao = el(
     "button",
     { type: "button", class: "linha" },
@@ -1110,7 +1117,23 @@ function aplicarFiltros() {
   else if (ordem === "nome") filtrados.sort((a, b) => ordemAlfabetica(a.municipio, b.municipio));
   mostrando = 0;
   $("lista").replaceChildren();
+  $("lista").removeAttribute("aria-busy");
   mostrarMais();
+}
+
+// explica as bolinhas da lista uma vez so, em cima dela
+function legendaLuzes() {
+  const caixa = $("legenda-luzes");
+  const item = (st, texto) => el("span", {}, el("span", { class: "luzes", "aria-hidden": "true" }, el("i", { class: st })), texto);
+  caixa.replaceChildren(
+    el("span", { text: `Cada bolinha é um dos ${Object.keys(ITENS).length} itens, na ordem de cima:` }),
+    item("pass", "cumpre"),
+    item("warn", "parcial"),
+    item("fail", "não cumpre"),
+    item("error", "não verificado"),
+    item("na", "item novo"),
+  );
+  caixa.hidden = false;
 }
 
 function mostrarMais() {
@@ -1353,6 +1376,7 @@ async function iniciar() {
   const ufs = [...new Set(todos.map((r) => r.uf).filter(Boolean))].sort();
   $("filtro-uf").append(...ufs.map((uf) => el("option", { value: uf, text: uf })));
   aplicarFiltros();
+  legendaLuzes();
   distribuicao(ranqueados);
 
   let espera;

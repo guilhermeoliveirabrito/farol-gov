@@ -217,3 +217,20 @@ def test_tls_antigo_servidor_mudo_conta_como_recusa():
         assert ClienteHTTP(timeout=0.3).aceita_tls_antigo("127.0.0.1", srv.getsockname()[1]) is None
     finally:
         srv.close()
+
+
+def test_leitura_do_corpo_para_no_prazo():
+    import time
+
+    from farol.checks.web import _ler_com_prazo
+
+    class Gotejando:
+        # servidor que manda um byte de cada vez, pra sempre
+        def read1(self, n):
+            time.sleep(0.01)
+            return b"x"
+
+    inicio = time.monotonic()
+    corpo = _ler_com_prazo(Gotejando(), 512 * 1024, time.monotonic() + 0.1)
+    assert time.monotonic() - inicio < 0.3
+    assert 0 < len(corpo) < 100

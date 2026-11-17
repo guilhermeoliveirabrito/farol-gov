@@ -53,6 +53,19 @@ def _contexto(verificar):
     return ctx
 
 
+def _ler_com_prazo(resp, maximo, prazo):
+    """Le ate `maximo` bytes, mas para no prazo. O timeout do socket vale por leitura,
+    entao um servidor que manda poucos bytes por vez segurava a thread por minutos."""
+    blocos, falta = [], maximo
+    while falta > 0 and time.monotonic() < prazo:
+        bloco = resp.read1(min(65536, falta))
+        if not bloco:
+            break
+        blocos.append(bloco)
+        falta -= len(bloco)
+    return b"".join(blocos)
+
+
 class ClienteHTTP:
     def __init__(self, timeout=10.0, tentativas=2):
         self.timeout = timeout
@@ -105,7 +118,7 @@ class ClienteHTTP:
                 if k == "set-cookie":
                     cookies.append(v)
                 headers[k] = f"{headers[k]}, {v}" if k in headers else v
-            corpo = resp.read(ler) if ler else b""
+            corpo = _ler_com_prazo(resp, ler, time.monotonic() + self.timeout * 2) if ler else b""
             return Resposta(url=url, status=resp.status, headers=headers, corpo=corpo, tls=tls, cookies=cookies, expira=expira)
         except ssl.SSLCertVerificationError as e:
             raise ErroConexao("certificado", e.verify_message or str(e)) from e

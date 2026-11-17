@@ -166,6 +166,7 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
 
     pendentes = [e for e in ordem if e.ibge in resultados and erros_transitorios(resultados[e.ibge])]
     repescados = 0
+    sem_resposta = 0
     if pendentes:
         log.warning("repescagem: %d dominios com timeout, tentando de novo com mais calma", len(pendentes))
         # 2 por IP: com 1 so, um servidor com centenas de prefeituras virava fila de horas
@@ -174,6 +175,7 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
             if erros_transitorios(novo) < erros_transitorios(resultados[ibge]):
                 resultados[ibge] = novo
                 repescados += 1
+        sem_resposta = len(pendentes) - len(segunda)
 
     lista = sorted(resultados.values(), key=lambda r: r["ibge"])
     marcar_compartilhados(lista)
@@ -181,6 +183,6 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
         "gerado_em": datetime.now(UTC).isoformat(timespec="seconds"),
         "metodologia": METODOLOGIA,
         "total": len(lista),
-        "repescagem": {"tentados": len(pendentes), "recuperados": repescados},
+        "repescagem": {"tentados": len(pendentes), "recuperados": repescados, "fora_do_prazo": sem_resposta},
         "resultados": lista,
     }

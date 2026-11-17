@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 import random
 import sys
 from pathlib import Path
@@ -58,7 +59,7 @@ def cmd_scan(args):
     lento = ClienteHTTP(timeout=args.timeout * 2.5, tentativas=2)
     dados = varrer(entidades, ResolverDNS, cliente, workers=args.workers, progresso=progresso, cliente_lento=lento, por_ip=args.por_ip)
     rep = dados["repescagem"]
-    print(f"repescagem: {rep['recuperados']} de {rep['tentados']} recuperados", file=sys.stderr)
+    print(f"repescagem: {rep['recuperados']} de {rep['tentados']} recuperados, {rep['fora_do_prazo']} fora do prazo", file=sys.stderr)
     # a pagina mostra um aviso quando o resultado e so uma amostra
     dados["amostra"] = args.amostra or args.limite or None
 
@@ -66,6 +67,11 @@ def cmd_scan(args):
     saida.parent.mkdir(parents=True, exist_ok=True)
     saida.write_text(json.dumps(dados, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"salvo em {saida}", file=sys.stderr)
+    if dados["repescagem"].get("fora_do_prazo"):
+        # sobrou thread da repescagem presa em servidor lento; o resultado ja esta salvo,
+        # entao nao vale esperar o python juntar essas threads na saida
+        sys.stderr.flush()
+        os._exit(0)
     return 0
 
 

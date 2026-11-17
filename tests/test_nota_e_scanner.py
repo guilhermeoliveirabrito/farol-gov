@@ -162,7 +162,7 @@ def test_repescagem_recupera_quem_deu_timeout():
     instavel = ClienteInstavel({})
     dados = varrer([ent], lambda: resolver, instavel, workers=1, cliente_lento=cliente)
     r = dados["resultados"][0]
-    assert dados["repescagem"] == {"tentados": 1, "recuperados": 1}
+    assert dados["repescagem"] == {"tentados": 1, "recuperados": 1, "fora_do_prazo": 0}
     assert r["checks"]["https"]["status"] != "error"
     assert r["acessivel"]
 
@@ -185,7 +185,7 @@ def test_repescagem_respeita_o_prazo():
     dados = varrer([ent], lambda: resolver, ClienteInstavel({}), workers=1, cliente_lento=ClienteTravado(cliente.rotas), prazo_repescagem=0.1)
     assert time.monotonic() - inicio < 0.5
     # o resultado da primeira passada fica valendo
-    assert dados["repescagem"] == {"tentados": 1, "recuperados": 0}
+    assert dados["repescagem"] == {"tentados": 1, "recuperados": 0, "fora_do_prazo": 1}
     assert dados["resultados"][0]["checks"]["https"]["status"] == "error"
 
 

@@ -214,3 +214,78 @@ def test_limite_por_servidor():
     for t in threads:
         t.join()
     assert maximo[0] == 2
+
+
+class _ResolverPorIp(FakeResolver):
+    """lento-N.x.gov.br fica no IP 10.0.0.9, o resto cada um no seu IP."""
+
+    def endereco(self, nome):
+        ip = "10.0.0.9" if nome.startswith("lento") else f"10.1.{len(nome)}.{sum(map(ord, nome)) % 250}"
+        return True, False, [ip]
+
+
+class _ClienteMedido(FakeCliente):
+    """Responde 200 pra tudo, demora nos hosts 'lento' e mede quantos rodam juntos por servidor."""
+
+    def __init__(self, espera=0.05):
+        super().__init__({})
+        import threading
+
+        self.espera = espera
+        self.trava = threading.Lock()
+        self.ativos, self.maximo, self.terminou = {}, {}, {}
+
+    def get(self, url, verificar=True, ler=0):
+        import time
+
+        host = url.split("/")[2]
+        chave = "lento" if host.startswith("lento") else host
+        with self.trava:
+            self.ativos[chave] = self.ativos.get(chave, 0) + 1
+            self.maximo[chave] = max(self.maximo.get(chave, 0), self.ativos[chave])
+        try:
+            if chave == "lento":
+                time.sleep(self.espera)
+            return resp(url)
+        finally:
+            with self.trava:
+                self.ativos[chave] -= 1
+                self.terminou[host] = time.monotonic()
+
+
+def _entidades(lentos, rapidos):
+    ents = [Entidade(f"35{i:05d}", f"Lenta {i}", "SP", f"lento-{i}.sp.gov.br") for i in range(lentos)]
+    ents += [Entidade(f"31{i:05d}", f"Rapida {i}", "MG", f"rapida-{i}.mg.gov.br") for i in range(rapidos)]
+    return ents
+
+
+def test_servidor_lento_nao_trava_os_outros():
+    # 20 cidades no mesmo servidor lento e 20 em servidores normais, com 4 threads.
+    # antes as 4 threads ficavam presas esperando a vez do servidor lento
+    import time
+
+    cliente = _ClienteMedido(espera=0.03)
+    inicio = time.monotonic()
+    dados = varrer(_entidades(20, 20), _ResolverPorIp, cliente, workers=4, por_ip=2)
+
+    assert dados["total"] == 40
+    assert cliente.maximo["lento"] <= 2
+    fim_rapidas = max(t for h, t in cliente.terminou.items() if h.startswith("rapida"))
+    fim_lentas = max(t for h, t in cliente.terminou.items() if h.startswith("lento"))
+    # as rapidas terminam bem antes da fila do servidor lento acabar
+    assert fim_rapidas - inicio < 0.3 * (fim_lentas - inicio)
+
+
+def test_prazo_da_varredura_deixa_sem_nota_e_nao_some_com_ninguem():
+    cliente = _ClienteMedido(espera=0.2)
+    dados = varrer(_entidades(10, 3), _ResolverPorIp, cliente, workers=2, por_ip=1, prazo=0.3)
+
+    assert dados["total"] == 13  # ninguem some do resultado
+    assert dados["sem_visita_por_prazo"] > 0
+    assert dados["repescagem"]["tentados"] == 0  # sem tempo nao tem repescagem
+    sem_visita = [r for r in dados["resultados"] if r["checks"]["https"]["detalhe"].startswith("prazo")]
+    assert len(sem_visita) == dados["sem_visita_por_prazo"]
+    for r in sem_visita:
+        assert r["nota"] is None and "verificacao_incompleta" in r["avisos"]
+        # o dns foi feito mesmo assim
+        assert r["checks"]["spf"]["status"] != "error" or "prazo" not in r["checks"]["spf"]["detalhe"]

@@ -27,7 +27,7 @@ from pathlib import Path
 # roda direto do repositorio, sem precisar de pip install
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from farol import historico  # noqa: E402
+from farol import historico, medalhas  # noqa: E402
 from farol.nota import PESOS  # noqa: E402
 
 CHECKS = list(PESOS)
@@ -36,6 +36,22 @@ CODIGO = historico.CODIGO
 ACESSIVEL = 1
 RANKING = 2
 SEMANAS_POR_CIDADE = 12
+HALL_MAXIMO = 30
+
+
+def premios(tempo):
+    """Podio de cada semana, medalhas de cada cidade e o hall da fama, no formato da pagina."""
+    semanas = medalhas.podios(tempo)
+    por_cidade = defaultdict(list)
+    for i, s in enumerate(semanas):
+        for tipo in medalhas.TIPOS:
+            for ibge in s[tipo]:
+                por_cidade[ibge].append([i, tipo[0]])  # o, p, b
+    return {
+        "semanas": [{"s": s["semana"], "d": s["data"], "parcial": s["parcial"]} for s in semanas],
+        "cidades": dict(por_cidade),
+        "hall": medalhas.hall_da_fama(semanas)[:HALL_MAXIMO],
+    }
 
 
 def compacto(obj, caminho):
@@ -93,6 +109,7 @@ def resumir(dados, snapshots=()):
         "checks": CHECKS,
         "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var"],
         "municipios": linhas,
+        "premios": premios(tempo),
     }
     evolucao = [s for s in (historico.resumo_nacional(snap, aval) for _, snap, aval in tempo) if s]
     return resumo, por_uf, evolucao

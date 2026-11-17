@@ -384,3 +384,32 @@ def test_zona_que_nao_responde_nao_gasta_mais_consultas():
     prep = preparar(Entidade("3509502", "Cidade", "SP", "www.cidade.sp.gov.br"), resolver)
     assert resolver.consultas == [("A", "www.cidade.sp.gov.br")]
     assert all(r.status == "error" for r in prep.dns)
+
+
+def test_repescagem_do_dns_nao_refaz_a_visita():
+    from farol.checks.dns import ErroDNS
+
+    ent, _, cliente = _ambiente()
+
+    class Engasgado(FakeResolver):
+        # o primeiro TXT da cidade estoura o tempo, os seguintes respondem
+        falhou = []
+
+        def txt(self, nome):
+            if nome == "cidade.sp.gov.br" and not Engasgado.falhou:
+                Engasgado.falhou.append(nome)
+                raise ErroDNS("LifetimeTimeout: o DNS de cidade.sp.gov.br nao respondeu a tempo")
+            return super().txt(nome)
+
+    def novo():
+        return Engasgado(
+            txt={"cidade.sp.gov.br": ["v=spf1 mx -all"], "_dmarc.cidade.sp.gov.br": ["v=DMARC1; p=none"]},
+            enderecos={ent.dominio: (True, False)},
+        )
+
+    dados = varrer([ent], novo, cliente, workers=1)
+    r = dados["resultados"][0]
+    assert dados["repescagem"]["recuperados"] == 1
+    assert r["checks"]["spf"]["status"] == "pass"
+    # a home foi visitada uma vez so (https), sem repetir a visita inteira
+    assert cliente.chamadas.count((f"https://{ent.dominio}/", True)) == 1

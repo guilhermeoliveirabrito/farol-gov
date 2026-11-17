@@ -3,7 +3,7 @@ import random
 import threading
 import time
 from collections import Counter, defaultdict, deque
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -91,14 +91,14 @@ def preparar(entidade, resolver):
         avisos.append(FORA_GOV_BR)
 
     email = dominio_email(host)
-    if dnssec.status == ERROR and dnssec.detalhe.startswith(ERROS_TRANSITORIOS):
+    if existe and not ips and dnssec.status == ERROR and dnssec.detalhe.startswith(ERROS_TRANSITORIOS):
         # o DNS do dominio nem respondeu o endereco; as outras consultas vao pro mesmo
         # servidor e so iam gastar mais 1 minuto de timeouts. a repescagem tenta de novo
         dns = [dnssec, *(Resultado(nome, ERROR, dnssec.detalhe) for nome in ("caa", "spf", "dmarc"))]
     else:
         dns = [
             dnssec,
-            checks_dns.checar_caa(email, resolver),
+            checks_dns.checar_caa(email, resolver, zona_responde=existe and bool(ips)),
             checks_dns.checar_spf(email, resolver),
             checks_dns.checar_dmarc(email, resolver),
         ]
@@ -202,7 +202,7 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
     primeiras visitas passa a ser sondado antes; se a sondagem responder, a visita
     completa acontece normalmente.
     """
-    fim = time.monotonic() + prazo if prazo else None
+    fim = time.monotonic() + prazo if prazo is not None else None
     total = len(entidades)
     resultados = {}
 
@@ -230,8 +230,8 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
         return montar(prep, acessivel, web)
 
     # dnspython nao garante ser thread-safe, entao cada consulta cria o seu resolver.
-    # dns e leve e vai pros resolvers publicos, entao tem o dobro de threads
-    pool_dns = ThreadPoolExecutor(max_workers=workers * 2)
+    # mesmas 32 threads: com 64 os resolvers publicos comecaram a deixar consulta sem resposta
+    pool_dns = ThreadPoolExecutor(max_workers=workers)
     pool_web = ThreadPoolExecutor(max_workers=workers)
     pendentes = {pool_dns.submit(preparar, e, resolver_factory()): ("dns", e) for e in entidades}
 
@@ -300,6 +300,34 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
     return resultados, sem_prazo
 
 
+def _repescar_dns(entidades, resultados, resolver_factory, workers, prazo):
+    """Refaz so o DNS e junta com a parte web que ja tinha dado certo. Devolve quantos melhoraram."""
+    melhoraram = 0
+    pool = ThreadPoolExecutor(max_workers=workers)
+    futuros = {pool.submit(preparar, e, resolver_factory()): e for e in entidades}
+    try:
+        for fut in as_completed(futuros, timeout=prazo):
+            ent = futuros[fut]
+            antigo = resultados[ent.ibge]
+            try:
+                prep = fut.result()
+            except Exception:
+                log.exception("erro inesperado na repescagem do dns de %s", ent.dominio)
+                continue
+            if prep.host != antigo["dominio"]:
+                continue  # resolveu outro host (www ou sem www); melhor nao misturar
+            web = [Resultado(n, c["status"], c["detalhe"]) for n, c in antigo["checks"].items() if n not in CHECKS_DNS]
+            novo = montar(prep, antigo["acessivel"], web)
+            if erros_transitorios(novo) < erros_transitorios(antigo):
+                resultados[ent.ibge] = novo
+                melhoraram += 1
+    except TimeoutError:
+        log.warning("prazo da repescagem do dns acabou")
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+    return melhoraram
+
+
 def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3, prazo=75 * 60, prazo_repescagem=600, sondagem=None):
     """Roda avaliar() em paralelo, com uma repescagem no fim pra quem deu timeout.
 
@@ -315,20 +343,40 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
 
     resultados, sem_prazo = _rodar(ordem, resolver_factory, cliente, workers, por_ip, progresso, prazo=prazo, sondagem=sondagem)
 
-    # se a primeira passada ja estourou o prazo, nao tem tempo pra repescagem
-    pendentes = [] if sem_prazo else [e for e in ordem if e.ibge in resultados and erros_transitorios(resultados[e.ibge])]
+    # repescagem em duas partes:
+    # - so DNS: o site respondeu, mas alguma consulta DNS estourou o tempo. Refaz so o DNS,
+    #   que e rapido, e junta com a visita que ja foi feita
+    # - visita: deu timeout no site. Refaz tudo com mais paciencia
+    # quem ficou sem visita por prazo nao entra (o erro dele nao e transitorio)
+    so_dns, visita = [], []
+    for e in ordem:
+        r = resultados.get(e.ibge)
+        if r is None or not erros_transitorios(r):
+            continue
+        web_ok = not any(
+            c["status"] == ERROR and c["detalhe"].startswith(ERROS_TRANSITORIOS)
+            for nome, c in r["checks"].items() if nome not in CHECKS_DNS
+        )
+        (so_dns if web_ok and r["acessivel"] else visita).append(e)
+
     repescados = 0
     sem_resposta = 0
-    if pendentes:
-        log.warning("repescagem: %d dominios com timeout, tentando de novo com mais calma", len(pendentes))
+    fim_repescagem = time.monotonic() + prazo_repescagem
+    if so_dns:
+        log.warning("repescagem do dns: %d dominios", len(so_dns))
+        repescados += _repescar_dns(so_dns, resultados, resolver_factory, workers, prazo_repescagem / 2)
+    if visita:
+        log.warning("repescagem: %d dominios com timeout, tentando de novo com mais calma", len(visita))
         # 2 por IP: com 1 so, um servidor com centenas de prefeituras virava fila de horas
-        segunda, nao_visitados = _rodar(pendentes, resolver_factory, cliente_lento or cliente, max(2, workers // 4), 2, prazo=prazo_repescagem)
+        restante = max(0.0, fim_repescagem - time.monotonic())
+        segunda, nao_visitados = _rodar(visita, resolver_factory, cliente_lento or cliente, max(2, workers // 4), 2, prazo=restante)
         sem_resposta = len(nao_visitados)
         for ibge, novo in segunda.items():
             # quem ficou sem visita na repescagem mantem o resultado da primeira passada
             if ibge not in nao_visitados and erros_transitorios(novo) < erros_transitorios(resultados[ibge]):
                 resultados[ibge] = novo
                 repescados += 1
+    pendentes = so_dns + visita
 
     lista = sorted(resultados.values(), key=lambda r: r["ibge"])
     marcar_compartilhados(lista)

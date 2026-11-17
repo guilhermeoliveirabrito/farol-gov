@@ -104,3 +104,71 @@ def test_caa_ausente_e_nao_olha_o_tld():
 def test_caa_com_erro_de_dns():
     resolver = FakeResolver(quebrados={"cidade.sp.gov.br"})
     assert checar_caa("cidade.sp.gov.br", resolver).status == ERROR
+
+
+class _Registro:
+    def __init__(self, texto):
+        self.strings = [texto.encode()]
+        self.texto = texto
+
+    def to_text(self):
+        return self.texto
+
+
+class _Resposta:
+    def __init__(self, registros, ad=False):
+        import dns.flags
+
+        self.rrset = [_Registro(r) for r in registros]
+        self.response = type("R", (), {"flags": dns.flags.AD if ad else 0})()
+
+
+class _Fora:
+    def resolve(self, nome, tipo, raise_on_no_answer=False):
+        import dns.resolver
+
+        raise dns.resolver.LifetimeTimeout(timeout=6.0, errors={})
+
+
+class _Responde:
+    def __init__(self, dados):
+        self.dados = dados
+
+    def resolve(self, nome, tipo, raise_on_no_answer=False):
+        return _Resposta(self.dados.get((nome, tipo), []))
+
+
+def _resolver(publico, reserva):
+    from farol.checks.dns import ResolverDNS
+
+    r = ResolverDNS(reserva=False, tentativas=1)
+    r._r, r._reserva = publico, reserva
+    return r
+
+
+def test_resolver_do_sistema_cobre_quando_os_publicos_nao_respondem():
+    pytest.importorskip("dns.resolver")
+    r = _resolver(_Fora(), _Responde({("cidade.sp.gov.br", "TXT"): ["v=spf1 -all"]}))
+    assert r.txt("cidade.sp.gov.br") == ["v=spf1 -all"]
+
+
+def test_sem_os_publicos_o_dnssec_fica_nao_verificado_mas_o_site_segue():
+    pytest.importorskip("dns.resolver")
+    r = _resolver(_Fora(), _Responde({("www.cidade.sp.gov.br", "A"): ["10.0.0.1"]}))
+    existe, resultado, ips = checar_dnssec("www.cidade.sp.gov.br", r)
+    assert existe and ips == ["10.0.0.1"]
+    assert resultado.status == "error" and resultado.detalhe.startswith("LifetimeTimeout")
+
+
+def test_publico_respondendo_usa_a_flag_ad():
+    pytest.importorskip("dns.resolver")
+    r = _resolver(_Responde({}), None)
+    r._r.resolve = lambda nome, tipo, raise_on_no_answer=False: _Resposta(["10.0.0.1"], ad=True)
+    assert r.endereco("www.cidade.sp.gov.br") == (True, True, ["10.0.0.1"])
+
+
+def test_caa_sem_resposta_com_a_zona_funcionando_conta_como_sem_caa():
+    pytest.importorskip("dns.resolver")
+    r = _resolver(_Fora(), _Fora())
+    assert checar_caa("cidade.sp.gov.br", r, zona_responde=True).status == "fail"
+    assert checar_caa("cidade.sp.gov.br", r).status == "error"

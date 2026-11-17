@@ -79,6 +79,8 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 
 - **Uma fila por servidor.** Muitas prefeituras ficam no mesmo servidor de hospedagem. Primeiro o farol consulta o DNS de todas, depois visita os sites com no máximo 3 conexões simultâneas por servidor. Um servidor lento atrasa só as cidades dele, não a varredura inteira.
 - **Prazos.** Cada página tem um tempo máximo de leitura, a varredura tem 75 minutos e a repescagem de quem deu timeout tem mais 10. Se o prazo acaba antes de visitar algum site, aquela cidade fica sem nota só nesta rodada, com o aviso de verificação incompleta. Ela não some da lista.
+- **DNS com reserva.** As consultas vão primeiro para resolvers públicos que validam DNSSEC (Cloudflare, Google, Quad9). Se eles não respondem a tempo, a consulta vai para o resolver do próprio servidor da varredura. Nesse caso SPF, DMARC e CAA são verificados normalmente e só o DNSSEC fica como não verificado, porque esse resolver não valida assinaturas. No fim, quem ficou com algum item de DNS sem resposta tem só o DNS consultado de novo.
+- **CAA sem resposta.** Se o DNS da prefeitura responde o endereço do site mas não responde a consulta CAA (alguns servidores antigos ignoram tipos de registro que não conhecem), o item conta como não cumprido. Na prática as autoridades certificadoras também não conseguem ler a política.
 - **Validação antes de publicar.** Antes de ir para o histórico e para o site, a rodada é comparada com a anterior. Se muito menos sites responderam (menos de 90%), se mais de 8% ficaram com verificação incompleta ou se o prazo deixou mais de 2% sem visita, nada é publicado: o site continua com a varredura anterior e o motivo aparece no resumo do GitHub Actions.
 
 ## Detalhes técnicos

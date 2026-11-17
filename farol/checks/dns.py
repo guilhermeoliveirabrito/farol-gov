@@ -13,64 +13,91 @@ class ErroDNS(Exception):
 
 
 class ResolverDNS:
-    """Wrapper fino em cima do dnspython, pra facilitar trocar por um fake nos testes."""
+    """Wrapper fino em cima do dnspython, pra facilitar trocar por um fake nos testes.
 
-    def __init__(self, servidores=SERVIDORES_PADRAO, timeout=12.0, tentativas=2):
+    Consulta primeiro os resolvers publicos, que validam DNSSEC (flag AD). Se eles
+    nao respondem a tempo, cai pro resolver do proprio sistema (no GitHub Actions, o
+    da Azure). Na varredura de 16/11 e na de 17/11 centenas de consultas estouraram o
+    tempo nos resolvers publicos com o site da prefeitura funcionando normalmente, ou
+    seja, o problema era do caminho ate eles, nao do DNS da cidade.
+    O resolver do sistema nao valida DNSSEC, entao ele so serve pros dados (TXT, CAA,
+    endereco); quando so ele responde, o DNSSEC fica como nao verificado.
+    """
+
+    def __init__(self, servidores=SERVIDORES_PADRAO, timeout=6.0, tentativas=2, reserva=True):
         import dns.flags
         import dns.resolver
 
         self._r = dns.resolver.Resolver(configure=False)
         self._r.nameservers = list(servidores)
-        # cada servidor tem 3s pra responder; dentro do lifetime o dnspython vai trocando de servidor
-        self._r.timeout = 3.0
+        # cada servidor tem 2s pra responder; dentro do lifetime o dnspython vai trocando de servidor
+        self._r.timeout = 2.0
         self._r.lifetime = timeout
         self._r.rotate = True
         # DO=1 pede pro resolver validar e devolver a flag AD
         self._r.use_edns(0, dns.flags.DO, 1232)
         self._tentativas = tentativas
 
-    def _resolve(self, nome, tipo):
+        self._reserva = None
+        if reserva:
+            try:
+                self._reserva = dns.resolver.Resolver()  # le o /etc/resolv.conf
+                self._reserva.lifetime = timeout
+                self._reserva.use_edns(0, 0, 1232)
+            except Exception:  # sem resolv.conf (container minimo etc), segue so com os publicos
+                self._reserva = None
+
+    def _consulta(self, resolver, nome, tipo, tentativas):
         import dns.exception
         import dns.resolver
 
-        for tentativa in range(self._tentativas):
+        for tentativa in range(tentativas):
             try:
-                return self._r.resolve(nome, tipo, raise_on_no_answer=False)
+                return resolver.resolve(nome, tipo, raise_on_no_answer=False)
             except dns.resolver.NXDOMAIN:
                 return None
             except (dns.resolver.LifetimeTimeout, dns.resolver.NoNameservers) as e:
-                # servidor autoritativo lento ou resolver sobrecarregado: espera um pouco e tenta de novo
-                if tentativa + 1 < self._tentativas:
-                    time.sleep(1.5)
+                if tentativa + 1 < tentativas:
+                    time.sleep(1.0)
                     continue
                 # a mensagem do dnspython lista cada servidor e cada tentativa; aqui basta o motivo
                 raise ErroDNS(f"{type(e).__name__}: o DNS de {nome} nao respondeu a tempo") from e
             except dns.exception.DNSException as e:
                 raise ErroDNS(f"{type(e).__name__}: {str(e)[:120]}") from e
 
+    def _resolve(self, nome, tipo):
+        """Devolve (resposta, veio_do_publico)."""
+        try:
+            return self._consulta(self._r, nome, tipo, self._tentativas), True
+        except ErroDNS:
+            if self._reserva is None:
+                raise
+        return self._consulta(self._reserva, nome, tipo, 1), False
+
     def txt(self, nome):
-        resp = self._resolve(nome, "TXT")
+        resp, _ = self._resolve(nome, "TXT")
         if resp is None or resp.rrset is None:
             return []
         return [b"".join(r.strings).decode("utf-8", "replace") for r in resp.rrset]
 
     def endereco(self, nome):
-        """Retorna (existe, validado_dnssec, ips)."""
+        """Retorna (existe, validado_dnssec, ips). validado_dnssec e None quando so o
+        resolver do sistema respondeu (ele nao valida, entao nao da pra saber)."""
         import dns.flags
 
-        resp = self._resolve(nome, "A")
+        resp, publico = self._resolve(nome, "A")
         if resp is None:
             return False, False, []
         if resp.rrset is None:
             # sem A, tenta AAAA antes de dizer que nao existe
-            resp = self._resolve(nome, "AAAA")
+            resp, publico = self._resolve(nome, "AAAA")
             if resp is None or resp.rrset is None:
                 return False, False, []
         ips = sorted(r.to_text() for r in resp.rrset)
-        return True, bool(resp.response.flags & dns.flags.AD), ips
+        return True, (bool(resp.response.flags & dns.flags.AD) if publico else None), ips
 
     def caa(self, nome):
-        resp = self._resolve(nome, "CAA")
+        resp, _ = self._resolve(nome, "CAA")
         if resp is None or resp.rrset is None:
             return []
         return [r.to_text() for r in resp.rrset]
@@ -167,16 +194,23 @@ def checar_dnssec(host, resolver):
         return True, Resultado("dnssec", ERROR, str(e)), []
     if not existe:
         return False, Resultado("dnssec", ERROR, "dominio nao resolve"), []
+    if validado is None:
+        # o prefixo faz a repescagem tentar de novo nos resolvers que validam
+        return True, Resultado("dnssec", ERROR, "LifetimeTimeout: os resolvers que validam DNSSEC nao responderam a tempo"), ips
     if validado:
         return True, Resultado("dnssec", PASS, "resposta validada (AD)"), ips
     return True, Resultado("dnssec", FAIL, "dominio sem DNSSEC"), ips
 
 
-def checar_caa(dominio, resolver):
+def checar_caa(dominio, resolver, zona_responde=False):
     """CAA diz quais autoridades podem emitir certificado pro dominio.
 
     Pela RFC 8659 o registro vale pros subdominios, entao sobe a arvore ate achar
     (cidade.sp.gov.br -> sp.gov.br -> gov.br). Para antes do TLD.
+
+    zona_responde: o DNS do dominio ja respondeu o endereco. Ai, se so a consulta CAA
+    fica sem resposta, o problema e do servidor da prefeitura (tem servidor antigo que
+    simplesmente ignora tipos de registro que nao conhece) e conta como sem CAA.
     """
     partes = dominio.rstrip(".").split(".")
     try:
@@ -187,5 +221,7 @@ def checar_caa(dominio, resolver):
                 origem = "" if i == 0 else f" (herdado de {nome})"
                 return Resultado("caa", PASS, f"{len(registros)} registro(s) CAA{origem}")
     except ErroDNS as e:
+        if zona_responde:
+            return Resultado("caa", FAIL, f"o DNS de {nome} nao responde a consultas CAA")
         return Resultado("caa", ERROR, str(e))
     return Resultado("caa", FAIL, "qualquer autoridade pode emitir certificado para o dominio")

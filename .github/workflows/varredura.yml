@@ -92,7 +92,14 @@ jobs:
             exit 0
           fi
           git commit -m "data: varredura de $(date -u +%Y-%m-%d)"
-          git push
+          # a varredura leva quase uma hora e pode entrar commit de codigo no meio;
+          # os dados so mexem em data/ e RESULTADOS.md, entao o rebase nao conflita
+          for tentativa in 1 2 3 4 5; do
+            git pull --rebase origin main && git push && exit 0
+            echo "push recusado, tentando de novo ($tentativa)"
+            sleep $((tentativa * 5))
+          done
+          exit 1
 
   # publica a pagina so com varredura completa e validada; amostra e so pra teste
   site:

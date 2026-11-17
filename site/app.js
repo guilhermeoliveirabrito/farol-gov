@@ -57,8 +57,11 @@ const ordemAlfabetica = new Intl.Collator("pt-BR").compare;
 const reduzirMovimento = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let todos = [];
-let ranqueados = [];
+let ranqueados = []; // todo mundo com nota (ranking geral): base das medias e da adocao
+let oficiais = []; // todos os itens verificados: ranking oficial, setas e medalhas
 let totalRanking = 0;
+let totalGeral = 0;
+let modoRanking = "oficial";
 let filtrados = [];
 let mostrando = 0;
 
@@ -125,31 +128,37 @@ function nomeSemana(s) {
   return `semana de ${inicio} a ${dia(fim)}/${mes(fim)}/${fim.getFullYear()}`;
 }
 
-function icone(tipo) {
-  return el("i", { class: `med-icone ${tipo}`, "aria-hidden": "true" });
+// medalha cheia com fita = ranking oficial; medalha vazada = ranking geral
+const NOME_RANKING = { oficial: "ranking oficial", geral: "ranking geral" };
+
+function icone(tipo, ranking = "oficial") {
+  return el("i", { class: `med-icone ${tipo} ${ranking}`, "aria-hidden": "true" });
 }
 
-// "Ouro: semana de 16 a 22/11/2026 (em andamento)"
-function semanasDaMedalha(r, tipo) {
-  const desse = (r.medalhas || []).filter((m) => m.tipo === tipo);
-  return `${NOME_MEDALHA[tipo]}: ` + desse.map((m) => nomeSemana(m.semana) + (m.semana.parcial ? " (em andamento)" : "")).join("; ");
+// "Ouro no ranking oficial: semana de 16 a 22/11/2026 (em andamento)"
+function semanasDaMedalha(r, tipo, ranking) {
+  const desse = (r.medalhas || []).filter((m) => m.tipo === tipo && m.ranking === ranking);
+  return `${NOME_MEDALHA[tipo]} no ${NOME_RANKING[ranking]}: ` + desse.map((m) => nomeSemana(m.semana) + (m.semana.parcial ? " (em andamento)" : "")).join("; ");
 }
 
-// "ouro 2x" ao lado do nome; o title conta de quais semanas foi cada uma
+// "ouro 2x" ao lado do nome, primeiro as do oficial e depois as do geral;
+// o title conta de quais semanas foi cada uma
 function chipsMedalhas(r) {
   if (!r.medalhas?.length) return null;
   const caixa = el("span", { class: "medalhas" });
-  for (const tipo of ["ouro", "prata", "bronze"]) {
-    const desse = r.medalhas.filter((m) => m.tipo === tipo);
-    if (!desse.length) continue;
-    caixa.append(
-      el(
-        "span",
-        { class: `med ${tipo}`, title: semanasDaMedalha(r, tipo), "aria-label": `${desse.length} ${desse.length > 1 ? "medalhas" : "medalha"} de ${tipo}` },
-        icone(tipo),
-        el("span", { text: `${desse.length}x`, "aria-hidden": "true" }),
-      ),
-    );
+  for (const ranking of ["oficial", "geral"]) {
+    for (const tipo of ["ouro", "prata", "bronze"]) {
+      const n = r.medalhas.filter((m) => m.tipo === tipo && m.ranking === ranking).length;
+      if (!n) continue;
+      caixa.append(
+        el(
+          "span",
+          { class: `med ${tipo} ${ranking}`, title: semanasDaMedalha(r, tipo, ranking), "aria-label": `${n} ${n > 1 ? "medalhas" : "medalha"} de ${tipo} no ${NOME_RANKING[ranking]}` },
+          icone(tipo, ranking),
+          el("span", { text: `${n}x`, "aria-hidden": "true" }),
+        ),
+      );
+    }
   }
   return caixa;
 }
@@ -175,17 +184,25 @@ async function buscarJson(url) {
   return resp.json();
 }
 
-// medalhas: premios.semanas tem a data de cada semana e premios.cidades[ibge] = [[indice da semana, "o"|"p"|"b"]]
+// medalhas: premios.semanas tem a data de cada semana e premios[ranking].cidades[ibge] = [[indice da semana, "o"|"p"|"b"]]
 const MEDALHAS = { o: "ouro", p: "prata", b: "bronze" };
 const NOME_MEDALHA = { ouro: "Ouro", prata: "Prata", bronze: "Bronze" };
 let semanasPremio = [];
 
+function premiosDo(premios, ranking) {
+  // formato antigo (uma premiacao so) vira a oficial
+  if (premios && !premios.oficial && premios.cidades) return ranking === "oficial" ? premios : null;
+  return premios?.[ranking] || null;
+}
+
 function medalhasDe(premios, ibge) {
-  const lista = premios?.cidades?.[ibge];
-  if (!Array.isArray(lista)) return [];
-  return lista
-    .map(([i, t]) => ({ tipo: MEDALHAS[t], semana: semanasPremio[i] }))
-    .filter((m) => m.tipo && m.semana);
+  const saida = [];
+  for (const ranking of ["oficial", "geral"]) {
+    const lista = premiosDo(premios, ranking)?.cidades?.[ibge];
+    if (!Array.isArray(lista)) continue;
+    for (const [i, t] of lista) if (MEDALHAS[t] && semanasPremio[i]) saida.push({ tipo: MEDALHAS[t], semana: semanasPremio[i], ranking });
+  }
+  return saida;
 }
 
 function decodificar(resumo) {
@@ -207,10 +224,13 @@ function decodificar(resumo) {
       conceito: conceitoSeguro(l[idx.conceito]),
       acessivel: Boolean(l[idx.flags] & 1),
       ranking: Boolean(l[idx.flags] & 2),
+      oficial: Boolean(l[idx.flags] & 4),
       posBr: typeof l[idx.pos] === "number" ? l[idx.pos] : null,
+      posGeral: typeof l[idx.posg] === "number" ? l[idx.posg] : null,
       variacao: typeof l[idx.var] === "number" ? l[idx.var] : null,
       st,
       medalhas: medalhasDe(resumo.premios, String(l[idx.ibge])),
+      naoVerificados: Object.values(st).filter((v) => v === "error").length,
       _busca: semAcento(`${municipio} ${dominio}`),
       _nome: semAcento(municipio),
     };
@@ -774,7 +794,7 @@ function blocoHistorico(semanas) {
       {},
       el("td", { text: fmtData(data, { day: "2-digit", month: "2-digit", year: "numeric" }) }),
       el("td", { class: "num", text: typeof nota === "number" ? fmtNota(nota) : "sem nota" }),
-      el("td", { class: "num" }, pos != null ? `${num(pos)}º` : "fora do ranking", mudanca ? " " : null, mudanca),
+      el("td", { class: "num" }, pos != null ? `${num(pos)}º` : "fora", mudanca ? " " : null, mudanca),
     );
   });
   return el(
@@ -785,7 +805,7 @@ function blocoHistorico(semanas) {
     el(
       "table",
       {},
-      el("thead", {}, el("tr", {}, el("th", { text: "Varredura" }), el("th", { class: "num", text: "Nota" }), el("th", { class: "num", text: "Posição no Brasil" }))),
+      el("thead", {}, el("tr", {}, el("th", { text: "Varredura" }), el("th", { class: "num", text: "Nota" }), el("th", { class: "num", text: "Ranking oficial" }))),
       el("tbody", {}, ...linhas),
     ),
   );
@@ -857,7 +877,9 @@ function regua(r) {
 function blocoMedalhas(r) {
   if (!r.medalhas?.length) return null;
   const ordem = { ouro: 0, prata: 1, bronze: 2 };
-  const lista = [...r.medalhas].sort((a, b) => b.semana.s.localeCompare(a.semana.s) || ordem[a.tipo] - ordem[b.tipo]);
+  const lista = [...r.medalhas].sort(
+    (a, b) => (a.ranking === b.ranking ? 0 : a.ranking === "oficial" ? -1 : 1) || b.semana.s.localeCompare(a.semana.s) || ordem[a.tipo] - ordem[b.tipo],
+  );
   return el(
     "section",
     { class: "medalhas-cidade" },
@@ -866,7 +888,14 @@ function blocoMedalhas(r) {
       "ul",
       {},
       ...lista.map((m) =>
-        el("li", {}, icone(m.tipo), el("b", { text: NOME_MEDALHA[m.tipo] }), ` na ${nomeSemana(m.semana)}`, m.semana.parcial ? el("span", { class: "parcial", text: "em andamento" }) : null),
+        el(
+          "li",
+          {},
+          icone(m.tipo, m.ranking),
+          el("b", { text: NOME_MEDALHA[m.tipo] }),
+          ` no ${NOME_RANKING[m.ranking]}, ${nomeSemana(m.semana)}`,
+          m.semana.parcial ? el("span", { class: "parcial", text: "em andamento" }) : null,
+        ),
       ),
     ),
   );
@@ -876,15 +905,29 @@ function abrirFicha(r) {
   const dialogo = $("ficha");
   const corpo = $("ficha-corpo");
 
-  const posicoes = r.posBr != null
-    ? el(
-        "div",
-        { class: "posicoes" },
-        el("span", {}, el("b", { text: `${num(r.posBr)}º` }), ` de ${num(totalRanking)} no Brasil`),
-        el("span", {}, el("b", { text: `${r.pos}º` }), ` de ${r.totalUf} em ${r.uf}`),
-        seta(r, true),
-      )
-    : null;
+  let posicoes = null;
+  if (r.posBr != null) {
+    posicoes = el(
+      "div",
+      { class: "posicoes" },
+      el("span", {}, el("b", { text: `${num(r.posBr)}º` }), ` de ${num(totalRanking)} no ranking oficial`),
+      el("span", {}, el("b", { text: `${r.pos}º` }), ` de ${r.totalUf} em ${r.uf}`),
+      seta(r, true),
+    );
+  } else if (r.posGeral != null) {
+    const n = r.naoVerificados;
+    posicoes = el(
+      "div",
+      { class: "posicoes fora-oficial" },
+      el("span", {}, el("b", { text: `${num(r.posGeral)}º` }), ` de ${num(totalGeral)} no ranking geral`),
+      el(
+        "p",
+        { class: "aviso-oficial" },
+        `Fora do ranking oficial nesta semana: ${n} ${n === 1 ? "item não pôde ser verificado" : "itens não puderam ser verificados"}. ` +
+          "A nota foi calculada sem eles e pode estar acima da real.",
+      ),
+    );
+  }
 
   const placar = el(
     "div",
@@ -913,7 +956,7 @@ function abrirFicha(r) {
 
   const avisos = el("div");
   const historicoCaixa = el("div");
-  corpo.replaceChildren(
+  corpo.replaceChildren(...[
     el("h2", { id: "ficha-nome", text: r.municipio }),
     el("p", { class: "onde", text: `${r.uf}, ${r.dominio}` }),
     placar,
@@ -925,7 +968,7 @@ function abrirFicha(r) {
     historicoCaixa,
     acoes,
     blocoSelo(r),
-  );
+  ].filter(Boolean)); // replaceChildren escreveria "null" no lugar do que nao existe
 
   carregarUf(r.uf)
     .then((dados) => {
@@ -1183,6 +1226,10 @@ function distribuicao(ok) {
 
 // ---------- lista de cidades ----------
 
+function posicaoNoModo(r) {
+  return modoRanking === "oficial" ? r.posBr : r.posGeral;
+}
+
 function linhaCidade(r) {
   const luzes = el(
     "span",
@@ -1195,7 +1242,17 @@ function linhaCidade(r) {
   const botao = el(
     "button",
     { type: "button", class: "linha" },
-    el("span", { class: "nome" }, r.municipio || r.dominio, chipsMedalhas(r), el("span", { class: "dominio", text: r.dominio })),
+    el(
+      "span",
+      { class: "nome" },
+      posicaoNoModo(r) != null ? el("span", { class: "pos-lista", text: `${num(posicaoNoModo(r))}º` }) : null,
+      r.municipio || r.dominio,
+      chipsMedalhas(r),
+      modoRanking === "geral" && r.nota != null && !r.oficial && r.naoVerificados
+        ? el("span", { class: "incompleta", title: "A nota foi calculada sem os itens que não puderam ser verificados", text: `${r.naoVerificados} sem verificar` })
+        : null,
+      el("span", { class: "dominio", text: r.dominio }),
+    ),
     el("span", { class: "uf", text: r.uf }),
     ...(r.nota != null
       ? [luzes, el("span", { class: "nota", text: fmtNota(r.nota) }), el("span", { class: "mov" }, seta(r))]
@@ -1206,11 +1263,28 @@ function linhaCidade(r) {
   return el("li", {}, botao);
 }
 
+const EXPLICA_RANKING = {
+  oficial:
+    "Ranking oficial: só entram as prefeituras com os 13 itens verificados nesta varredura. É ele que vale para as posições, as setas e as medalhas.",
+  geral:
+    "Ranking geral: todas as prefeituras com nota, inclusive as que tiveram algum item sem resposta porque o servidor não respondeu a tempo. " +
+    "Item não verificado sai da conta, então a nota dessas cidades é calculada sobre menos itens e pode ficar acima da real. " +
+    "Por isso o primeiro daqui pode não ser o primeiro de verdade.",
+};
+
+function trocarModo(modo) {
+  modoRanking = modo;
+  for (const b of document.querySelectorAll("#modo-ranking button")) b.setAttribute("aria-pressed", String(b.dataset.modo === modo));
+  $("explica-ranking").textContent = EXPLICA_RANKING[modo];
+  aplicarFiltros();
+}
+
 function aplicarFiltros() {
   const termo = semAcento($("filtro").value.trim());
   const uf = $("filtro-uf").value;
   const conceito = $("filtro-conceito").value;
-  filtrados = todos.filter((r) => {
+  const base = modoRanking === "oficial" ? oficiais : todos;
+  filtrados = base.filter((r) => {
     if (uf && r.uf !== uf) return false;
     if (conceito === "-" && r.nota != null) return false;
     if (conceito && conceito !== "-" && r.conceito !== conceito) return false;
@@ -1251,7 +1325,7 @@ function mostrarMais() {
   mostrando += proximos.length;
   const criterio = { nota: "da maior nota para a menor", menor: "da menor nota para a maior", subiu: "das que mais subiram", caiu: "das que mais caíram", nome: "em ordem alfabética" }[$("ordem").value];
   $("contagem").textContent = filtrados.length
-    ? `${num(filtrados.length)} cidades, ${criterio}. Toque em uma para ver o detalhe.`
+    ? `${num(filtrados.length)} cidades no ranking ${modoRanking}, ${criterio}. Toque em uma para ver o detalhe.`
     : "Nenhuma cidade com esse filtro. Confira a grafia ou procure pelo domínio do site.";
   $("mais").hidden = mostrando >= filtrados.length;
 }
@@ -1399,66 +1473,100 @@ function movimento(resumo) {
 
 // ---------- medalhas: podio da semana e hall da fama ----------
 
-function podio(semana, porIbge, atual) {
+function podio(semana, porIbge, atual, ranking) {
+  const titulo = (tipo) => `${NOME_MEDALHA[tipo]} no ${NOME_RANKING[ranking]}, ${nomeSemana(semana)}`;
   const degrau = (tipo, altura) => {
     const cidades = semana[tipo].map((ibge) => porIbge.get(ibge)).filter(Boolean);
     const nomes = cidades.length
       ? cidades.map((r) => {
-          const b = el("button", { type: "button", class: "podio-cidade", title: `${NOME_MEDALHA[tipo]} na ${nomeSemana(semana)}` }, el("b", { text: r.municipio }), el("span", { text: atual ? `${r.uf}, nota ${fmtNota(r.nota)}` : r.uf }));
+          const b = el("button", { type: "button", class: "podio-cidade", title: titulo(tipo) }, el("b", { text: r.municipio }), el("span", { text: atual ? `${r.uf}, nota ${fmtNota(r.nota)}` : r.uf }));
           b.addEventListener("click", () => abrirFicha(r));
           return b;
         })
       : [el("span", { class: "podio-vazio", text: tipo === "prata" ? "ninguém (empate no ouro)" : "ninguém (empate acima)" })];
-    return el("li", { class: `degrau ${tipo} ${altura}` }, el("div", { class: "podio-nomes" }, ...nomes), el("div", { class: "bloco", title: `${NOME_MEDALHA[tipo]} na ${nomeSemana(semana)}` }, icone(tipo), el("span", { text: NOME_MEDALHA[tipo] })));
+    return el("li", { class: `degrau ${tipo} ${altura}` }, el("div", { class: "podio-nomes" }, ...nomes), el("div", { class: "bloco", title: titulo(tipo) }, icone(tipo, ranking), el("span", { text: NOME_MEDALHA[tipo] })));
   };
   // prata na esquerda, ouro no meio, bronze na direita, como num podio de verdade
   return el("ol", { class: "podio", "aria-label": "Pódio" }, degrau("prata", "medio"), degrau("ouro", "alto"), degrau("bronze", "baixo"));
 }
 
+const EXPLICA_PREMIO = {
+  oficial: "Premiação oficial (medalha cheia): só concorre quem teve os 13 itens verificados na semana.",
+  geral:
+    "Premiação geral (medalha vazada): concorre todo mundo com nota, inclusive quem teve item sem verificar. " +
+    "A nota dessas cidades é calculada sem os itens que faltaram, então o pódio geral pode premiar quem não teria ganho com tudo verificado.",
+};
+
 function medalhasSecao(resumo) {
   const premios = resumo.premios;
   if (!premios || !semanasPremio.length) return;
   const porIbge = new Map(todos.map((r) => [r.ibge, r]));
-  // monta o podio de cada semana a partir das medalhas de cada cidade
-  const semanas = semanasPremio.map((s) => ({ ...s, ouro: [], prata: [], bronze: [] }));
-  for (const [ibge, lista] of Object.entries(premios.cidades || {})) {
-    for (const [i, t] of lista) if (semanas[i] && MEDALHAS[t]) semanas[i][MEDALHAS[t]].push(ibge);
-  }
+  let ranking = "oficial";
+  let semanaAtual = semanasPremio.length - 1;
 
-  const escolha = $("semana-podio");
-  const legenda = $("podio-semana");
-  const mostrar = (i) => {
-    const s = semanas[i];
-    legenda.textContent = s.parcial
+  // monta o podio de cada semana a partir das medalhas de cada cidade
+  const semanasDe = (rk) => {
+    const dados = premiosDo(premios, rk) || {};
+    const semanas = semanasPremio.map((s, i) => ({ ...s, ouro: [], prata: [], bronze: [], x: (dados.x || [])[i] || s.x || {} }));
+    for (const [ibge, lista] of Object.entries(dados.cidades || {})) {
+      for (const [i, t] of lista) if (semanas[i] && MEDALHAS[t]) semanas[i][MEDALHAS[t]].push(ibge);
+    }
+    return semanas;
+  };
+  const porRanking = { oficial: semanasDe("oficial"), geral: semanasDe("geral") };
+
+  const mostrarPodio = () => {
+    const s = porRanking[ranking][semanaAtual];
+    $("podio-semana").textContent = s.parcial
       ? `Resultado parcial da ${nomeSemana(s)}: se houver outra varredura até domingo, o pódio pode mudar.`
       : `Resultado da ${nomeSemana(s)}, pela varredura de ${fmtData(s.d, { day: "numeric", month: "long" })}.`;
-    $("podio").replaceChildren(podio(s, porIbge, i === semanas.length - 1));
+    $("podio").replaceChildren(podio(s, porIbge, semanaAtual === semanasPremio.length - 1, ranking));
     const desempates = Object.entries(s.x || {}).filter(([t, c]) => NOME_MEDALHA[t] && typeof c === "string");
     $("podio-desempate").textContent = desempates.length
       ? "Nota empatada, decidido no desempate: " + desempates.map(([t, c]) => `${NOME_MEDALHA[t].toLowerCase()} por ${c}`).join("; ") + "."
       : "";
   };
-  escolha.replaceChildren(...semanas.map((s, i) => el("option", { value: i, text: nomeSemana(s).replace("semana de ", "") + (s.parcial ? " (em andamento)" : "") })).reverse());
-  escolha.value = String(semanas.length - 1);
-  escolha.addEventListener("change", () => mostrar(Number(escolha.value)));
-  mostrar(semanas.length - 1);
 
-  const hall = (premios.hall || []).map(([ibge, o, p, b, pontos, pos]) => ({ r: porIbge.get(String(ibge)), o, p, b, pontos, pos })).filter((h) => h.r);
-  const contagem = (r, tipo, n) => (n ? el("span", { class: `med ${tipo}`, title: semanasDaMedalha(r, tipo) }, icone(tipo), el("span", { text: `${n}x` })) : el("span", { "aria-hidden": "true" }));
-  $("hall").replaceChildren(
-    ...hall.map((h) => {
-      const b = el(
-        "button",
-        { type: "button", class: "hall-linha" },
-        el("span", { class: "hall-pos", text: `${h.pos}º` }),
-        el("span", { class: "hall-nome" }, h.r.municipio, el("span", { class: "uf", text: h.r.uf })),
-        el("span", { class: "hall-medalhas" }, contagem(h.r, "ouro", h.o), contagem(h.r, "prata", h.p), contagem(h.r, "bronze", h.b)),
-        el("span", { class: "hall-pontos", text: `${num(h.pontos)} pts` }),
-      );
-      b.addEventListener("click", () => abrirFicha(h.r));
-      return el("li", {}, b);
-    }),
-  );
+  const mostrarHall = () => {
+    const dados = premiosDo(premios, ranking) || {};
+    const hall = (dados.hall || []).map(([ibge, o, p, b, pontos, pos]) => ({ r: porIbge.get(String(ibge)), o, p, b, pontos, pos })).filter((h) => h.r);
+    const contagem = (r, tipo, n) =>
+      n ? el("span", { class: `med ${tipo}`, title: semanasDaMedalha(r, tipo, ranking) }, icone(tipo, ranking), el("span", { text: `${n}x` })) : el("span", { "aria-hidden": "true" });
+    $("hall-titulo").textContent = ranking === "oficial" ? "Hall da fama oficial" : "Hall da fama geral";
+    $("hall").replaceChildren(
+      ...hall.map((h) => {
+        const b = el(
+          "button",
+          { type: "button", class: "hall-linha" },
+          el("span", { class: "hall-pos", text: `${h.pos}º` }),
+          el("span", { class: "hall-nome" }, h.r.municipio, el("span", { class: "uf", text: h.r.uf })),
+          el("span", { class: "hall-medalhas" }, contagem(h.r, "ouro", h.o), contagem(h.r, "prata", h.p), contagem(h.r, "bronze", h.b)),
+          el("span", { class: "hall-pontos", text: `${num(h.pontos)} pts` }),
+        );
+        b.addEventListener("click", () => abrirFicha(h.r));
+        return el("li", {}, b);
+      }),
+    );
+    if (!hall.length) $("hall").replaceChildren(el("li", { class: "hall-vazio", text: "Nenhuma medalha ainda nesta premiação." }));
+  };
+
+  const escolha = $("semana-podio");
+  escolha.replaceChildren(...semanasPremio.map((s, i) => el("option", { value: i, text: nomeSemana(s).replace("semana de ", "") + (s.parcial ? " (em andamento)" : "") })).reverse());
+  escolha.value = String(semanaAtual);
+  escolha.addEventListener("change", () => {
+    semanaAtual = Number(escolha.value);
+    mostrarPodio();
+  });
+
+  const trocar = (rk) => {
+    ranking = rk;
+    for (const b of document.querySelectorAll("#modo-premio button")) b.setAttribute("aria-pressed", String(b.dataset.modo === rk));
+    $("explica-premio").textContent = EXPLICA_PREMIO[rk];
+    mostrarPodio();
+    mostrarHall();
+  };
+  for (const b of document.querySelectorAll("#modo-premio button")) b.addEventListener("click", () => trocar(b.dataset.modo));
+  trocar("oficial");
   $("medalhas").hidden = false;
 }
 
@@ -1531,13 +1639,20 @@ async function iniciar() {
 
   todos = decodificar(resumo).sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1) || ordemAlfabetica(a.municipio, b.municipio));
   ranqueados = todos.filter((r) => r.acessivel && r.ranking);
-  totalRanking = resumo.ranqueados || ranqueados.length;
+  oficiais = todos.filter((r) => r.acessivel && r.oficial);
+  // resumo antigo (antes do ranking oficial) nao tem o campo: trata todo mundo como oficial
+  if (!resumo.campos.includes("posg")) {
+    for (const r of ranqueados) Object.assign(r, { oficial: true, posGeral: r.posBr });
+    oficiais = ranqueados;
+  }
+  totalRanking = resumo.oficiais || oficiais.length;
+  totalGeral = resumo.ranqueados || ranqueados.length;
   calcularPorEstado(ranqueados);
 
   // posicao de cada cidade dentro do proprio estado (todos ja esta ordenado por nota)
   const porUf = {};
-  for (const r of ranqueados) r.pos = porUf[r.uf] = (porUf[r.uf] || 0) + 1;
-  for (const r of ranqueados) r.totalUf = porUf[r.uf];
+  for (const r of oficiais) r.pos = porUf[r.uf] = (porUf[r.uf] || 0) + 1;
+  for (const r of oficiais) r.totalUf = porUf[r.uf];
 
   cabecalho(resumo);
   iniciarBusca();
@@ -1563,6 +1678,8 @@ async function iniciar() {
   $("ordem").addEventListener("change", aplicarFiltros);
   $("baixar-csv").addEventListener("click", baixarCsv);
   $("mais").addEventListener("click", mostrarMais);
+  for (const b of document.querySelectorAll("#modo-ranking button")) b.addEventListener("click", () => trocarModo(b.dataset.modo));
+  $("explica-ranking").textContent = EXPLICA_RANKING[modoRanking];
   window.addEventListener("hashchange", abrirDoLink);
 
   const pedidoHistorico = buscarJson("dados/historico.json").catch(() => []);

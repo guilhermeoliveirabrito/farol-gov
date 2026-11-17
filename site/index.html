@@ -112,8 +112,13 @@
     <section class="secao largura" id="medalhas" hidden>
       <div class="cabeca">
         <h2>Pódio da semana</h2>
-        <p>Toda semana as três prefeituras com a maior nota levam ouro, prata e bronze. Só concorre quem teve os 13 itens verificados, e vale a última varredura de cada semana.</p>
+        <p>Toda semana as três prefeituras com a maior nota levam ouro, prata e bronze, em duas premiações: a oficial e a geral. Vale a última varredura de cada semana.</p>
       </div>
+      <div class="modo-ranking" id="modo-premio" role="group" aria-label="Qual premiação mostrar">
+        <button type="button" data-modo="oficial" aria-pressed="true"><i class="med-icone ouro oficial" aria-hidden="true"></i> Oficial</button>
+        <button type="button" data-modo="geral" aria-pressed="false"><i class="med-icone ouro geral" aria-hidden="true"></i> Geral</button>
+      </div>
+      <p class="explica-ranking" id="explica-premio" aria-live="polite"></p>
       <div class="podio-topo">
         <p id="podio-semana" class="podio-legenda"></p>
         <label class="podio-escolha">
@@ -125,7 +130,7 @@
       <p class="podio-desempate" id="podio-desempate"></p>
 
       <div class="hall-caixa">
-        <h3>Hall da fama</h3>
+        <h3 id="hall-titulo">Hall da fama</h3>
         <p>Ouro vale 10 pontos, prata 5 e bronze 2,5. Em empate de pontos, ganha quem tem mais ouros, depois mais pratas. Se ainda empatar, divide a posição.</p>
         <ol class="hall" id="hall"></ol>
       </div>
@@ -167,6 +172,12 @@
           <ul class="dist-legenda" id="dist-legenda"></ul>
         </div>
       </div>
+
+      <div class="modo-ranking" id="modo-ranking" role="group" aria-label="Qual ranking mostrar">
+        <button type="button" data-modo="oficial" aria-pressed="true">Ranking oficial</button>
+        <button type="button" data-modo="geral" aria-pressed="false">Ranking geral</button>
+      </div>
+      <p class="explica-ranking" id="explica-ranking" aria-live="polite"></p>
 
       <div class="filtros" role="search">
         <label class="filtro-texto">

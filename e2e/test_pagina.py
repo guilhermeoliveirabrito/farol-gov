@@ -67,7 +67,7 @@ def test_carrega_sem_erros(pagina):
 
 
 def test_busca_abre_a_ficha(pagina):
-    primeira = pagina.locator("#lista .linha .nome").first.evaluate("n => n.firstChild.textContent")
+    primeira = pagina.locator("#lista .linha .nome").first.evaluate("n => [...n.childNodes].find((c) => c.nodeType === 3).textContent")
     pagina.fill("#busca", primeira[:5])
     pagina.wait_for_selector("#sugestoes li")
     pagina.keyboard.press("Enter")
@@ -106,4 +106,14 @@ def test_medalhas_e_hall_da_fama(pagina):
     if opcoes.count() > 1:
         pagina.select_option("#semana-podio", opcoes.last.get_attribute("value"))
         assert pagina.locator("#podio .degrau").count() == 3
+    assert pagina.erros == []
+
+
+def test_ranking_oficial_e_geral(pagina):
+    assert pagina.get_attribute("#modo-ranking button[data-modo=oficial]", "aria-pressed") == "true"
+    oficial = pagina.locator("#contagem").inner_text()
+    pagina.click("#modo-ranking button[data-modo=geral]")
+    assert pagina.get_attribute("#modo-ranking button[data-modo=geral]", "aria-pressed") == "true"
+    assert "geral" in pagina.locator("#explica-ranking").inner_text()
+    assert pagina.locator("#contagem").inner_text() != oficial
     assert pagina.erros == []

@@ -75,6 +75,12 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 - **Variação**: diferença de posição em relação à varredura anterior. Como as notas têm poucos valores possíveis, muitas cidades empatam, e uma mudança pequena de nota pode mover uma cidade centenas de posições.
 - **Histórico**: cada varredura completa é guardada em `data/historico/AAAA-MM-DD.json`, só com o status de cada item. **As notas das semanas antigas são recalculadas com as regras atuais**, para que a comparação faça sentido. Um item novo só entra na conta a partir da semana em que começou a ser verificado. No gráfico da página, a semana em que a metodologia mudou aparece marcada.
 
+## Como a varredura se protege de uma rodada ruim
+
+- **Uma fila por servidor.** Muitas prefeituras ficam no mesmo servidor de hospedagem. Primeiro o farol consulta o DNS de todas, depois visita os sites com no máximo 3 conexões simultâneas por servidor. Um servidor lento atrasa só as cidades dele, não a varredura inteira.
+- **Prazos.** Cada página tem um tempo máximo de leitura, a varredura tem 75 minutos e a repescagem de quem deu timeout tem mais 10. Se o prazo acaba antes de visitar algum site, aquela cidade fica sem nota só nesta rodada, com o aviso de verificação incompleta. Ela não some da lista.
+- **Validação antes de publicar.** Antes de ir para o histórico e para o site, a rodada é comparada com a anterior. Se muito menos sites responderam (menos de 90%), se mais de 8% ficaram com verificação incompleta ou se o prazo deixou mais de 2% sem visita, nada é publicado: o site continua com a varredura anterior e o motivo aparece no resumo do GitHub Actions.
+
 ## Detalhes técnicos
 
 - **DNS**: consultas em cinco resolvers públicos que validam DNSSEC (Cloudflare, Google e Quad9), com rodízio entre eles, 3 segundos por servidor, até 12 segundos por consulta e uma nova tentativa quando dá timeout. O DNSSEC é considerado válido quando a resposta para o registro `A` vem com a flag AD.

@@ -151,3 +151,24 @@ def test_selos_gerados_no_build(tmp_path):
     (tmp_path / "data" / "resultados" / "latest.json").write_text(json.dumps({"gerado_em": "x", "total": 1, "resultados": [_resultado("2611606", "PE")]}))
     montar_site.montar(tmp_path, tmp_path / "_site")
     assert "A · 100/100" in (tmp_path / "_site" / "selos" / "2611606.svg").read_text(encoding="utf-8")
+
+
+def test_json_ld_e_sitemap(tmp_path):
+    (tmp_path / "site").mkdir()
+    (tmp_path / "site" / "index.html").write_text("<!doctype html><head></head>")
+    (tmp_path / "data" / "resultados").mkdir(parents=True)
+    dados = {"gerado_em": "2026-11-17T06:00:00+00:00", "total": 1, "resultados": [_resultado("2611606", "PE")]}
+    (tmp_path / "data" / "resultados" / "latest.json").write_text(json.dumps(dados))
+    montar_site.montar(tmp_path, tmp_path / "_site")
+
+    html = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
+    inicio = html.index('<script type="application/ld+json">') + len('<script type="application/ld+json">')
+    ld = json.loads(html[inicio:html.index("</script>", inicio)])
+    assert ld["@type"] == "Dataset"
+    assert ld["dateModified"] == "2026-11-17T06:00:00+00:00"
+    assert "<lastmod>2026-11-17</lastmod>" in (tmp_path / "_site" / "sitemap.xml").read_text(encoding="utf-8")
+
+
+def test_json_ld_nao_fecha_a_tag_script():
+    tag = montar_site.json_ld({"total": 1, "gerado_em": "</script><script>alert(1)"})
+    assert tag.count("</script>") == 1

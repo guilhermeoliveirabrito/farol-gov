@@ -170,6 +170,49 @@ def gerar_selos(resumo, pasta):
         (pasta / f"{m[campo['ibge']]}.svg").write_text(selo_svg(nota, m[campo["conceito"]]), encoding="utf-8")
 
 
+URL = "https://guilhermeoliveirabrito.github.io/farol-gov/"
+
+
+def json_ld(resumo):
+    """Descricao do dataset no formato schema.org, pro Google Dataset Search achar."""
+    dados = {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "farol-gov: segurança dos sites e e-mails das prefeituras brasileiras",
+        "description": (
+            "Verificação semanal e passiva de HTTPS, TLS, HSTS, headers, DNSSEC, CAA, SPF e DMARC "
+            f"nos sites de {resumo['total']} prefeituras brasileiras, com nota de 0 a 100 e histórico."
+        ),
+        "url": URL,
+        "inLanguage": "pt-BR",
+        "isAccessibleForFree": True,
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "creator": {"@type": "Person", "name": "Guilherme Oliveira de Brito Silva"},
+        "spatialCoverage": {"@type": "Place", "name": "Brasil"},
+        "keywords": ["segurança da informação", "prefeituras", "governo eletrônico", "DMARC", "HTTPS", "DNSSEC"],
+        "distribution": [
+            {"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": URL + "dados/latest.json"},
+            {"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": URL + "dados/historico.json"},
+        ],
+    }
+    if resumo.get("gerado_em"):
+        dados["dateModified"] = resumo["gerado_em"]
+    # "</" dentro do json fecharia a tag script antes da hora
+    texto = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    return f'<script type="application/ld+json">{texto}</script>'
+
+
+def sitemap(resumo):
+    data = (resumo.get("gerado_em") or "")[:10]
+    lastmod = f"<lastmod>{data}</lastmod>" if data else ""
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"  <url><loc>{URL}</loc>{lastmod}<changefreq>weekly</changefreq></url>\n"
+        "</urlset>\n"
+    )
+
+
 def carimbar(saida, versao_dados):
     """Cache-busting: o GitHub Pages guarda arquivos por 10 minutos, entao cada versao
     nova de app.js/estilo.css ganha um ?v=<hash> e os dados ganham a data da varredura."""
@@ -216,7 +259,9 @@ def montar(raiz, saida):
             if frase:
                 html = html.replace(PERGUNTA, f'<h1 id="manchete">{frase}</h1>')
             html = html.replace(TOTAL, f'<strong id="n-total">{numero_br(resumo["total"])}</strong>')
+            html = html.replace("</head>", f"  {json_ld(resumo)}\n</head>", 1)
             index.write_text(html, encoding="utf-8")
+        (saida / "sitemap.xml").write_text(sitemap(resumo), encoding="utf-8")
         print(f"{len(resumo['municipios'])} municipios no resumo, {len(evolucao)} semanas no historico")
     else:
         print("sem resultados ainda, a pagina vai mostrar aviso")

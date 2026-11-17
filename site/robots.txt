@@ -1,0 +1,6 @@
+# no github pages de projeto esse arquivo fica em /farol-gov/, entao vale mais
+# pra informar o sitemap no Search Console do que pros robos em si
+User-agent: *
+Allow: /
+
+Sitemap: https://guilhermeoliveirabrito.github.io/farol-gov/sitemap.xml

@@ -271,6 +271,8 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 }
 .mais:hover { background: var(--tinta); color: var(--dia); }
 
+.sem-js { padding-block: 20px; font-size: .95rem; }
+
 /* legenda das bolinhas e esqueleto enquanto o json chega */
 .legenda-luzes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0 0 12px; color: var(--suave); font-size: .84rem; }
 .legenda-luzes > span { display: inline-flex; align-items: center; gap: 6px; }

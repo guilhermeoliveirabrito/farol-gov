@@ -234,3 +234,18 @@ def test_leitura_do_corpo_para_no_prazo():
     corpo = _ler_com_prazo(Gotejando(), 512 * 1024, time.monotonic() + 0.1)
     assert time.monotonic() - inicio < 0.3
     assert 0 < len(corpo) < 100
+
+
+def test_site_fora_do_ar_nao_tenta_a_home_tres_vezes():
+    from tests.fakes import FakeCliente
+
+    class Morto(FakeCliente):
+        def get(self, url, verificar=True, ler=0):
+            self.chamadas.append(url)
+            raise ErroConexao("timeout")
+
+    cliente = Morto({})
+    acessivel, resultados = checar_web("www.morto.sp.gov.br", cliente)
+    assert not acessivel
+    assert len(cliente.chamadas) == 2  # uma no https, uma no http
+    assert {r.check for r in resultados} >= {"headers", "conteudo_misto", "cookies"}

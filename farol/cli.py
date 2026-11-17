@@ -56,9 +56,12 @@ def cmd_scan(args):
             print(f"  {i}/{total}", file=sys.stderr)
 
     cliente = ClienteHTTP(timeout=args.timeout)
-    # repescagem com o dobro de paciencia
-    lento = ClienteHTTP(timeout=args.timeout * 2.5, tentativas=2)
-    dados = varrer(entidades, ResolverDNS, cliente, workers=args.workers, progresso=progresso, cliente_lento=lento, por_ip=args.por_ip, prazo=args.prazo * 60)
+    # repescagem com mais paciencia, mas uma tentativa so: com duas, um site fora do ar
+    # gastava mais de 2 minutos e quase nenhum voltava (2 de 36 na amostra de 17/11)
+    lento = ClienteHTTP(timeout=args.timeout * 1.5, tentativas=1)
+    # sondagem rapida pra servidor que nao respondeu as primeiras visitas
+    sondagem = ClienteHTTP(timeout=5, tentativas=1)
+    dados = varrer(entidades, ResolverDNS, cliente, workers=args.workers, progresso=progresso, cliente_lento=lento, por_ip=args.por_ip, prazo=args.prazo * 60, sondagem=sondagem)
     rep = dados["repescagem"]
     print(f"repescagem: {rep['recuperados']} de {rep['tentados']} recuperados, {rep['fora_do_prazo']} fora do prazo", file=sys.stderr)
     if dados["sem_visita_por_prazo"]:

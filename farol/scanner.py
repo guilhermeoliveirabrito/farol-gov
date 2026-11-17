@@ -167,7 +167,13 @@ def marcar_compartilhados(resultados):
             r["ranking"] = False
 
 
-def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None, prazo=None):
+# depois de tantas visitas seguidas sem resposta nenhuma, o servidor so recebe uma
+# sondagem rapida antes de cada visita completa (muito provedor bloqueia IP de fora do
+# Brasil, e cada site desses levava um minuto inteiro de timeouts)
+FALHAS_PARA_SONDAR = 3
+
+
+def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None, prazo=None, sondagem=None):
     """Avalia em duas fases e devolve (resultados, ibges que ficaram sem visita por prazo).
 
     1. DNS de todo mundo, em paralelo (rapido, vai nos resolvers publicos).
@@ -179,6 +185,9 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
     a uma esperando a vez dele e a varredura inteira se arrastava.
 
     Com `prazo` (segundos), quem nao foi visitado a tempo sai sem nota nesta rodada.
+    Com `sondagem` (um cliente com timeout curto), servidor que nao respondeu as
+    primeiras visitas passa a ser sondado antes; se a sondagem responder, a visita
+    completa acontece normalmente.
     """
     fim = time.monotonic() + prazo if prazo else None
     restante = lambda: None if fim is None else max(0.0, fim - time.monotonic())  # noqa: E731
@@ -214,9 +223,14 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
         else:
             filas[prep.servidor].append(prep)
 
-    def tarefa(prep):
+    # servidor -> [visitas seguidas sem resposta, ja respondeu alguma vez]
+    estado = defaultdict(lambda: [0, False])
+
+    def tarefa(prep, sondar):
         inicio = time.monotonic()
-        acessivel, web = visitar(prep, cliente)
+        acessivel, web = visitar(prep, sondagem) if sondar else (False, None)
+        if not sondar or acessivel:
+            acessivel, web = visitar(prep, cliente)
         gasto = time.monotonic() - inicio
         if gasto > 90:
             log.warning("lento: %s (%s) levou %.0fs", prep.host, prep.servidor, gasto)
@@ -229,7 +243,9 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
 
     def mandar(ip):
         prep = filas[ip].popleft()
-        andando[pool.submit(tarefa, prep)] = prep
+        falhas, ja_respondeu = estado[ip]
+        sondar = sondagem is not None and not ja_respondeu and falhas >= FALHAS_PARA_SONDAR
+        andando[pool.submit(tarefa, prep, sondar)] = prep
 
     for _ in range(por_ip):
         for ip in list(filas):
@@ -246,6 +262,11 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
                 prep = andando.pop(fut)
                 try:
                     resultados[prep.entidade.ibge] = fut.result()
+                    marca = estado[prep.servidor]
+                    if resultados[prep.entidade.ibge]["acessivel"]:
+                        marca[:] = [0, True]
+                    else:
+                        marca[0] += 1
                 except Exception:
                     log.exception("erro inesperado em %s", prep.host)
                     resultados[prep.entidade.ibge] = montar(prep, *com_erro(prep, "erro inesperado na verificacao"))
@@ -264,7 +285,7 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
     return resultados, sem_prazo
 
 
-def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3, prazo=75 * 60, prazo_repescagem=600):
+def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3, prazo=75 * 60, prazo_repescagem=600, sondagem=None):
     """Roda avaliar() em paralelo, com uma repescagem no fim pra quem deu timeout.
 
     resolver_factory cria um resolver por tarefa. cliente_lento (timeout maior) e usado
@@ -277,7 +298,7 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
     ordem = list(entidades)
     random.Random(0).shuffle(ordem)
 
-    resultados, sem_prazo = _rodar(ordem, resolver_factory, cliente, workers, por_ip, progresso, prazo=prazo)
+    resultados, sem_prazo = _rodar(ordem, resolver_factory, cliente, workers, por_ip, progresso, prazo=prazo, sondagem=sondagem)
 
     # se a primeira passada ja estourou o prazo, nao tem tempo pra repescagem
     pendentes = [] if sem_prazo else [e for e in ordem if e.ibge in resultados and erros_transitorios(resultados[e.ibge])]

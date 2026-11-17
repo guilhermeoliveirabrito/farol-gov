@@ -289,3 +289,35 @@ def test_prazo_da_varredura_deixa_sem_nota_e_nao_some_com_ninguem():
         assert r["nota"] is None and "verificacao_incompleta" in r["avisos"]
         # o dns foi feito mesmo assim
         assert r["checks"]["spf"]["status"] != "error" or "prazo" not in r["checks"]["spf"]["detalhe"]
+
+
+class _ClienteMorto(FakeCliente):
+    """Servidor que nao responde nada (timeout em tudo)."""
+
+    def __init__(self):
+        super().__init__({})
+        self.hosts = set()
+
+    def get(self, url, verificar=True, ler=0):
+        self.hosts.add(url.split("/")[2])
+        raise ErroConexao("timeout")
+
+
+def test_servidor_mudo_passa_a_ser_sondado():
+    principal, sondagem = _ClienteMorto(), _ClienteMorto()
+    dados = varrer(_entidades(10, 0), _ResolverPorIp, principal, workers=1, por_ip=1, sondagem=sondagem, cliente_lento=FakeCliente({}))
+
+    assert dados["total"] == 10
+    # as 3 primeiras levam a visita completa; as outras so a sondagem rapida
+    assert len(principal.hosts) == 3
+    assert len(sondagem.hosts) == 7
+    assert not any(r["acessivel"] for r in dados["resultados"])
+
+
+def test_sondagem_que_responde_faz_a_visita_completa():
+    principal = _ClienteMedido()
+    sondagem = _ClienteMedido()
+    # todos no mesmo servidor, que responde normalmente: sondagem nunca entra
+    dados = varrer(_entidades(6, 0), _ResolverPorIp, principal, workers=1, por_ip=1, sondagem=sondagem)
+    assert all(r["acessivel"] for r in dados["resultados"])
+    assert not sondagem.terminou

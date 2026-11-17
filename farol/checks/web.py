@@ -378,6 +378,9 @@ def checar_web(host, cliente):
 
     # pagina final, depois dos redirects (reaproveita a resposta https quando ela ja e a final)
     try:
+        if resp_https is None and not http_respondeu and erro_https is not None and redirect.status == ERROR:
+            # nem https nem http responderam: tentar a home pela terceira vez so gasta tempo
+            raise erro_https
         if resp_https is not None:
             final = seguir(cliente, None, ler=CORPO_MAXIMO, inicio=resp_https)
         else:

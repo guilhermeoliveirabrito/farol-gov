@@ -139,6 +139,14 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .chaves { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; }
 .chaves li { display: flex; align-items: center; gap: 6px; }
 .chaves i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.chaves button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; margin: -3px 0;
+  background: none; border: 1px solid transparent; border-radius: 99px; color: inherit; font-size: inherit; cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.chaves button:hover { color: #fff; border-color: rgb(199 212 224 / 25%); }
+.chaves button[aria-pressed="true"] { color: #fff; border-color: var(--facho); background: rgb(255 207 107 / 10%); }
+.chaves .sem-site { margin-left: 4px; }
 
 .dica {
   position: absolute; z-index: 6; pointer-events: none; transform: translate(-50%, calc(-100% - 14px));

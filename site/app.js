@@ -188,6 +188,9 @@ const Mapa = (() => {
   let rodando = false, visivel = true, quadro = 0;
   // a parte que nao muda (graticulado + pontos) fica pre-desenhada aqui
   let fundo = null;
+  // filtro por conceito (clicando na legenda): so esses pontos ficam acesos
+  let filtroCor = null;
+  let camadaFiltro = null;
   let raioPonto = 2;
 
   const tx = (x) => dx + x * escala;
@@ -239,6 +242,21 @@ const Mapa = (() => {
     dy = area.y + (area.h - ALT * escala) / 2;
     raioPonto = Math.max(1.4, 0.2 * escala);
     prepararFundo(dpr);
+    prepararFiltro();
+  }
+
+  function prepararFiltro() {
+    camadaFiltro = null;
+    if (!filtroCor || !fundo) return;
+    camadaFiltro = document.createElement("canvas");
+    camadaFiltro.width = canvas.width;
+    camadaFiltro.height = canvas.height;
+    const f = camadaFiltro.getContext("2d");
+    f.setTransform(canvas.width / largCss, 0, 0, canvas.width / largCss, 0, 0);
+    const original = ctx;
+    ctx = f;
+    pontosBase((p) => p.cor === filtroCor);
+    ctx = original;
   }
 
   function prepararFundo(dpr) {
@@ -337,8 +355,12 @@ const Mapa = (() => {
       ctx.closePath();
       ctx.clip();
     }
-    ctx.globalAlpha = apontando ? 0.6 : 1;
+    ctx.globalAlpha = apontando ? 0.6 : camadaFiltro ? 0.16 : 1;
     ctx.drawImage(fundo, 0, 0, largCss, altCss);
+    if (camadaFiltro) {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(camadaFiltro, 0, 0, largCss, altCss);
+    }
     ctx.restore();
 
     facho(apontando ? 0.09 : 0.34, apontando ? 1.4 : 1);
@@ -346,7 +368,7 @@ const Mapa = (() => {
     // brilho so nos pontos por onde o facho acabou de passar
     if (!reduzirMovimento && !apontando) {
       for (const p of pontos) {
-        if (p.cor === "sem") continue;
+        if (p.cor === "sem" || (filtroCor && p.cor !== filtroCor)) continue;
         const atraso = (angulo - p.ang + TAU * 4) % TAU;
         if (atraso > 1 || !jaRevelado(p)) continue;
         const g = Math.exp(-atraso / 0.4);
@@ -555,7 +577,14 @@ const Mapa = (() => {
     agendar();
   }
 
-  return { iniciar, apontar, ronda };
+  // null mostra todos
+  function filtrar(cor) {
+    filtroCor = cor;
+    prepararFiltro();
+    redesenharSeParado();
+  }
+
+  return { iniciar, apontar, ronda, filtrar };
 })();
 
 // ===================================================================
@@ -1233,8 +1262,20 @@ function legendaMapa(semSite) {
     i.style.background = cor;
     return i;
   };
-  const chaves = CONCEITOS.map((c) => el("li", {}, bolinha(`var(--c${c})`), c));
-  if (semSite) chaves.push(el("li", {}, bolinha("#203a55"), `sem site cadastrado (${num(semSite)})`));
+  const contagem = Object.fromEntries(CONCEITOS.map((c) => [c, ranqueados.filter((r) => r.conceito === c).length]));
+  // cada conceito da legenda e um botao: clicar acende so aquelas prefeituras no mapa
+  const botoes = CONCEITOS.map((c) => {
+    const b = el("button", { type: "button", "aria-pressed": "false", title: `Mostrar só as prefeituras com conceito ${c} (${num(contagem[c])})` }, bolinha(`var(--c${c})`), c);
+    b.addEventListener("click", () => {
+      const ativo = b.getAttribute("aria-pressed") === "true";
+      botoes.forEach((x) => x.setAttribute("aria-pressed", "false"));
+      b.setAttribute("aria-pressed", String(!ativo));
+      Mapa.filtrar(ativo ? null : c);
+    });
+    return b;
+  });
+  const chaves = botoes.map((b) => el("li", {}, b));
+  if (semSite) chaves.push(el("li", { class: "sem-site" }, bolinha("#203a55"), `sem site cadastrado (${num(semSite)})`));
   $("chaves").replaceChildren(...chaves);
   $("legenda-mapa").hidden = false;
 }

@@ -201,8 +201,9 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
             progresso(feitos, total)
 
     # fase 1: dns. dnspython nao garante ser thread-safe, entao cada tarefa cria o seu resolver
+    # consulta dns e leve e vai pros resolvers publicos, entao aguenta o dobro de threads
     preparos = []
-    with ThreadPoolExecutor(max_workers=workers) as pool:
+    with ThreadPoolExecutor(max_workers=workers * 2) as pool:
         futuros = {pool.submit(preparar, e, resolver_factory()): e for e in entidades}
         for fut in as_completed(futuros):
             try:

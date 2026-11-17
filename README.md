@@ -110,6 +110,7 @@ A lista de municípios e seus sites oficiais vem do [Wikidata](https://www.wikid
 - [x] Histórico semanal, gráfico de evolução e variação de posição de cada cidade
 - [x] Testar se o servidor ainda aceita TLS 1.0/1.1
 - [x] Conteúdo misto, cookies e CAA
+- [x] Medalhas da semana e hall da fama
 - [ ] Domínios estaduais e federais
 - [ ] DMARC herdado do domínio organizacional
 

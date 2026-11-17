@@ -75,6 +75,14 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 - **Variação**: diferença de posição em relação à varredura anterior. Como as notas têm poucos valores possíveis, muitas cidades empatam, e uma mudança pequena de nota pode mover uma cidade centenas de posições.
 - **Histórico**: cada varredura completa é guardada em `data/historico/AAAA-MM-DD.json`, só com o status de cada item. **As notas das semanas antigas são recalculadas com as regras atuais**, para que a comparação faça sentido. Um item novo só entra na conta a partir da semana em que começou a ser verificado. No gráfico da página, a semana em que a metodologia mudou aparece marcada.
 
+## Medalhas e hall da fama
+
+- **Semana** vai de segunda a domingo, no horário de Brasília. Se houver mais de uma varredura na semana, vale só a última, do mesmo jeito que no histórico vale só a última varredura de cada dia.
+- **Pódio:** ouro, prata e bronze vão para a 1ª, 2ª e 3ª posição do ranking dessa varredura. Empate divide a medalha como nas Olimpíadas: dois empatados em 1º levam ouro e o seguinte já é 3º, com bronze.
+- **Semana em andamento:** o pódio da semana atual aparece como parcial até domingo, porque uma nova varredura ainda pode mudá-lo.
+- **Hall da fama:** ouro vale 10 pontos, prata 5 e bronze 2,5. Em empate de pontos, fica na frente quem tem mais ouros e depois quem tem mais pratas. Se tudo empatar, as cidades dividem a posição.
+- As notas de semanas antigas são recalculadas com as regras atuais, então as medalhas de semanas passadas também seguem a metodologia de hoje.
+
 ## Como a varredura se protege de uma rodada ruim
 
 - **Uma fila por servidor.** Muitas prefeituras ficam no mesmo servidor de hospedagem. Primeiro o farol consulta o DNS de todas, depois visita os sites com no máximo 3 conexões simultâneas por servidor. Um servidor lento atrasa só as cidades dele, não a varredura inteira.

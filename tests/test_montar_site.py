@@ -136,3 +136,18 @@ def test_varredura_nova_no_mesmo_dia_substitui_no_grafico():
     assert evolucao[0]["media"] == 100.0
     assert resumo["anterior"] is None
     assert len(por_uf["PE"]["2611606"]["h"]) == 1
+
+
+def test_selo():
+    svg = montar_site.selo_svg(78.4, "B")
+    assert "B · 78/100" in svg and 'aria-label="farol-gov: B · 78/100"' in svg
+    assert "sem nota" in montar_site.selo_svg(None, None)
+
+
+def test_selos_gerados_no_build(tmp_path):
+    (tmp_path / "site").mkdir()
+    (tmp_path / "site" / "index.html").write_text("<!doctype html>")
+    (tmp_path / "data" / "resultados").mkdir(parents=True)
+    (tmp_path / "data" / "resultados" / "latest.json").write_text(json.dumps({"gerado_em": "x", "total": 1, "resultados": [_resultado("2611606", "PE")]}))
+    montar_site.montar(tmp_path, tmp_path / "_site")
+    assert "A · 100/100" in (tmp_path / "_site" / "selos" / "2611606.svg").read_text(encoding="utf-8")

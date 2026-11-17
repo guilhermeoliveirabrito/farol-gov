@@ -133,6 +133,43 @@ def sem_site(caminho_csv):
     return pontos
 
 
+CORES_SELO = {"A": "#1e9e7e", "B": "#5a9e4f", "C": "#c98a12", "D": "#d0602a", "F": "#c4362a"}
+
+
+def selo_svg(nota, conceito):
+    """Selo no estilo dos badges do GitHub. So tem numeros e letras, nada vindo de fora."""
+    esquerda = "farol-gov"
+    if nota is None:
+        direita, cor = "sem nota", "#7f8b96"
+    else:
+        direita, cor = f"{conceito} · {nota:.0f}/100", CORES_SELO.get(conceito, "#7f8b96")
+    # largura aproximada pra Verdana 11px, igual os badges do shields.io
+    larg_e = 10 + round(len(esquerda) * 6.6)
+    larg_d = 10 + round(len(direita) * 6.8)
+    total = larg_e + larg_d
+    titulo = f"farol-gov: {direita}"
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="20" role="img" aria-label="{titulo}">
+<title>{titulo}</title>
+<linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>
+<clipPath id="r"><rect width="{total}" height="20" rx="3" fill="#fff"/></clipPath>
+<g clip-path="url(#r)"><rect width="{larg_e}" height="20" fill="#07182a"/><rect x="{larg_e}" width="{larg_d}" height="20" fill="{cor}"/><rect width="{total}" height="20" fill="url(#s)"/></g>
+<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+<text x="{larg_e / 2}" y="14" fill="#ffcf6b">{esquerda}</text>
+<text x="{larg_e + larg_d / 2}" y="15" fill="#010101" fill-opacity=".3">{direita}</text>
+<text x="{larg_e + larg_d / 2}" y="14">{direita}</text>
+</g></svg>
+"""
+
+
+def gerar_selos(resumo, pasta):
+    campo = {c: i for i, c in enumerate(resumo["campos"])}
+    pasta.mkdir(parents=True, exist_ok=True)
+    for m in resumo["municipios"]:
+        ranqueado = m[campo["pos"]] is not None
+        nota = m[campo["nota"]] if ranqueado else None
+        (pasta / f"{m[campo['ibge']]}.svg").write_text(selo_svg(nota, m[campo["conceito"]]), encoding="utf-8")
+
+
 def carimbar(saida, versao_dados):
     """Cache-busting: o GitHub Pages guarda arquivos por 10 minutos, entao cada versao
     nova de app.js/estilo.css ganha um ?v=<hash> e os dados ganham a data da varredura."""
@@ -170,6 +207,7 @@ def montar(raiz, saida):
         for uf, detalhes in por_uf.items():
             compacto(detalhes, saida / "dados" / "uf" / f"{uf}.json")
         compacto(dados, saida / "dados" / "latest.json")
+        gerar_selos(resumo, saida / "selos")
 
         index = saida / "index.html"
         if index.exists():

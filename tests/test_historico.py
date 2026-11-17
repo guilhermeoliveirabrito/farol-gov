@@ -18,9 +18,9 @@ def test_compactar_e_recalcular():
     assert snap["m"]["1"] == [historico.ACESSIVEL | historico.ELEGIVEL, "p" * len(PESOS), 0]
 
     aval = historico.avaliar_snapshot(snap)
-    assert aval["1"] == [100.0, "A", 1]
+    assert aval["1"] == [100.0, "A", 1, 1]
     assert aval["2"][2] == 2
-    assert aval["3"] == [None, None, None]
+    assert aval["3"] == [None, None, None, None]
     # tem nota, mas fica fora do ranking
     assert aval["4"][0] == 100.0 and aval["4"][2] is None
 
@@ -77,3 +77,13 @@ def test_dia_no_horario_de_brasilia():
     assert historico.dia_da_varredura("2026-11-17T01:30:00+00:00") == "2026-11-16"
     assert historico.dia_da_varredura("2026-11-16T15:00:00+00:00") == "2026-11-16"
     assert historico.dia_da_varredura("x") == "x"
+
+
+def test_item_nao_verificado_tira_do_ranking_oficial_mas_nao_do_geral():
+    dados = {"gerado_em": "2026-11-17T09:00:00+00:00", "resultados": [_r("1", "pass"), _r("2", "warn")]}
+    # a cidade 1 teve um item sem resposta: nota continua 100 (o item sai da conta)
+    dados["resultados"][0]["checks"]["caa"]["status"] = "error"
+    aval = historico.avaliar_snapshot(historico.compactar(dados))
+    assert aval["1"][0] == 100.0
+    assert aval["1"][2] is None and aval["1"][3] == 1  # fora do oficial, 1o no geral
+    assert aval["2"][2] == 1 and aval["2"][3] == 2  # a 2 e a primeira do oficial

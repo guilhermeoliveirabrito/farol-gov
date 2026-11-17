@@ -34,24 +34,29 @@ CHECKS = list(PESOS)
 CODIGO = historico.CODIGO
 
 ACESSIVEL = 1
-RANKING = 2
+RANKING = 2  # tem nota e entra no ranking geral
+OFICIAL = 4  # todos os itens verificados: ranking oficial (o que vale pras medalhas)
 SEMANAS_POR_CIDADE = 12
 HALL_MAXIMO = 30
 
 
 def premios(tempo):
-    """Podio de cada semana, medalhas de cada cidade e o hall da fama, no formato da pagina."""
-    semanas = medalhas.podios(tempo)
-    por_cidade = defaultdict(list)
-    for i, s in enumerate(semanas):
-        for tipo in medalhas.TIPOS:
-            for ibge in s[tipo]:
-                por_cidade[ibge].append([i, tipo[0]])  # o, p, b
-    return {
-        "semanas": [{"s": s["semana"], "d": s["data"], "parcial": s["parcial"], "x": s["desempate"]} for s in semanas],
-        "cidades": dict(por_cidade),
-        "hall": medalhas.hall_da_fama(semanas)[:HALL_MAXIMO],
-    }
+    """Podio de cada semana, medalhas de cada cidade e o hall da fama, pros dois rankings."""
+    saida = {"semanas": [], "oficial": {}, "geral": {}}
+    for ranking in medalhas.RANKINGS:
+        semanas = medalhas.podios(tempo, ranking)
+        por_cidade = defaultdict(list)
+        for i, s in enumerate(semanas):
+            for tipo in medalhas.TIPOS:
+                for ibge in s[tipo]:
+                    por_cidade[ibge].append([i, tipo[0]])  # o, p, b
+        saida["semanas"] = [{"s": s["semana"], "d": s["data"], "parcial": s["parcial"]} for s in semanas]
+        saida[ranking] = {
+            "x": [s["desempate"] for s in semanas],
+            "cidades": dict(por_cidade),
+            "hall": medalhas.hall_da_fama(semanas)[:HALL_MAXIMO],
+        }
+    return saida
 
 
 def compacto(obj, caminho):
@@ -83,15 +88,15 @@ def resumir(dados, snapshots=()):
         checks = r.get("checks", {})
         # "-" = item que ainda nao existia quando essa varredura rodou
         status = "".join(CODIGO.get(checks[c].get("status"), "e") if c in checks else "-" for c in CHECKS)
-        nota, conceito, pos = agora.get(r["ibge"], [None, None, None])
-        pos_antes = antes.get(r["ibge"], [None, None, None])[2]
-        # positivo = subiu no ranking
+        nota, conceito, pos, pos_geral = agora.get(r["ibge"], [None, None, None, None])
+        pos_antes = antes.get(r["ibge"], [None, None, None, None])[2]
+        # positivo = subiu no ranking oficial
         variacao = pos_antes - pos if (pos is not None and pos_antes is not None) else None
-        flags = (ACESSIVEL if r.get("acessivel") else 0) | (RANKING if pos is not None else 0)
+        flags = (ACESSIVEL if r.get("acessivel") else 0) | (RANKING if pos_geral is not None else 0) | (OFICIAL if pos is not None else 0)
         linhas.append([
             r["ibge"], r["municipio"], r["uf"], r["dominio"],
             r.get("lat"), r.get("lon"), nota, conceito,
-            flags, status, pos, variacao,
+            flags, status, pos, variacao, pos_geral,
         ])
         semanas = [[data, aval[r["ibge"]][0], aval[r["ibge"]][2]] for data, _, aval in tempo if r["ibge"] in aval]
         por_uf[r["uf"] or "XX"][r["ibge"]] = {
@@ -105,9 +110,10 @@ def resumir(dados, snapshots=()):
         "total": dados.get("total", len(linhas)),
         "amostra": dados.get("amostra"),
         "anterior": tempo[-2][0] if len(tempo) > 1 else None,
-        "ranqueados": sum(1 for v in agora.values() if v[2] is not None),
+        "ranqueados": sum(1 for v in agora.values() if v[3] is not None),
+        "oficiais": sum(1 for v in agora.values() if v[2] is not None),
         "checks": CHECKS,
-        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var"],
+        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var", "posg"],
         "municipios": linhas,
         "premios": premios(tempo),
     }

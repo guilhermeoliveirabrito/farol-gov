@@ -97,22 +97,32 @@ def posicoes(notas):
 
 
 def avaliar_snapshot(snap):
-    """Devolve {ibge: (nota, conceito, posicao ou None)} com as regras atuais."""
+    """Devolve {ibge: [nota, conceito, posicao oficial, posicao geral]} com as regras atuais.
+
+    Ranking oficial: so quem teve todos os itens daquela varredura verificados. Item nao
+    verificado sai da conta da nota, entao quem teve item sem resposta pode ficar com
+    nota maior do que a real; essas cidades entram so no ranking geral.
+    """
     checks = snap["checks"]
-    notas, saida = {}, {}
+    geral, oficial, saida = {}, {}, {}
     for ibge, (flags, status, *_) in snap["m"].items():
         nota = nota_do_status(checks, status) if flags & ACESSIVEL else None
-        saida[ibge] = [nota, conceito(nota) if nota is not None else None, None]
+        saida[ibge] = [nota, conceito(nota) if nota is not None else None, None, None]
         if nota is not None and flags & ELEGIVEL:
-            notas[ibge] = nota
-    for ibge, pos in posicoes(notas).items():
+            geral[ibge] = nota
+            if "e" not in status:
+                oficial[ibge] = nota
+    for ibge, pos in posicoes(oficial).items():
         saida[ibge][2] = pos
+    for ibge, pos in posicoes(geral).items():
+        saida[ibge][3] = pos
     return saida
 
 
 def resumo_nacional(snap, avaliacao):
     """Uma linha do grafico de evolucao: media, conceitos e adocao de cada item."""
-    ranqueados = [i for i, (_, _, pos) in avaliacao.items() if pos is not None]
+    # media e adocao usam todo mundo com nota (ranking geral), pra serie nao mudar de base
+    ranqueados = [i for i, v in avaliacao.items() if v[3] is not None]
     n = len(ranqueados)
     if not n:
         return None
@@ -140,7 +150,7 @@ def resumo_nacional(snap, avaliacao):
 def variacoes(anterior, atual):
     """Quem subiu e quem caiu entre duas semanas: lista de (ibge, pos_antes, pos_agora)."""
     mudancas = []
-    for ibge, (_, _, pos) in atual.items():
+    for ibge, (_, _, pos, *_) in atual.items():
         antes = anterior.get(ibge, [None, None, None])[2]
         if pos is not None and antes is not None and pos != antes:
             mudancas.append((ibge, antes, pos))

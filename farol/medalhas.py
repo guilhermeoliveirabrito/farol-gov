@@ -5,8 +5,9 @@ da semana. Se rodar mais de uma vez (como na semana de 16/11, que teve varredura
 problema e depois a refeita), so a ultima conta, do mesmo jeito que no historico so
 vale a ultima varredura do dia.
 
-Ouro, prata e bronze vao pras posicoes 1, 2 e 3 dessa varredura, contando so quem
-teve todos os itens verificados. Nota igual desempata
+Sao duas premiacoes, uma pra cada ranking: a oficial (so quem teve todos os itens
+verificados) e a geral (todo mundo com nota). Ouro, prata e bronze vao pras posicoes
+1, 2 e 3 dessa varredura em cada uma. Nota igual desempata
 por: mais itens cumpridos por inteiro, mais pontos de excelencia (nota.EXCELENCIA) e
 melhor media nas 4 semanas anteriores. Se ainda empatar, divide como nas Olimpiadas:
 dois empatados em 1o levam ouro e o proximo ja e 3o (bronze), sem prata.
@@ -40,16 +41,21 @@ CRITERIOS = (
 SEMANAS_DE_CONSTANCIA = 4
 
 
-def _chaves(snap, aval, anteriores):
+RANKINGS = ("oficial", "geral")
+
+
+def _chaves(snap, aval, anteriores, ranking="oficial"):
     """{ibge: (nota, itens inteiros, excelencia, media anterior)} de quem esta no ranking."""
     chaves = {}
-    for ibge, (nota, _, pos) in aval.items():
+    for ibge, linha in aval.items():
+        nota = linha[0]
+        # oficial: so quem teve todos os itens verificados (item nao verificado sai da conta
+        # da nota, e uma cidade com 3 itens sem resposta podia chegar a 100). geral: todo mundo com nota
+        pos = linha[2] if ranking == "oficial" else (linha[3] if len(linha) > 3 else linha[2])
         if pos is None:
             continue
         flags_status = snap["m"].get(ibge, [0, ""]) if snap else [0, ""]
-        # so concorre quem teve todos os itens verificados: item nao verificado sai da
-        # conta da nota e uma cidade com 3 itens sem resposta podia chegar a 100
-        if "e" in str(flags_status[1]):
+        if ranking == "oficial" and "e" in str(flags_status[1]):
             continue
         inteiros = str(flags_status[1]).count("p")
         extra = flags_status[2] if len(flags_status) > 2 and isinstance(flags_status[2], (int, float)) else 0
@@ -70,7 +76,7 @@ def _classificar(chaves):
     return saida, ordem
 
 
-def podios(tempo):
+def podios(tempo, ranking="oficial"):
     """tempo: [(data, snapshot, avaliacao)] em ordem de data.
 
     Devolve uma lista de semanas, da mais antiga pra mais nova:
@@ -85,7 +91,7 @@ def podios(tempo):
     ordem_semanas = sorted(ultima_da_semana)
     for i, semana in enumerate(ordem_semanas):
         data, snap, aval = ultima_da_semana[semana]
-        chaves = _chaves(snap, aval, finais[-SEMANAS_DE_CONSTANCIA:])
+        chaves = _chaves(snap, aval, finais[-SEMANAS_DE_CONSTANCIA:], ranking)
         posicoes, ordem = _classificar(chaves)
         podio = {"semana": semana, "data": data, "parcial": i == len(ordem_semanas) - 1, "desempate": {}}
         for p, tipo in enumerate(TIPOS, 1):

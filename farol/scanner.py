@@ -3,7 +3,7 @@ import random
 import threading
 import time
 from collections import Counter, defaultdict, deque
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -91,12 +91,17 @@ def preparar(entidade, resolver):
         avisos.append(FORA_GOV_BR)
 
     email = dominio_email(host)
-    dns = [
-        dnssec,
-        checks_dns.checar_caa(email, resolver),
-        checks_dns.checar_spf(email, resolver),
-        checks_dns.checar_dmarc(email, resolver),
-    ]
+    if dnssec.status == ERROR and dnssec.detalhe.startswith(ERROS_TRANSITORIOS):
+        # o DNS do dominio nem respondeu o endereco; as outras consultas vao pro mesmo
+        # servidor e so iam gastar mais 1 minuto de timeouts. a repescagem tenta de novo
+        dns = [dnssec, *(Resultado(nome, ERROR, dnssec.detalhe) for nome in ("caa", "spf", "dmarc"))]
+    else:
+        dns = [
+            dnssec,
+            checks_dns.checar_caa(email, resolver),
+            checks_dns.checar_spf(email, resolver),
+            checks_dns.checar_dmarc(email, resolver),
+        ]
     return Preparo(entidade, host, existe, list(ips or []), avisos, dns)
 
 
@@ -110,6 +115,12 @@ def visitar(prep, cliente):
 def sem_tempo(prep):
     """Quando o prazo da varredura acaba antes de visitar o site: fica sem nota nesta rodada."""
     return com_erro(prep, "prazo: a varredura acabou antes de chegar neste site")
+
+
+def sem_dns(entidade, motivo="prazo: a varredura acabou antes de chegar neste site"):
+    """Preparo de quem nem chegou a ter o DNS consultado."""
+    dns = [Resultado(nome, ERROR, motivo) for nome in CHECKS_DNS]
+    return Preparo(entidade, entidade.dominio, True, [], [], dns)
 
 
 def com_erro(prep, motivo):
@@ -174,15 +185,17 @@ FALHAS_PARA_SONDAR = 3
 
 
 def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None, prazo=None, sondagem=None):
-    """Avalia em duas fases e devolve (resultados, ibges que ficaram sem visita por prazo).
+    """Avalia todo mundo e devolve (resultados, ibges que ficaram sem visita por prazo).
 
-    1. DNS de todo mundo, em paralelo (rapido, vai nos resolvers publicos).
-    2. Visita aos sites com uma fila por IP: no maximo `por_ip` visitas ao mesmo
-       servidor ao mesmo tempo, e a proxima so entra quando uma termina.
+    Duas filas andando ao mesmo tempo:
+    - DNS de cada cidade (rapido na maioria, mas tem zona que demora muito pra responder)
+    - visita ao site, que entra assim que o DNS daquela cidade sai, numa fila por
+      servidor: no maximo `por_ip` visitas ao mesmo IP, e a proxima so entra quando
+      uma termina, entao nenhuma thread fica parada esperando a vez de um servidor.
 
-    Antes a fase 2 usava um semaforo dentro de cada thread. Quando um servidor de
-    hospedagem com centenas de prefeituras ficava lento, as 32 threads iam parando uma
-    a uma esperando a vez dele e a varredura inteira se arrastava.
+    Antes cada thread esperava num semaforo a vez do IP dela, e um provedor lento com
+    centenas de prefeituras prendia as 32 threads. Depois o DNS virou uma fase separada,
+    mas sozinha ela levou 40 min na varredura de 17/11 e a parte web ficou sem tempo.
 
     Com `prazo` (segundos), quem nao foi visitado a tempo sai sem nota nesta rodada.
     Com `sondagem` (um cliente com timeout curto), servidor que nao respondeu as
@@ -190,44 +203,23 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
     completa acontece normalmente.
     """
     fim = time.monotonic() + prazo if prazo else None
-    restante = lambda: None if fim is None else max(0.0, fim - time.monotonic())  # noqa: E731
     total = len(entidades)
-    feitos = 0
-
-    def avancou():
-        nonlocal feitos
-        feitos += 1
-        if progresso:
-            progresso(feitos, total)
-
-    # fase 1: dns. dnspython nao garante ser thread-safe, entao cada tarefa cria o seu resolver
-    # consulta dns e leve e vai pros resolvers publicos, entao aguenta o dobro de threads
-    preparos = []
-    with ThreadPoolExecutor(max_workers=workers * 2) as pool:
-        futuros = {pool.submit(preparar, e, resolver_factory()): e for e in entidades}
-        for fut in as_completed(futuros):
-            try:
-                preparos.append(fut.result())
-            except Exception:
-                log.exception("erro inesperado no dns de %s", futuros[fut].dominio)
-    # devolve a ordem original (as_completed embaralha conforme quem termina primeiro)
-    posicao = {e.ibge: i for i, e in enumerate(entidades)}
-    preparos.sort(key=lambda p: posicao[p.entidade.ibge])
-
     resultados = {}
-    filas = defaultdict(deque)
-    for prep in preparos:
-        if prep.servidor is None:
-            # nem resolveu: nao tem site pra visitar
-            resultados[prep.entidade.ibge] = montar(prep, *visitar(prep, cliente))
-            avancou()
-        else:
-            filas[prep.servidor].append(prep)
+
+    def restante():
+        return None if fim is None else max(0.0, fim - time.monotonic())
+
+    def guardar(ibge, resultado):
+        resultados[ibge] = resultado
+        if progresso:
+            progresso(len(resultados), total)
 
     # servidor -> [visitas seguidas sem resposta, ja respondeu alguma vez]
     estado = defaultdict(lambda: [0, False])
+    filas = defaultdict(deque)
+    em_voo = Counter()
 
-    def tarefa(prep, sondar):
+    def visita(prep, sondar):
         inicio = time.monotonic()
         acessivel, web = visitar(prep, sondagem) if sondar else (False, None)
         if not sondar or acessivel:
@@ -237,50 +229,72 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
             log.warning("lento: %s (%s) levou %.0fs", prep.host, prep.servidor, gasto)
         return montar(prep, acessivel, web)
 
-    # fase 2: visitas. a primeira leva intercala os IPs (rodada 1: um de cada servidor,
-    # rodada 2: o segundo de cada um...) pra servidor grande nao ocupar o comeco da fila
-    pool = ThreadPoolExecutor(max_workers=workers)
-    andando = {}
+    # dnspython nao garante ser thread-safe, entao cada consulta cria o seu resolver.
+    # dns e leve e vai pros resolvers publicos, entao tem o dobro de threads
+    pool_dns = ThreadPoolExecutor(max_workers=workers * 2)
+    pool_web = ThreadPoolExecutor(max_workers=workers)
+    pendentes = {pool_dns.submit(preparar, e, resolver_factory()): ("dns", e) for e in entidades}
 
-    def mandar(ip):
-        prep = filas[ip].popleft()
-        falhas, ja_respondeu = estado[ip]
+    def mandar(servidor):
+        prep = filas[servidor].popleft()
+        falhas, ja_respondeu = estado[servidor]
         sondar = sondagem is not None and not ja_respondeu and falhas >= FALHAS_PARA_SONDAR
-        andando[pool.submit(tarefa, prep, sondar)] = prep
+        em_voo[servidor] += 1
+        pendentes[pool_web.submit(visita, prep, sondar)] = ("web", prep)
 
-    for _ in range(por_ip):
-        for ip in list(filas):
-            if filas[ip]:
-                mandar(ip)
-
-    sem_prazo = set()
     try:
-        while andando:
-            prontos, _ = wait(andando, timeout=restante(), return_when=FIRST_COMPLETED)
+        while pendentes:
+            prontos, _ = wait(pendentes, timeout=restante(), return_when=FIRST_COMPLETED)
             if not prontos:
                 break  # prazo acabou
             for fut in prontos:
-                prep = andando.pop(fut)
+                tipo, item = pendentes.pop(fut)
+                if tipo == "dns":
+                    try:
+                        prep = fut.result()
+                    except Exception:
+                        log.exception("erro inesperado no dns de %s", item.dominio)
+                        guardar(item.ibge, montar(sem_dns(item), *com_erro(None, "erro inesperado na verificacao")))
+                        continue
+                    if prep.servidor is None:
+                        # nem resolveu: nao tem site pra visitar
+                        guardar(item.ibge, montar(prep, *visitar(prep, cliente)))
+                    else:
+                        filas[prep.servidor].append(prep)
+                        if em_voo[prep.servidor] < por_ip:
+                            mandar(prep.servidor)
+                    continue
+
+                prep = item
+                em_voo[prep.servidor] -= 1
                 try:
-                    resultados[prep.entidade.ibge] = fut.result()
+                    resultado = fut.result()
                     marca = estado[prep.servidor]
-                    if resultados[prep.entidade.ibge]["acessivel"]:
+                    if resultado["acessivel"]:
                         marca[:] = [0, True]
                     else:
                         marca[0] += 1
                 except Exception:
                     log.exception("erro inesperado em %s", prep.host)
-                    resultados[prep.entidade.ibge] = montar(prep, *com_erro(prep, "erro inesperado na verificacao"))
-                avancou()
+                    resultado = montar(prep, *com_erro(prep, "erro inesperado na verificacao"))
+                guardar(prep.entidade.ibge, resultado)
                 if filas[prep.servidor]:
                     mandar(prep.servidor)
     finally:
-        pool.shutdown(wait=fim is None, cancel_futures=True)
+        espera = fim is None
+        pool_dns.shutdown(wait=espera, cancel_futures=True)
+        pool_web.shutdown(wait=espera, cancel_futures=True)
 
-    # o que nao deu tempo: o dns ja foi feito, so a visita ficou faltando
-    for prep in [*andando.values(), *(p for fila in filas.values() for p in fila)]:
+    # o que nao deu tempo. quem ja tinha dns fica com ele; o resto nem isso
+    sem_prazo = set()
+    for tipo, item in pendentes.values():
+        prep = item if tipo == "web" else sem_dns(item)
         resultados[prep.entidade.ibge] = montar(prep, *sem_tempo(prep))
         sem_prazo.add(prep.entidade.ibge)
+    for fila in filas.values():
+        for prep in fila:
+            resultados[prep.entidade.ibge] = montar(prep, *sem_tempo(prep))
+            sem_prazo.add(prep.entidade.ibge)
     if sem_prazo:
         log.warning("prazo de %ss acabou: %d sites ficaram sem visita", prazo, len(sem_prazo))
     return resultados, sem_prazo

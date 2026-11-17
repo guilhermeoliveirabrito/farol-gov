@@ -321,3 +321,66 @@ def test_sondagem_que_responde_faz_a_visita_completa():
     dados = varrer(_entidades(6, 0), _ResolverPorIp, principal, workers=1, por_ip=1, sondagem=sondagem)
     assert all(r["acessivel"] for r in dados["resultados"])
     assert not sondagem.terminou
+
+
+class _ResolverDemorado(_ResolverPorIp):
+    """O DNS de 'lerdo-*' demora; os outros respondem na hora."""
+
+    def __init__(self, espera=0.5):
+        super().__init__()
+        self.espera = espera
+
+    def endereco(self, nome):
+        import time
+
+        if nome.startswith("lerdo"):
+            time.sleep(self.espera)
+        return super().endereco(nome)
+
+
+def test_dns_lento_nao_segura_as_visitas_das_outras():
+    import time
+
+    ents = _entidades(0, 6) + [Entidade("3300001", "Lerda", "RJ", "lerdo.rj.gov.br")]
+    cliente = _ClienteMedido()
+    inicio = time.monotonic()
+    dados = varrer(ents, lambda: _ResolverDemorado(0.5), cliente, workers=4)
+    assert dados["total"] == 7
+    fim_rapidas = max(t for h, t in cliente.terminou.items() if h.startswith("rapida"))
+    assert fim_rapidas - inicio < 0.4
+
+
+def test_prazo_com_dns_pendente_nao_some_com_a_cidade():
+    ents = _entidades(0, 2) + [Entidade("3300001", "Lerda", "RJ", "lerdo.rj.gov.br")]
+    dados = varrer(ents, lambda: _ResolverDemorado(1.0), _ClienteMedido(), workers=4, prazo=0.3)
+    assert dados["total"] == 3
+    lerda = next(r for r in dados["resultados"] if r["ibge"] == "3300001")
+    assert lerda["nota"] is None and "verificacao_incompleta" in lerda["avisos"]
+    assert dados["sem_visita_por_prazo"] == 1
+
+
+def test_zona_que_nao_responde_nao_gasta_mais_consultas():
+    from farol.checks.dns import ErroDNS
+    from farol.scanner import preparar
+
+    class Mudo(FakeResolver):
+        def __init__(self):
+            super().__init__()
+            self.consultas = []
+
+        def endereco(self, nome):
+            self.consultas.append(("A", nome))
+            raise ErroDNS("LifetimeTimeout: o DNS de x nao respondeu a tempo")
+
+        def txt(self, nome):
+            self.consultas.append(("TXT", nome))
+            return []
+
+        def caa(self, nome):
+            self.consultas.append(("CAA", nome))
+            return []
+
+    resolver = Mudo()
+    prep = preparar(Entidade("3509502", "Cidade", "SP", "www.cidade.sp.gov.br"), resolver)
+    assert resolver.consultas == [("A", "www.cidade.sp.gov.br")]
+    assert all(r.status == "error" for r in prep.dns)

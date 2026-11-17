@@ -74,6 +74,27 @@ pip install -e ".[e2e]" && python -m playwright install chromium
 pytest e2e
 ```
 
+## Dados abertos
+
+Tudo que a página mostra sai de arquivos JSON estáticos, que podem ser usados direto (CC BY 4.0):
+
+| Arquivo | O que tem |
+|---|---|
+| [`dados/latest.json`](https://guilhermeoliveirabrito.github.io/farol-gov/dados/latest.json) | Resultado completo da última varredura, com o detalhe de cada item |
+| [`dados/historico.json`](https://guilhermeoliveirabrito.github.io/farol-gov/dados/historico.json) | Média nacional e adoção de cada item, varredura por varredura |
+| `dados/uf/<UF>.json` | Detalhes das cidades de um estado (ex.: [`PE.json`](https://guilhermeoliveirabrito.github.io/farol-gov/dados/uf/PE.json)) |
+| [`data/historico/`](data/historico) | Um arquivo compacto por dia de varredura, para reconstruir a série inteira |
+
+### Selo
+
+Cada prefeitura tem um selo SVG que se atualiza sozinho, no endereço `selos/<código IBGE>.svg`. Para o Recife, por exemplo:
+
+```markdown
+[![farol-gov](https://guilhermeoliveirabrito.github.io/farol-gov/selos/2611606.svg)](https://guilhermeoliveirabrito.github.io/farol-gov/#m-2611606)
+```
+
+A ficha de cada cidade na página já mostra o código pronto para copiar.
+
 ## De onde vêm os domínios
 
 A lista de municípios e seus sites oficiais vem do [Wikidata](https://www.wikidata.org/) (propriedade P856, ligada ao código IBGE). Se o site da sua cidade estiver errado ou faltando, o melhor jeito de corrigir é editar o Wikidata, assim a correção vale para todo mundo. Também dá para abrir uma issue aqui.

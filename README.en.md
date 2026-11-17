@@ -37,6 +37,10 @@ pip install -e ".[dev]"
 farol check www.recife.pe.gov.br
 ```
 
+## Open data
+
+Everything on the page comes from static JSON files you can use directly (CC BY 4.0): [`dados/latest.json`](https://guilhermeoliveirabrito.github.io/farol-gov/dados/latest.json) has the full latest scan, [`dados/historico.json`](https://guilhermeoliveirabrito.github.io/farol-gov/dados/historico.json) the national series, and `dados/uf/<UF>.json` the per-state details. Each city also has a self-updating SVG badge at `selos/<IBGE code>.svg`.
+
 ## License
 
 Code: MIT. Data in `data/`: CC BY 4.0.

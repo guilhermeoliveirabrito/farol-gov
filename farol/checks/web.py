@@ -9,6 +9,7 @@ import re
 import socket
 import ssl
 import time
+import warnings
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlsplit
 
@@ -125,28 +126,40 @@ class ClienteHTTP:
     def aceita_tls_antigo(self, host, porta=443):
         """Tenta um handshake oferecendo so TLS 1.0 e 1.1. Devolve a versao aceita ou None.
 
-        Levanta ErroConexao se nao der pra testar (timeout, ou o OpenSSL local sem suporte).
+        Levanta ErroConexao se nao der pra testar (conexao caiu, ou o OpenSSL local sem suporte).
+        Esse teste so roda depois do handshake moderno ter funcionado, entao o servidor
+        esta no ar: se ele fica mudo diante de um ClientHello TLS 1.0 (firewall/WAF que
+        descarta), na pratica nao aceita a versao antiga.
         """
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         try:
-            ctx.minimum_version = ssl.TLSVersion.TLSv1
-            ctx.maximum_version = ssl.TLSVersion.TLSv1_1
+            # o python avisa que TLSv1 e obsoleto; aqui e justamente o que a gente quer testar
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                ctx.minimum_version = ssl.TLSVersion.TLSv1
+                ctx.maximum_version = ssl.TLSVersion.TLSv1_1
             # sem isso o OpenSSL 3 nem tenta as versoes antigas
             ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
         except (ValueError, ssl.SSLError) as e:
-            raise ErroConexao("outro", f"OpenSSL local sem suporte a TLS antigo: {e}") from e
+            raise ErroConexao("local", f"OpenSSL local sem suporte a TLS antigo: {e}") from e
+        # nao precisa esperar o timeout cheio: o servidor ja respondeu ao handshake moderno
+        espera = min(self.timeout, 6.0)
         try:
-            with socket.create_connection((host, porta), timeout=self.timeout) as sock, ctx.wrap_socket(sock, server_hostname=host) as tls:
+            with socket.create_connection((host, porta), timeout=espera) as sock, ctx.wrap_socket(sock, server_hostname=host) as tls:
                 return tls.version()
-        except ssl.SSLError:
+        except ssl.SSLError as e:
+            # NO_PROTOCOLS_AVAILABLE e o OpenSSL daqui se recusando a mandar TLS 1.0; nao e o servidor
+            if getattr(e, "reason", None) == "NO_PROTOCOLS_AVAILABLE":
+                raise ErroConexao("local", "OpenSSL local nao deixa oferecer TLS 1.0/1.1") from e
             return None
         except ConnectionResetError:
             # muito servidor simplesmente derruba a conexao quando nao aceita a versao
             return None
-        except TimeoutError as e:
-            raise ErroConexao("timeout") from e
+        except TimeoutError:
+            # antes isso virava erro e mandava o dominio pra repescagem, que ficava lentissima
+            return None
         except OSError as e:
             raise ErroConexao("outro", f"{type(e).__name__}: {e}") from e
 

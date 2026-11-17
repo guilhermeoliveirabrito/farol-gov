@@ -199,3 +199,21 @@ def test_cookies_da_primeira_resposta_contam():
     })
     _, resultados = checar_web(HOST, cliente)
     assert _por_check(resultados)["cookies"].status == FAIL
+
+
+def test_tls_antigo_servidor_mudo_conta_como_recusa():
+    # servidor que aceita o TCP e nunca responde o ClientHello antigo (firewall que descarta)
+    import socket
+    import threading
+
+    from farol.checks.web import ClienteHTTP
+
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen()
+    conexoes = []
+    threading.Thread(target=lambda: conexoes.append(srv.accept()), daemon=True).start()
+    try:
+        assert ClienteHTTP(timeout=0.3).aceita_tls_antigo("127.0.0.1", srv.getsockname()[1]) is None
+    finally:
+        srv.close()

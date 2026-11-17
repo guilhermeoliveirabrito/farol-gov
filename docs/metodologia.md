@@ -79,7 +79,7 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 
 - **DNS**: consultas em cinco resolvers públicos que validam DNSSEC (Cloudflare, Google e Quad9), com rodízio entre eles, 3 segundos por servidor, até 12 segundos por consulta e uma nova tentativa quando dá timeout. O DNSSEC é considerado válido quando a resposta para o registro `A` vem com a flag AD.
 - **Domínio de e-mail**: SPF, DMARC e CAA são consultados no domínio do site sem o `www.` (ex.: `www.recife.pe.gov.br` vira `recife.pe.gov.br`).
-- **TLS antigo**: um único handshake oferecendo só TLS 1.0 e 1.1, sem nenhuma requisição HTTP depois. É o mesmo teste que ferramentas como o SSL Labs fazem.
+- **TLS antigo**: um único handshake oferecendo só TLS 1.0 e 1.1, sem nenhuma requisição HTTP depois. É o mesmo teste que ferramentas como o SSL Labs fazem. Se o servidor fica sem responder por 6 segundos (comum em firewall que descarta versões antigas), conta como recusa: ele já tinha respondido ao handshake moderno logo antes, então está no ar e simplesmente não fala TLS 1.0.
 - **Página inicial**: lemos até 512 KB do HTML da página final (depois dos redirecionamentos) para os itens de conteúdo misto e headers. A página é baixada uma vez só.
 - **Limite por servidor**: muitas prefeituras ficam hospedadas no mesmo servidor. A varredura verifica no máximo 3 sites por IP ao mesmo tempo e embaralha a ordem da lista, para não sobrecarregar ninguém.
 - **Repescagem**: no fim da varredura, quem teve timeout é verificado de novo, com mais tempo (25 s por conexão) e uma prefeitura por servidor de cada vez.

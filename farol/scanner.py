@@ -160,7 +160,8 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
     repescados = 0
     if pendentes:
         log.warning("repescagem: %d dominios com timeout, tentando de novo com mais calma", len(pendentes))
-        segunda = _rodar(pendentes, resolver_factory, cliente_lento or cliente, max(2, workers // 4), LimitePorServidor(1))
+        # 2 por IP: com 1 so, um servidor com centenas de prefeituras virava fila de horas
+        segunda = _rodar(pendentes, resolver_factory, cliente_lento or cliente, max(2, workers // 4), LimitePorServidor(2))
         for ibge, novo in segunda.items():
             if erros_transitorios(novo) < erros_transitorios(resultados[ibge]):
                 resultados[ibge] = novo

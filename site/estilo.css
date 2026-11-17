@@ -375,6 +375,24 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .placar div span { color: var(--suave); font-size: .92rem; }
 @keyframes surge { from { transform: scale(.4); opacity: 0; } }
 
+/* regua da ficha: faixas dos conceitos, a cidade e as medias */
+.regua { margin: 6px 0 18px; }
+.regua-faixa {
+  position: relative; height: 8px; margin: 28px 0 36px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--cF) 0 35%, var(--cD) 35% 55%, var(--cC) 55% 75%, var(--cB) 75% 90%, var(--cA) 90%);
+  opacity: .9;
+}
+.regua .marca { position: absolute; left: var(--x); top: 50%; translate: -50% -50%; }
+.regua .marca.uf, .regua .marca.br { width: 2px; height: 22px; background: var(--tinta); }
+.regua .marca small { position: absolute; left: 50%; translate: -50% 0; white-space: nowrap; font-size: .76rem; font-weight: 600; color: var(--suave); }
+.regua .marca.uf small { bottom: calc(100% + 2px); }
+.regua .marca.br small { top: calc(100% + 2px); }
+.regua .marca.cidade { width: 20px; height: 20px; border-radius: 50%; background: var(--cX); border: 3px solid var(--papel); box-shadow: 0 0 0 1px var(--tinta); }
+.regua .marca.cidade.cA { background: var(--cA); } .regua .marca.cidade.cB { background: var(--cB); }
+.regua .marca.cidade.cC { background: var(--cC); } .regua .marca.cidade.cD { background: var(--cD); }
+.regua .marca.cidade.cF { background: var(--cF); }
+.regua figcaption { font-size: .9rem; color: var(--suave); }
+
 .posicoes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 14px 0; border-bottom: 1px solid var(--linha); font-size: .94rem; color: var(--suave); }
 .posicoes b { color: var(--tinta); font-family: var(--titulo); font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; }
 .sinais .compara { font-size: .8rem; color: var(--suave); margin-top: 2px; opacity: .85; }

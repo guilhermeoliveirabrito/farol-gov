@@ -630,13 +630,17 @@ function linkCorrigir(check) {
 
 // parte das cidades de cada estado que cumpre cada item (pra comparar na ficha)
 let porEstado = {};
+let mediaBrasil = null;
+
+const mediaNotas = (lista) => (lista.length ? lista.reduce((a, r) => a + r.nota, 0) / lista.length : null);
 
 function calcularPorEstado(ok) {
   const grupos = {};
   for (const r of ok) (grupos[r.uf] ??= []).push(r);
   porEstado = {};
+  mediaBrasil = mediaNotas(ok);
   for (const [uf, lista] of Object.entries(grupos)) {
-    porEstado[uf] = { n: lista.length };
+    porEstado[uf] = { n: lista.length, media: mediaNotas(lista) };
     for (const check of Object.keys(ITENS)) {
       const avaliados = lista.filter((r) => r.st[check] !== "na").length;
       porEstado[uf][check] = avaliados ? pct(conta(lista, check), avaliados) : null;
@@ -765,6 +769,37 @@ function blocoSelo(r) {
   );
 }
 
+// regua de 0 a 100 com a cidade, a media do estado e a do Brasil
+function regua(r) {
+  const mediaUf = porEstado[r.uf]?.media;
+  if (r.nota == null || !r.ranking || mediaUf == null || mediaBrasil == null) return null;
+  const marca = (classe, valor, rotulo) => {
+    const m = el("span", { class: `marca ${classe}` }, rotulo && el("small", { text: rotulo }));
+    m.style.setProperty("--x", `${Math.max(0, Math.min(100, valor))}%`);
+    return m;
+  };
+  const diferenca = r.nota - mediaUf;
+  const comparacao = Math.abs(diferenca) < 1
+    ? `Na média de ${r.uf}.`
+    : `${fmtNota(Math.abs(diferenca))} pontos ${diferenca > 0 ? "acima" : "abaixo"} da média de ${r.uf}.`;
+  return el(
+    "figure",
+    { class: "regua" },
+    el(
+      "div",
+      {
+        class: "regua-faixa",
+        role: "img",
+        "aria-label": `Nota ${fmtNota(r.nota)}. Média de ${r.uf}: ${fmtNota(mediaUf)}. Média do Brasil: ${fmtNota(mediaBrasil)}.`,
+      },
+      marca("uf", mediaUf, `${r.uf} ${fmtNota(mediaUf)}`),
+      marca("br", mediaBrasil, `Brasil ${fmtNota(mediaBrasil)}`),
+      marca(`cidade c${r.conceito}`, r.nota),
+    ),
+    el("figcaption", { text: comparacao }),
+  );
+}
+
 function abrirFicha(r) {
   const dialogo = $("ficha");
   const corpo = $("ficha-corpo");
@@ -810,6 +845,7 @@ function abrirFicha(r) {
     el("h2", { id: "ficha-nome", text: r.municipio }),
     el("p", { class: "onde", text: `${r.uf}, ${r.dominio}` }),
     placar,
+    regua(r),
     posicoes,
     avisos,
     listaSinais(r),

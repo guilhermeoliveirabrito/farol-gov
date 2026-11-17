@@ -12,7 +12,7 @@ from farol.nota import PESOS  # noqa: E402
 
 def test_ordem_dos_checks_bate_com_os_pesos():
     # se alguem adicionar um check novo e esquecer daqui, a pagina mostra o status errado
-    assert montar_site.CHECKS == list(PESOS)
+    assert list(PESOS) == montar_site.CHECKS
 
 
 def _resultado(ibge, uf, status="pass"):

@@ -24,6 +24,34 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest -v
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: ruff check --output-format=github .
+      # o app.js nao tem build, entao pelo menos garante que ele faz parse
+      - run: node --check site/app.js
+
+  # monta o site com os dados do repo e abre num chromium de verdade
+  pagina:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[e2e]"
+      - run: python -m playwright install --with-deps chromium
+      - run: pytest e2e -v
+
   # roda contra um dominio de verdade so pra ver se o caminho real (dnspython, ssl) funciona.
   # nao bloqueia o merge porque depende de rede externa
   smoke:

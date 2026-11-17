@@ -1,9 +1,9 @@
 from farol.checks import FAIL, PASS, WARN, Resultado
+from farol.checks.web import ErroConexao
 from farol.dominios import Entidade, dominio_email, normalizar_host, uf_do_ibge
 from farol.nota import PESOS, calcular_nota, conceito
 from farol.resumo import gerar_markdown, linhas_revisao
 from farol.scanner import avaliar, varrer
-from farol.checks.web import ErroConexao
 from tests.fakes import FakeCliente, FakeResolver, resp
 
 
@@ -154,8 +154,6 @@ def test_sem_nota_quando_falta_verificar_demais():
 
 def test_repescagem_recupera_quem_deu_timeout():
     ent, resolver, cliente = _ambiente()
-    https = f"https://{ent.dominio}/"
-
     class ClienteInstavel(FakeCliente):
         def get(self, url, verificar=True, ler=0):
             raise ErroConexao("timeout")
@@ -171,6 +169,7 @@ def test_repescagem_recupera_quem_deu_timeout():
 def test_limite_por_servidor():
     import threading
     import time
+
     from farol.scanner import LimitePorServidor
 
     limite = LimitePorServidor(por_ip=2)

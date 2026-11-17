@@ -9,7 +9,7 @@ assim a série fica comparável. Itens que ainda não existiam numa semana simpl
 não entram na conta daquela semana.
 """
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 from .checks import Resultado
@@ -39,7 +39,7 @@ def dia_da_varredura(gerado_em):
     except (TypeError, ValueError):
         return str(gerado_em)[:10]
     if momento.tzinfo is None:
-        momento = momento.replace(tzinfo=timezone.utc)
+        momento = momento.replace(tzinfo=UTC)
     return momento.astimezone(BRASILIA).date().isoformat()
 
 
@@ -116,7 +116,7 @@ def resumo_nacional(snap, avaliacao):
     n = len(ranqueados)
     if not n:
         return None
-    conceitos = {c: 0 for c in "ABCDF"}
+    conceitos = dict.fromkeys("ABCDF", 0)
     for i in ranqueados:
         conceitos[avaliacao[i][1]] += 1
     por_uf = {}

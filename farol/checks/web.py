@@ -138,9 +138,8 @@ class ClienteHTTP:
         except (ValueError, ssl.SSLError) as e:
             raise ErroConexao("outro", f"OpenSSL local sem suporte a TLS antigo: {e}") from e
         try:
-            with socket.create_connection((host, porta), timeout=self.timeout) as sock:
-                with ctx.wrap_socket(sock, server_hostname=host) as tls:
-                    return tls.version()
+            with socket.create_connection((host, porta), timeout=self.timeout) as sock, ctx.wrap_socket(sock, server_hostname=host) as tls:
+                return tls.version()
         except ssl.SSLError:
             return None
         except ConnectionResetError:

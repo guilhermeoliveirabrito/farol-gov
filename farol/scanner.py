@@ -4,7 +4,7 @@ import threading
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager, nullcontext
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from .checks import ERROR, Resultado
 from .checks import dns as checks_dns
@@ -169,7 +169,7 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
     lista = sorted(resultados.values(), key=lambda r: r["ibge"])
     marcar_compartilhados(lista)
     return {
-        "gerado_em": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "gerado_em": datetime.now(UTC).isoformat(timespec="seconds"),
         "metodologia": METODOLOGIA,
         "total": len(lista),
         "repescagem": {"tentados": len(pendentes), "recuperados": repescados},

@@ -94,7 +94,7 @@ def resumir(dados, snapshots=()):
         "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var"],
         "municipios": linhas,
     }
-    evolucao = [l for l in (historico.resumo_nacional(snap, aval) for _, snap, aval in tempo) if l]
+    evolucao = [s for s in (historico.resumo_nacional(snap, aval) for _, snap, aval in tempo) if s]
     return resumo, por_uf, evolucao
 
 

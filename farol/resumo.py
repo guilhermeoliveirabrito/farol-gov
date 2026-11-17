@@ -139,7 +139,7 @@ def linhas_movimento(dados, snapshots, top=10):
         return linhas
 
     return (
-        [f"", f"Comparação com a varredura de {anteriores[-1]['data']}: {len(mudancas)} cidades mudaram de posição."]
+        ["", f"Comparação com a varredura de {anteriores[-1]['data']}: {len(mudancas)} cidades mudaram de posição."]
         + tabela("Quem mais subiu", [m for m in subiram if m[2] < m[1]], "↑")
         + tabela("Quem mais caiu", [m for m in cairam if m[2] > m[1]], "↓")
     )

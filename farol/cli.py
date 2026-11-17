@@ -6,11 +6,10 @@ import random
 import sys
 from pathlib import Path
 
-from . import __version__
+from . import __version__, historico
 from .checks.dns import ResolverDNS
 from .checks.web import ClienteHTTP
 from .dominios import Entidade, ler_csv, normalizar_host
-from . import historico
 from .resumo import gerar_markdown, linhas_movimento, linhas_revisao
 from .scanner import avaliar, varrer
 

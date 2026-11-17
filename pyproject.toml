@@ -15,7 +15,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.15"]
+e2e = ["pytest>=8", "playwright>=1.50"]
 
 [project.scripts]
 farol = "farol.cli:main"
@@ -25,3 +26,14 @@ include = ["farol*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
+
+[tool.ruff.lint]
+# erros reais, imports, modernizacao e alguns bugs comuns
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4"]
+# SIM105: o try/except/pass deixa mais claro qual chamada pode falhar
+# B905: zip com strict quebraria o build por causa de um snapshot antigo torto
+ignore = ["E501", "SIM108", "SIM105", "B905"]

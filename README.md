@@ -63,6 +63,17 @@ python scripts/montar_site.py          # monta _site/ com os dados de data/
 python -m http.server -d _site 8000    # abre em http://localhost:8000
 ```
 
+### Testes
+
+```bash
+pytest                 # testes da coleta, das notas e do build (rapidos, sem rede)
+ruff check .           # lint
+
+# teste da pagina num navegador de verdade
+pip install -e ".[e2e]" && python -m playwright install chromium
+pytest e2e
+```
+
 ## De onde vêm os domínios
 
 A lista de municípios e seus sites oficiais vem do [Wikidata](https://www.wikidata.org/) (propriedade P856, ligada ao código IBGE). Se o site da sua cidade estiver errado ou faltando, o melhor jeito de corrigir é editar o Wikidata, assim a correção vale para todo mundo. Também dá para abrir uma issue aqui.

@@ -46,7 +46,7 @@ def validar(dados, snapshots):
     if anteriores:
         antes = anteriores[-1]
         total_antes = len(antes["m"])
-        acessiveis_antes = sum(1 for flags, _ in antes["m"].values() if flags & historico.ACESSIVEL)
+        acessiveis_antes = sum(1 for flags, *_ in antes["m"].values() if flags & historico.ACESSIVEL)
         linhas.append(f"- comparando com {antes['data']}: {total_antes} municipios, {acessiveis_antes} responderam")
         if total < MIN_TOTAL * total_antes:
             problemas.append(f"so {total} municipios, contra {total_antes} na varredura de {antes['data']}")

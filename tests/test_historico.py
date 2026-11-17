@@ -15,7 +15,7 @@ def test_compactar_e_recalcular():
     ]}
     snap = historico.compactar(dados)
     assert snap["data"] == "2026-11-16"
-    assert snap["m"]["1"] == [historico.ACESSIVEL | historico.ELEGIVEL, "p" * len(PESOS)]
+    assert snap["m"]["1"] == [historico.ACESSIVEL | historico.ELEGIVEL, "p" * len(PESOS), 0]
 
     aval = historico.avaliar_snapshot(snap)
     assert aval["1"] == [100.0, "A", 1]

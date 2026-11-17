@@ -5,9 +5,11 @@ da semana. Se rodar mais de uma vez (como na semana de 16/11, que teve varredura
 problema e depois a refeita), so a ultima conta, do mesmo jeito que no historico so
 vale a ultima varredura do dia.
 
-Ouro, prata e bronze vao pras posicoes 1, 2 e 3 do ranking dessa varredura. Empate
-divide a posicao como nas Olimpiadas: dois empatados em 1o levam ouro e o proximo
-ja e 3o (bronze), sem prata.
+Ouro, prata e bronze vao pras posicoes 1, 2 e 3 dessa varredura, contando so quem
+teve todos os itens verificados. Nota igual desempata
+por: mais itens cumpridos por inteiro, mais pontos de excelencia (nota.EXCELENCIA) e
+melhor media nas 4 semanas anteriores. Se ainda empatar, divide como nas Olimpiadas:
+dois empatados em 1o levam ouro e o proximo ja e 3o (bronze), sem prata.
 
 A semana da varredura mais recente fica marcada como em andamento: se rodar de novo
 antes de domingo, o podio dela pode mudar.
@@ -28,23 +30,75 @@ def semana_de(data):
     return (d - timedelta(days=d.weekday())).isoformat()
 
 
+# o que desempata quem tem a mesma nota, nessa ordem
+CRITERIOS = (
+    "nota",
+    "mais itens cumpridos por inteiro",
+    "mais pontos de excelência",
+    "melhor média nas semanas anteriores",
+)
+SEMANAS_DE_CONSTANCIA = 4
+
+
+def _chaves(snap, aval, anteriores):
+    """{ibge: (nota, itens inteiros, excelencia, media anterior)} de quem esta no ranking."""
+    chaves = {}
+    for ibge, (nota, _, pos) in aval.items():
+        if pos is None:
+            continue
+        flags_status = snap["m"].get(ibge, [0, ""]) if snap else [0, ""]
+        # so concorre quem teve todos os itens verificados: item nao verificado sai da
+        # conta da nota e uma cidade com 3 itens sem resposta podia chegar a 100
+        if "e" in str(flags_status[1]):
+            continue
+        inteiros = str(flags_status[1]).count("p")
+        extra = flags_status[2] if len(flags_status) > 2 and isinstance(flags_status[2], (int, float)) else 0
+        notas = [a[ibge][0] for a in anteriores if a.get(ibge) and a[ibge][0] is not None]
+        constancia = round(sum(notas) / len(notas), 2) if notas else 0.0
+        chaves[ibge] = (nota, inteiros, extra, constancia)
+    return chaves
+
+
+def _classificar(chaves):
+    """Posicao de competicao (1, 1, 3...) pela tupla inteira de criterios."""
+    ordem = sorted(chaves, key=lambda i: chaves[i], reverse=True)
+    pos, anterior, saida = 0, None, {}
+    for n, ibge in enumerate(ordem, 1):
+        if chaves[ibge] != anterior:
+            pos, anterior = n, chaves[ibge]
+        saida[ibge] = pos
+    return saida, ordem
+
+
 def podios(tempo):
-    """tempo: [(data, snapshot, avaliacao)] em ordem de data (a avaliacao traz a posicao).
+    """tempo: [(data, snapshot, avaliacao)] em ordem de data.
 
     Devolve uma lista de semanas, da mais antiga pra mais nova:
-    {"semana", "data", "parcial", "ouro": [ibge...], "prata": [...], "bronze": [...]}
+    {"semana", "data", "parcial", "ouro": [ibge...], "prata": [...], "bronze": [...],
+     "desempate": {tipo: criterio}} (so quando a medalha foi decidida no desempate)
     """
     ultima_da_semana = {}
-    for data, _, aval in tempo:
-        ultima_da_semana[semana_de(data)] = (data, aval)  # em ordem: a ultima sobrescreve
+    for data, snap, aval in tempo:
+        ultima_da_semana[semana_de(data)] = (data, snap, aval)  # em ordem: a ultima sobrescreve
 
-    semanas = []
-    for i, semana in enumerate(sorted(ultima_da_semana)):
-        data, aval = ultima_da_semana[semana]
-        podio = {"semana": semana, "data": data, "parcial": i == len(ultima_da_semana) - 1}
-        for pos, tipo in enumerate(TIPOS, 1):
-            podio[tipo] = sorted(ibge for ibge, (_, _, p) in aval.items() if p == pos)
+    semanas, finais = [], []
+    ordem_semanas = sorted(ultima_da_semana)
+    for i, semana in enumerate(ordem_semanas):
+        data, snap, aval = ultima_da_semana[semana]
+        chaves = _chaves(snap, aval, finais[-SEMANAS_DE_CONSTANCIA:])
+        posicoes, ordem = _classificar(chaves)
+        podio = {"semana": semana, "data": data, "parcial": i == len(ordem_semanas) - 1, "desempate": {}}
+        for p, tipo in enumerate(TIPOS, 1):
+            podio[tipo] = sorted(ibge for ibge, pos in posicoes.items() if pos == p)
+            if podio[tipo]:
+                # quem veio logo depois: se tinha a mesma nota, conta qual criterio separou
+                seguinte = next((x for x in ordem if posicoes[x] > p), None)
+                if seguinte is not None:
+                    a, b = chaves[podio[tipo][0]], chaves[seguinte]
+                    if a[0] == b[0]:
+                        podio["desempate"][tipo] = next(CRITERIOS[k] for k in range(1, len(a)) if a[k] != b[k])
         semanas.append(podio)
+        finais.append(aval)
     return semanas
 
 

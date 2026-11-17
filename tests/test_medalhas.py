@@ -2,7 +2,8 @@ from farol.medalhas import hall_da_fama, podios, semana_de
 
 
 def _aval(posicoes):
-    return {ibge: [90.0, "A", pos] for ibge, pos in posicoes.items()}
+    # nota cai junto com a posicao, e empate de posicao vira empate de nota
+    return {ibge: [100.0 - pos, "A", pos] for ibge, pos in posicoes.items()}
 
 
 def test_semana_comeca_na_segunda():
@@ -53,3 +54,34 @@ def test_desempate_por_ouro_antes_de_prata():
     hall = hall_da_fama([{"ouro": ["a"], "prata": ["b"], "bronze": []}, {"ouro": [], "prata": ["b"], "bronze": []}])
     assert [linha[0] for linha in hall] == ["a", "b"]
     assert [linha[5] for linha in hall] == [1, 2]
+
+
+def _snap(status):
+    return {"m": {ibge: [3, st, extra] for ibge, (st, extra) in status.items()}}
+
+
+def test_cidade_com_item_nao_verificado_nao_concorre():
+    aval = {"a": [100.0, "A", 1], "b": [94.0, "A", 2], "c": [90.0, "A", 3], "d": [80.0, "B", 4]}
+    snap = _snap({"a": ("ppep", 0), "b": ("pppp", 0), "c": ("pppw", 0), "d": ("ppwf", 0)})
+    s = podios([("2026-11-17", snap, aval)])[0]
+    assert (s["ouro"], s["prata"], s["bronze"]) == (["b"], ["c"], ["d"])
+
+
+def test_desempate_por_itens_inteiros_e_excelencia():
+    aval = {"a": [90.0, "A", 1], "b": [90.0, "A", 1], "c": [90.0, "A", 1]}
+    # a e b tem 3 itens inteiros; c compensou com parciais. entre a e b decide a excelencia
+    snap = _snap({"a": ("pppf", 1), "b": ("pppf", 3), "c": ("ppww", 5)})
+    s = podios([("2026-11-17", snap, aval)])[0]
+    assert (s["ouro"], s["prata"], s["bronze"]) == (["b"], ["a"], ["c"])
+    assert s["desempate"] == {"ouro": "mais pontos de excelência", "prata": "mais itens cumpridos por inteiro"}
+
+
+def test_desempate_pela_media_das_semanas_anteriores():
+    snap = _snap({"a": ("pppp", 0), "b": ("pppp", 0)})
+    tempo = [
+        ("2026-11-09", snap, {"a": [80.0, "B", 2], "b": [90.0, "A", 1]}),
+        ("2026-11-16", snap, {"a": [95.0, "A", 1], "b": [95.0, "A", 1]}),
+    ]
+    s = podios(tempo)[1]
+    assert s["ouro"] == ["b"] and s["prata"] == ["a"]
+    assert s["desempate"]["ouro"] == "melhor média nas semanas anteriores"

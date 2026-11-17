@@ -51,3 +51,47 @@ def conceito(nota):
         if nota >= minimo:
             return letra
     return "F"
+
+
+# pontos de excelencia: nao mudam a nota, servem pra desempatar o podio da semana.
+# cada um e um passo alem do minimo que o item ja cobra
+EXCELENCIA = {
+    "dmarc_reject": "DMARC com p=reject (recusa o e-mail falso em vez de mandar pro spam)",
+    "spf_hardfail": "SPF terminando em -all (recusa quem nao esta na lista)",
+    "tls13": "TLS 1.3",
+    "hsts_subdominios": "HSTS cobrindo os subdominios (includeSubDomains)",
+    "hsts_preload": "HSTS pronto pra lista de preload dos navegadores",
+    "csp": "Content-Security-Policy na pagina",
+    "caa_proprio": "CAA no proprio dominio, sem depender do registro do estado",
+}
+
+
+def criterios_de_excelencia(checks):
+    """checks: {nome: {"status", "detalhe"}} como no json da varredura. Devolve as chaves atingidas."""
+
+    def detalhe(nome):
+        c = checks.get(nome) or {}
+        return str(c.get("detalhe", "")) if c.get("status") == "pass" else ""
+
+    feitos = []
+    if detalhe("dmarc") == "p=reject":
+        feitos.append("dmarc_reject")
+    if "-all" in detalhe("spf"):
+        feitos.append("spf_hardfail")
+    if detalhe("tls") == "TLSv1.3":
+        feitos.append("tls13")
+    hsts = detalhe("hsts").lower()
+    if "includesubdomains" in hsts:
+        feitos.append("hsts_subdominios")
+    if "preload" in hsts:
+        feitos.append("hsts_preload")
+    if "com CSP" in detalhe("headers"):
+        feitos.append("csp")
+    caa = detalhe("caa")
+    if caa and "herdado" not in caa:
+        feitos.append("caa_proprio")
+    return feitos
+
+
+def excelencia(checks):
+    return len(criterios_de_excelencia(checks))

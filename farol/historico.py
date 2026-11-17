@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .checks import Resultado
 from .dominios import uf_do_ibge
-from .nota import calcular_nota, conceito
+from .nota import calcular_nota, conceito, excelencia
 
 CODIGO = {"pass": "p", "warn": "w", "fail": "f", "error": "e"}
 STATUS = {v: k for k, v in CODIGO.items()}
@@ -56,7 +56,7 @@ def compactar(dados):
         if not AVISOS_FORA.intersection(r.get("avisos", [])):
             flags |= ELEGIVEL
         status = "".join(CODIGO.get(r["checks"].get(c, {}).get("status"), "-") for c in checks)
-        municipios[r["ibge"]] = [flags, status]
+        municipios[r["ibge"]] = [flags, status, excelencia(r.get("checks", {}))]
     return {
         "data": dia_da_varredura(dados["gerado_em"]),
         "metodologia": dados.get("metodologia", 1),
@@ -100,7 +100,7 @@ def avaliar_snapshot(snap):
     """Devolve {ibge: (nota, conceito, posicao ou None)} com as regras atuais."""
     checks = snap["checks"]
     notas, saida = {}, {}
-    for ibge, (flags, status) in snap["m"].items():
+    for ibge, (flags, status, *_) in snap["m"].items():
         nota = nota_do_status(checks, status) if flags & ACESSIVEL else None
         saida[ibge] = [nota, conceito(nota) if nota is not None else None, None]
         if nota is not None and flags & ELEGIVEL:

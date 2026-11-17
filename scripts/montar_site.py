@@ -48,7 +48,7 @@ def premios(tempo):
             for ibge in s[tipo]:
                 por_cidade[ibge].append([i, tipo[0]])  # o, p, b
     return {
-        "semanas": [{"s": s["semana"], "d": s["data"], "parcial": s["parcial"]} for s in semanas],
+        "semanas": [{"s": s["semana"], "d": s["data"], "parcial": s["parcial"], "x": s["desempate"]} for s in semanas],
         "cidades": dict(por_cidade),
         "hall": medalhas.hall_da_fama(semanas)[:HALL_MAXIMO],
     }

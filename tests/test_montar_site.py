@@ -178,7 +178,7 @@ def test_premios_no_resumo():
     dados = {"gerado_em": "2026-11-17T09:00:00+00:00", "total": 2, "resultados": [_resultado("2611606", "PE"), _resultado("2304400", "CE")]}
     resumo, _, _ = montar_site.resumir(dados, [])
     premios = resumo["premios"]
-    assert premios["semanas"] == [{"s": "2026-11-16", "d": "2026-11-17", "parcial": True}]
+    assert premios["semanas"] == [{"s": "2026-11-16", "d": "2026-11-17", "parcial": True, "x": {}}]
     # as duas com nota maxima empatam no ouro
     assert premios["cidades"] == {"2611606": [[0, "o"]], "2304400": [[0, "o"]]}
     assert [linha[5] for linha in premios["hall"]] == [1, 1]

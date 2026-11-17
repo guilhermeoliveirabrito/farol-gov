@@ -196,7 +196,8 @@ def avaliar_hsts(valor):
         return Resultado("hsts", FAIL, "max-age ausente ou zero")
     idade = int(m.group(1))
     if idade >= HSTS_MINIMO:
-        return Resultado("hsts", PASS, f"max-age={idade}")
+        extras = [x for x in ("includeSubDomains", "preload") if x.lower() in valor.lower()]
+        return Resultado("hsts", PASS, "; ".join([f"max-age={idade}", *extras]))
     return Resultado("hsts", WARN, f"max-age={idade} (menos de 1 ano)")
 
 
@@ -207,7 +208,7 @@ def avaliar_headers(headers):
     frame = "x-frame-options" in headers or "frame-ancestors" in csp
 
     if nosniff and frame:
-        return Resultado("headers", PASS, "nosniff e anti-clickjacking")
+        return Resultado("headers", PASS, "nosniff e anti-clickjacking" + (", com CSP" if csp else ""))
     if nosniff or frame:
         falta = "anti-clickjacking" if nosniff else "X-Content-Type-Options"
         return Resultado("headers", WARN, f"falta {falta}")

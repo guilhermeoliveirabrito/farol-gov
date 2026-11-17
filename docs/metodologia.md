@@ -78,7 +78,12 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 ## Medalhas e hall da fama
 
 - **Semana** vai de segunda a domingo, no horário de Brasília. Se houver mais de uma varredura na semana, vale só a última, do mesmo jeito que no histórico vale só a última varredura de cada dia.
-- **Pódio:** ouro, prata e bronze vão para a 1ª, 2ª e 3ª posição do ranking dessa varredura. Empate divide a medalha como nas Olimpíadas: dois empatados em 1º levam ouro e o seguinte já é 3º, com bronze.
+- **Quem concorre:** só cidades no ranking com os 13 itens verificados naquela varredura. Item não verificado sai da conta da nota, então uma cidade com três itens sem resposta podia chegar a 100 e levar o ouro.
+- **Pódio:** ouro, prata e bronze vão para as três maiores notas. Nota igual desempata, nesta ordem, por:
+  1. mais itens cumpridos por inteiro (dois parciais somam o mesmo que um inteiro, mas valem menos aqui);
+  2. mais pontos de excelência: DMARC com `p=reject`, SPF com `-all`, TLS 1.3, HSTS com `includeSubDomains`, HSTS com `preload`, Content-Security-Policy e CAA no próprio domínio. Eles não mudam a nota, só desempatam;
+  3. melhor média de nota nas 4 semanas anteriores.
+  Se ainda empatar, a medalha é dividida, como nas Olimpíadas: dois empatados em 1º levam ouro e o seguinte já é 3º, com bronze. Quando o desempate decide uma medalha, o pódio mostra qual critério decidiu.
 - **Semana em andamento:** o pódio da semana atual aparece como parcial até domingo, porque uma nova varredura ainda pode mudá-lo.
 - **Hall da fama:** ouro vale 10 pontos, prata 5 e bronze 2,5. Em empate de pontos, fica na frente quem tem mais ouros e depois quem tem mais pratas. Se tudo empatar, as cidades dividem a posição.
 - As notas de semanas antigas são recalculadas com as regras atuais, então as medalhas de semanas passadas também seguem a metodologia de hoje.

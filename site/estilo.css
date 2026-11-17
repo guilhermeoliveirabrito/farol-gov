@@ -236,7 +236,7 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 
 .cidades { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); }
 .linha {
-  width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 36px 190px 40px 64px 40px; gap: 16px; align-items: center;
+  width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 36px 190px 48px 64px 40px; gap: 16px; align-items: center;
   padding: 12px 8px; background: none; border: 0; border-bottom: 1px solid var(--linha); text-align: left; cursor: pointer;
   transition: background .15s;
 }
@@ -342,6 +342,8 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .podio-cidade:hover { background: var(--papel); }
 .podio-cidade b { font-family: var(--titulo); font-size: 1.15rem; line-height: 1.15; overflow-wrap: anywhere; }
 .podio-cidade span { color: var(--suave); font-size: .85rem; }
+.podio-desempate { text-align: center; color: var(--suave); font-size: .88rem; margin: 14px auto 0; max-width: 60ch; }
+.podio-desempate:empty { display: none; }
 .podio-vazio { color: var(--suave); font-size: .85rem; font-style: italic; }
 .degrau .bloco {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 18px;

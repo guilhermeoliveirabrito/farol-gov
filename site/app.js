@@ -1198,7 +1198,7 @@ function linhaCidade(r) {
     el("span", { class: "nome" }, r.municipio || r.dominio, chipsMedalhas(r), el("span", { class: "dominio", text: r.dominio })),
     el("span", { class: "uf", text: r.uf }),
     ...(r.nota != null
-      ? [luzes, el("span", { class: "nota", text: Math.round(r.nota) }), el("span", { class: "mov" }, seta(r))]
+      ? [luzes, el("span", { class: "nota", text: fmtNota(r.nota) }), el("span", { class: "mov" }, seta(r))]
       : [el("span", { class: "situacao", text: r.acessivel ? "fora do ranking" : "não respondeu" })]),
     selo(r),
   );
@@ -1433,6 +1433,10 @@ function medalhasSecao(resumo) {
       ? `Resultado parcial da ${nomeSemana(s)}: se houver outra varredura até domingo, o pódio pode mudar.`
       : `Resultado da ${nomeSemana(s)}, pela varredura de ${fmtData(s.d, { day: "numeric", month: "long" })}.`;
     $("podio").replaceChildren(podio(s, porIbge, i === semanas.length - 1));
+    const desempates = Object.entries(s.x || {}).filter(([t, c]) => NOME_MEDALHA[t] && typeof c === "string");
+    $("podio-desempate").textContent = desempates.length
+      ? "Nota empatada, decidido no desempate: " + desempates.map(([t, c]) => `${NOME_MEDALHA[t].toLowerCase()} por ${c}`).join("; ") + "."
+      : "";
   };
   escolha.replaceChildren(...semanas.map((s, i) => el("option", { value: i, text: nomeSemana(s).replace("semana de ", "") + (s.parcial ? " (em andamento)" : "") })).reverse());
   escolha.value = String(semanas.length - 1);

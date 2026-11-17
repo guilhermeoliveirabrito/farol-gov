@@ -387,6 +387,18 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
   border: 1.5px solid var(--linha); background: none; border-radius: 99px; padding: 8px 16px;
 }
 .acoes a:hover, .acoes button:hover { border-color: var(--tinta); }
+.acoes .principal { background: var(--tinta); color: var(--papel); border-color: var(--tinta); }
+.acoes .principal:hover { opacity: .9; }
+
+.selo-cidade { margin-top: 32px; padding-top: 22px; border-top: 1px solid var(--linha); }
+.selo-cidade h3 { font-size: 1.15rem; margin: 0 0 6px; }
+.selo-cidade p { color: var(--suave); font-size: .9rem; margin: 0 0 12px; }
+.selo-cidade img { display: block; margin-bottom: 10px; }
+.selo-cidade code {
+  display: block; padding: 10px 12px; border-radius: 8px; background: var(--dia); color: var(--suave);
+  font-size: .78rem; line-height: 1.5; overflow-wrap: anywhere;
+}
+.selo-cidade .acoes { margin-top: 12px; }
 
 /* ---------------- rodape ---------------- */
 

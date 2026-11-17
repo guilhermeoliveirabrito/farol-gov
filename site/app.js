@@ -733,6 +733,38 @@ function blocoHistorico(semanas) {
   );
 }
 
+const SITE = "https://guilhermeoliveirabrito.github.io/farol-gov/";
+
+async function copiarTexto(botao, texto, rotuloOk) {
+  const original = botao.textContent;
+  try {
+    await navigator.clipboard.writeText(texto);
+    botao.textContent = rotuloOk;
+  } catch {
+    botao.textContent = "Não deu para copiar";
+  }
+  setTimeout(() => (botao.textContent = original), 2200);
+}
+
+// selo que a prefeitura (ou quem quiser) pode colocar no proprio site
+function blocoSelo(r) {
+  const link = `${SITE}#m-${r.ibge}`;
+  const imagem = `${SITE}selos/${r.ibge}.svg`;
+  const alt = r.ranking && r.conceito ? `Segurança do site: conceito ${r.conceito} no farol-gov` : "Segurança do site no farol-gov";
+  const codigo = `<a href="${link}"><img src="${imagem}" alt="${alt}"></a>`;
+  const copiar = el("button", { type: "button" }, "Copiar código");
+  copiar.addEventListener("click", () => copiarTexto(copiar, codigo, "Código copiado"));
+  return el(
+    "section",
+    { class: "selo-cidade" },
+    el("h3", { text: "Selo para o site" }),
+    el("p", { text: "Cole este código no site da prefeitura. O selo se atualiza sozinho a cada varredura." }),
+    el("img", { src: `selos/${encodeURIComponent(r.ibge)}.svg`, alt, height: "20" }),
+    el("code", { text: codigo }),
+    el("div", { class: "acoes" }, copiar),
+  );
+}
+
 function abrirFicha(r) {
   const dialogo = $("ficha");
   const corpo = $("ficha-corpo");
@@ -756,18 +788,21 @@ function abrirFicha(r) {
       : el("div", {}, el("strong", { text: "Sem nota" }), el("span", { text: r.acessivel ? "verificação incompleta ou domínio em revisão" : "o site não respondeu à verificação" })),
   );
 
+  const url = `${location.origin}${location.pathname}#m-${r.ibge}`;
   const copiar = el("button", { type: "button" }, "Copiar link");
-  copiar.addEventListener("click", async () => {
-    const url = `${location.origin}${location.pathname}#m-${r.ibge}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      copiar.textContent = "Link copiado";
-    } catch {
-      copiar.textContent = url;
-    }
-  });
+  copiar.addEventListener("click", () => copiarTexto(copiar, url, "Link copiado"));
+
+  // no celular abre o menu de compartilhar do sistema (WhatsApp etc)
+  let compartilhar = null;
+  if (navigator.share) {
+    compartilhar = el("button", { type: "button", class: "principal" }, "Compartilhar");
+    const frase = r.ranking && r.conceito
+      ? `${r.municipio} (${r.uf}) tem conceito ${r.conceito} na segurança do site e do e-mail da prefeitura.`
+      : `Veja a segurança do site e do e-mail da prefeitura de ${r.municipio} (${r.uf}).`;
+    compartilhar.addEventListener("click", () => navigator.share({ title: `${r.municipio} no farol-gov`, text: frase, url }).catch(() => {}));
+  }
   const titulo = encodeURIComponent(`Contestar resultado: ${r.municipio} (${r.dominio})`);
-  const acoes = el("div", { class: "acoes" }, copiar, el("a", { href: `${REPO}/issues/new?title=${titulo}`, rel: "noopener", text: "Contestar resultado" }));
+  const acoes = el("div", { class: "acoes" }, compartilhar, copiar, el("a", { href: `${REPO}/issues/new?title=${titulo}`, rel: "noopener", text: "Contestar resultado" }));
 
   const avisos = el("div");
   const historicoCaixa = el("div");
@@ -780,6 +815,7 @@ function abrirFicha(r) {
     listaSinais(r),
     historicoCaixa,
     acoes,
+    blocoSelo(r),
   );
 
   carregarUf(r.uf)

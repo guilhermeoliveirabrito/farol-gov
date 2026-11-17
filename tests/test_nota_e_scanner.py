@@ -413,3 +413,20 @@ def test_repescagem_do_dns_nao_refaz_a_visita():
     assert r["checks"]["spf"]["status"] == "pass"
     # a home foi visitada uma vez so (https), sem repetir a visita inteira
     assert cliente.chamadas.count((f"https://{ent.dominio}/", True)) == 1
+
+
+def test_criterios_de_excelencia():
+    from farol.nota import EXCELENCIA, criterios_de_excelencia
+
+    checks = {
+        "dmarc": {"status": "pass", "detalhe": "p=reject; com relatorios"},
+        "spf": {"status": "pass", "detalhe": "via _spf.x: -all"},
+        "tls": {"status": "pass", "detalhe": "TLSv1.3"},
+        "hsts": {"status": "pass", "detalhe": "max-age=63072000; includeSubDomains; preload"},
+        "headers": {"status": "pass", "detalhe": "nosniff e anti-clickjacking, com CSP, Referrer-Policy, Permissions-Policy"},
+        "caa": {"status": "pass", "detalhe": "2 registro(s) CAA"},
+    }
+    assert sorted(criterios_de_excelencia(checks)) == sorted(EXCELENCIA)
+    # so conta com o item cumprido
+    checks["dmarc"]["status"] = "warn"
+    assert "dmarc_reject" not in criterios_de_excelencia(checks)

@@ -144,9 +144,11 @@ def avaliar_dmarc(registros):
     if len(dmarc) > 1:
         return Resultado("dmarc", FAIL, "mais de um registro DMARC (invalido)")
 
-    politica = _tags_dmarc(dmarc[0]).get("p")
+    tags = _tags_dmarc(dmarc[0])
+    politica = tags.get("p")
     if politica in ("reject", "quarantine"):
-        return Resultado("dmarc", PASS, f"p={politica}")
+        # rua = pra onde vao os relatorios: sem isso ninguem fica sabendo de quem tenta se passar pela prefeitura
+        return Resultado("dmarc", PASS, f"p={politica}" + ("; com relatorios" if tags.get("rua") else ""))
     if politica == "none":
         return Resultado("dmarc", WARN, "p=none so monitora, nao bloqueia")
     return Resultado("dmarc", FAIL, "registro sem politica p= valida")

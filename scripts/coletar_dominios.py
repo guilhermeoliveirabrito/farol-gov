@@ -17,13 +17,15 @@ from farol.dominios import Entidade, deve_ignorar, normalizar_host, salvar_csv, 
 
 SPARQL_URL = "https://query.wikidata.org/sparql"
 
-# Q3184121 = município do Brasil, P1585 = código IBGE, P856 = site oficial, P625 = coordenadas
+# Q3184121 = município do Brasil, P1585 = código IBGE, P856 = site oficial, P625 = coordenadas,
+# P1082 = população (wdt traz so o valor preferido, que costuma ser o do ultimo censo)
 QUERY = """
-SELECT ?ibge ?nome ?site ?coord WHERE {
+SELECT ?ibge ?nome ?site ?coord ?pop WHERE {
   ?mun wdt:P31 wd:Q3184121 ;
        wdt:P1585 ?ibge .
   OPTIONAL { ?mun wdt:P856 ?site . }
   OPTIONAL { ?mun wdt:P625 ?coord . }
+  OPTIONAL { ?mun wdt:P1082 ?pop . }
   OPTIONAL { ?mun rdfs:label ?pt . FILTER(LANG(?pt) = "pt") }
   OPTIONAL { ?mun rdfs:label ?ptbr . FILTER(LANG(?ptbr) = "pt-br") }
   BIND(COALESCE(?pt, ?ptbr, "") AS ?nome)
@@ -65,12 +67,16 @@ def montar_lista(linhas):
         ibge = linha["ibge"]["value"].strip()
         if len(ibge) != 7:
             continue
-        item = por_ibge.setdefault(ibge, {"nome": linha["nome"]["value"], "sites": [], "coord": ("", "")})
+        item = por_ibge.setdefault(ibge, {"nome": linha["nome"]["value"], "sites": [], "coord": ("", ""), "pop": 0})
         host = normalizar_host(linha.get("site", {}).get("value", ""))
         if host and not deve_ignorar(host):
             item["sites"].append(host)
         if "coord" in linha and not item["coord"][0]:
             item["coord"] = ler_ponto(linha["coord"]["value"])
+        try:
+            item["pop"] = max(item["pop"], int(float(linha.get("pop", {}).get("value", 0))))
+        except ValueError:
+            pass
 
     com_site, sem_site = [], []
     for ibge, item in sorted(por_ibge.items()):
@@ -82,6 +88,7 @@ def montar_lista(linhas):
             dominio=escolher_site(item["sites"]) if item["sites"] else "",
             lat=lat,
             lon=lon,
+            populacao=str(item["pop"]) if item["pop"] else "",
         )
         (com_site if ent.dominio else sem_site).append(ent)
     return com_site, sem_site

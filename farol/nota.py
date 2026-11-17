@@ -1,3 +1,5 @@
+import re
+
 from .checks import ERROR, PASS, WARN
 
 # versao da metodologia; muda quando entra/sai item ou peso, pra nao comparar nota de regras diferentes
@@ -62,6 +64,10 @@ EXCELENCIA = {
     "hsts_subdominios": "HSTS cobrindo os subdominios (includeSubDomains)",
     "hsts_preload": "HSTS pronto pra lista de preload dos navegadores",
     "csp": "Content-Security-Policy na pagina",
+    "referrer_policy": "Referrer-Policy (nao vaza o endereco da pagina pra outros sites)",
+    "permissions_policy": "Permissions-Policy (desliga camera, microfone etc. que o site nao usa)",
+    "hsts_2_anos": "HSTS valendo por 2 anos ou mais",
+    "dmarc_relatorios": "DMARC mandando relatorios (rua=)",
     "caa_proprio": "CAA no proprio dominio, sem depender do registro do estado",
 }
 
@@ -74,8 +80,11 @@ def criterios_de_excelencia(checks):
         return str(c.get("detalhe", "")) if c.get("status") == "pass" else ""
 
     feitos = []
-    if detalhe("dmarc") == "p=reject":
+    dmarc = detalhe("dmarc")
+    if dmarc.startswith("p=reject"):
         feitos.append("dmarc_reject")
+    if "com relatorios" in dmarc:
+        feitos.append("dmarc_relatorios")
     if "-all" in detalhe("spf"):
         feitos.append("spf_hardfail")
     if detalhe("tls") == "TLSv1.3":
@@ -85,8 +94,13 @@ def criterios_de_excelencia(checks):
         feitos.append("hsts_subdominios")
     if "preload" in hsts:
         feitos.append("hsts_preload")
-    if "com CSP" in detalhe("headers"):
-        feitos.append("csp")
+    idade = re.match(r"max-age=(\d+)", hsts)
+    if idade and int(idade.group(1)) >= 2 * 365 * 86400:
+        feitos.append("hsts_2_anos")
+    headers = detalhe("headers")
+    for chave, texto in (("csp", "CSP"), ("referrer_policy", "Referrer-Policy"), ("permissions_policy", "Permissions-Policy")):
+        if texto in headers:
+            feitos.append(chave)
     caa = detalhe("caa")
     if caa and "herdado" not in caa:
         feitos.append("caa_proprio")

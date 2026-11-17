@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from farol import historico, medalhas  # noqa: E402
+from farol.dominios import ler_csv  # noqa: E402
 from farol.nota import PESOS  # noqa: E402
 
 CHECKS = list(PESOS)
@@ -40,11 +41,25 @@ SEMANAS_POR_CIDADE = 12
 HALL_MAXIMO = 30
 
 
-def premios(tempo):
+def populacoes(raiz):
+    """{ibge: habitantes} da lista de dominios (ultimo desempate do podio)."""
+    caminho = Path(raiz) / "data" / "dominios.csv"
+    if not caminho.exists():
+        return {}
+    saida = {}
+    for e in ler_csv(caminho):
+        try:
+            saida[e.ibge] = int(e.populacao)
+        except (TypeError, ValueError):
+            pass
+    return saida
+
+
+def premios(tempo, populacao=None):
     """Podio de cada semana, medalhas de cada cidade e o hall da fama, pros dois rankings."""
     saida = {"semanas": [], "oficial": {}, "geral": {}}
     for ranking in medalhas.RANKINGS:
-        semanas = medalhas.podios(tempo, ranking)
+        semanas = medalhas.podios(tempo, ranking, populacao)
         por_cidade = defaultdict(list)
         for i, s in enumerate(semanas):
             for tipo in medalhas.TIPOS:
@@ -76,7 +91,7 @@ def linha_do_tempo(dados, snapshots):
     return [(data, por_data[data], historico.avaliar_snapshot(por_data[data])) for data in sorted(por_data)]
 
 
-def resumir(dados, snapshots=()):
+def resumir(dados, snapshots=(), populacao=None):
     """Devolve (resumo, detalhes_por_uf, evolucao_nacional)."""
     tempo = linha_do_tempo(dados, snapshots)
     _, _, agora = tempo[-1]
@@ -115,7 +130,7 @@ def resumir(dados, snapshots=()):
         "checks": CHECKS,
         "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var", "posg"],
         "municipios": linhas,
-        "premios": premios(tempo),
+        "premios": premios(tempo, populacao),
     }
     evolucao = [s for s in (historico.resumo_nacional(snap, aval) for _, snap, aval in tempo) if s]
     return resumo, por_uf, evolucao
@@ -267,7 +282,7 @@ def montar(raiz, saida):
     if resultados.exists():
         dados = json.loads(resultados.read_text(encoding="utf-8"))
         snapshots = historico.carregar(raiz / "data" / "historico")
-        resumo, por_uf, evolucao = resumir(dados, snapshots)
+        resumo, por_uf, evolucao = resumir(dados, snapshots, populacoes(raiz))
         compacto(resumo, saida / "dados" / "resumo.json")
         compacto(evolucao, saida / "dados" / "historico.json")
         for uf, detalhes in por_uf.items():

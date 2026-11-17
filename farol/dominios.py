@@ -18,7 +18,7 @@ IGNORAR = (
     "wikipedia.org", "blogspot.com", "wordpress.com", "google.com",
 )
 
-CAMPOS = ["ibge", "municipio", "uf", "dominio", "lat", "lon"]
+CAMPOS = ["ibge", "municipio", "uf", "dominio", "lat", "lon", "populacao"]
 
 
 @dataclass(frozen=True)
@@ -30,6 +30,8 @@ class Entidade:
     # coordenadas so servem pro mapa da pagina, entao sao opcionais
     lat: str = ""
     lon: str = ""
+    # so serve de ultimo desempate no podio da semana
+    populacao: str = ""
 
 
 def uf_do_ibge(codigo):

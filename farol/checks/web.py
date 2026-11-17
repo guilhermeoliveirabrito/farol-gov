@@ -208,7 +208,8 @@ def avaliar_headers(headers):
     frame = "x-frame-options" in headers or "frame-ancestors" in csp
 
     if nosniff and frame:
-        return Resultado("headers", PASS, "nosniff e anti-clickjacking" + (", com CSP" if csp else ""))
+        extras = [nome for nome, tem in (("CSP", csp), ("Referrer-Policy", "referrer-policy" in headers), ("Permissions-Policy", "permissions-policy" in headers)) if tem]
+        return Resultado("headers", PASS, "nosniff e anti-clickjacking" + (", com " + ", ".join(extras) if extras else ""))
     if nosniff or frame:
         falta = "anti-clickjacking" if nosniff else "X-Content-Type-Options"
         return Resultado("headers", WARN, f"falta {falta}")

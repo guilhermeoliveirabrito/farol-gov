@@ -26,12 +26,21 @@ def test_vale_a_ultima_varredura_da_semana():
     assert not semanas[0]["parcial"] and semanas[1]["parcial"]
 
 
-def test_empate_divide_a_medalha_como_nas_olimpiadas():
-    # dois empatados em 1o: os dois levam ouro, ninguem leva prata e o seguinte leva bronze
+def test_empate_total_divide_a_medalha_e_o_seguinte_leva_a_proxima():
+    # dois empatados em tudo no 1o: os dois levam ouro, o seguinte leva prata (nao some)
     semanas = podios([("2026-11-16", None, _aval({"a": 1, "b": 1, "c": 3, "d": 4}))])
     assert semanas[0]["ouro"] == ["a", "b"]
-    assert semanas[0]["prata"] == []
-    assert semanas[0]["bronze"] == ["c"]
+    assert semanas[0]["prata"] == ["c"]
+    assert semanas[0]["bronze"] == ["d"]
+
+
+def test_mesmo_servidor_desempata_pela_populacao():
+    # tres cidades no mesmo servidor tem tudo identico: decide quem protege mais gente
+    aval = {"a": [90.0, "A", 1], "b": [90.0, "A", 1], "c": [90.0, "A", 1]}
+    snap = _snap({"a": ("pppf", 3), "b": ("pppf", 3), "c": ("pppf", 3)})
+    s = podios([("2026-11-17", snap, aval)], populacao={"a": 10_000, "b": 30_000, "c": 20_000})[0]
+    assert (s["ouro"], s["prata"], s["bronze"]) == (["b"], ["c"], ["a"])
+    assert s["desempate"]["ouro"] == "maior população (mais gente protegida)"
 
 
 def test_hall_da_fama_por_pontos_e_desempate():

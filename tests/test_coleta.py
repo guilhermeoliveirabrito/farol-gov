@@ -38,3 +38,12 @@ def test_montar_lista_separa_quem_nao_tem_site():
 
     # facebook nao conta como site
     assert {e.ibge for e in sem} == {"5200050", "3550308"}
+
+
+def test_populacao_fica_com_o_maior_valor():
+    linhas = [
+        {"ibge": {"value": "2611606"}, "nome": {"value": "Recife"}, "site": {"value": "https://www2.recife.pe.gov.br/"}, "pop": {"value": "1488920"}},
+        {"ibge": {"value": "2611606"}, "nome": {"value": "Recife"}, "pop": {"value": "1537704"}},
+    ]
+    com_site, _ = coleta.montar_lista(linhas)
+    assert com_site[0].populacao == "1537704"

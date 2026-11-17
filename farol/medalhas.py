@@ -8,9 +8,9 @@ vale a ultima varredura do dia.
 Sao duas premiacoes, uma pra cada ranking: a oficial (so quem teve todos os itens
 verificados) e a geral (todo mundo com nota). Ouro, prata e bronze vao pras posicoes
 1, 2 e 3 dessa varredura em cada uma. Nota igual desempata
-por: mais itens cumpridos por inteiro, mais pontos de excelencia (nota.EXCELENCIA) e
-melhor media nas 4 semanas anteriores. Se ainda empatar, divide como nas Olimpiadas:
-dois empatados em 1o levam ouro e o proximo ja e 3o (bronze), sem prata.
+por: mais itens cumpridos por inteiro, mais pontos de excelencia (nota.EXCELENCIA),
+melhor media nas 4 semanas anteriores e, por ultimo, maior populacao. Se ainda assim
+empatar, divide a medalha, e o seguinte leva a proxima (dois ouros e uma prata).
 
 A semana da varredura mais recente fica marcada como em andamento: se rodar de novo
 antes de domingo, o podio dela pode mudar.
@@ -37,6 +37,7 @@ CRITERIOS = (
     "mais itens cumpridos por inteiro",
     "mais pontos de excelência",
     "melhor média nas semanas anteriores",
+    "maior população (mais gente protegida)",
 )
 SEMANAS_DE_CONSTANCIA = 4
 
@@ -44,8 +45,8 @@ SEMANAS_DE_CONSTANCIA = 4
 RANKINGS = ("oficial", "geral")
 
 
-def _chaves(snap, aval, anteriores, ranking="oficial"):
-    """{ibge: (nota, itens inteiros, excelencia, media anterior)} de quem esta no ranking."""
+def _chaves(snap, aval, anteriores, ranking="oficial", populacao=None):
+    """{ibge: (nota, itens inteiros, excelencia, media anterior, populacao)} de quem esta no ranking."""
     chaves = {}
     for ibge, linha in aval.items():
         nota = linha[0]
@@ -61,22 +62,27 @@ def _chaves(snap, aval, anteriores, ranking="oficial"):
         extra = flags_status[2] if len(flags_status) > 2 and isinstance(flags_status[2], (int, float)) else 0
         notas = [a[ibge][0] for a in anteriores if a.get(ibge) and a[ibge][0] is not None]
         constancia = round(sum(notas) / len(notas), 2) if notas else 0.0
-        chaves[ibge] = (nota, inteiros, extra, constancia)
+        chaves[ibge] = (nota, inteiros, extra, constancia, (populacao or {}).get(ibge, 0))
     return chaves
 
 
 def _classificar(chaves):
-    """Posicao de competicao (1, 1, 3...) pela tupla inteira de criterios."""
+    """Posicao densa (1, 1, 2, 3...) pela tupla inteira de criterios.
+
+    Densa e nao olimpica: se dois empatam em tudo no ouro, o seguinte leva prata.
+    Com a olimpica (1, 1, 3) um empate no topo sumia com a prata e o bronze, e como
+    cidades no mesmo servidor tem a configuracao identica, o podio virava so ouro.
+    """
     ordem = sorted(chaves, key=lambda i: chaves[i], reverse=True)
     pos, anterior, saida = 0, None, {}
-    for n, ibge in enumerate(ordem, 1):
+    for ibge in ordem:
         if chaves[ibge] != anterior:
-            pos, anterior = n, chaves[ibge]
+            pos, anterior = pos + 1, chaves[ibge]
         saida[ibge] = pos
     return saida, ordem
 
 
-def podios(tempo, ranking="oficial"):
+def podios(tempo, ranking="oficial", populacao=None):
     """tempo: [(data, snapshot, avaliacao)] em ordem de data.
 
     Devolve uma lista de semanas, da mais antiga pra mais nova:
@@ -91,7 +97,7 @@ def podios(tempo, ranking="oficial"):
     ordem_semanas = sorted(ultima_da_semana)
     for i, semana in enumerate(ordem_semanas):
         data, snap, aval = ultima_da_semana[semana]
-        chaves = _chaves(snap, aval, finais[-SEMANAS_DE_CONSTANCIA:], ranking)
+        chaves = _chaves(snap, aval, finais[-SEMANAS_DE_CONSTANCIA:], ranking, populacao)
         posicoes, ordem = _classificar(chaves)
         podio = {"semana": semana, "data": data, "parcial": i == len(ordem_semanas) - 1, "desempate": {}}
         for p, tipo in enumerate(TIPOS, 1):

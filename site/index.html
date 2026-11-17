@@ -42,6 +42,7 @@
       <nav aria-label="Seções">
         <a href="#itens">O que falta</a>
         <a href="#evolucao">Evolução</a>
+        <a href="#medalhas">Medalhas</a>
         <a href="#movimento">Quem subiu</a>
         <a href="#estados">Estados</a>
         <a href="#cidades">Cidades</a>
@@ -106,6 +107,27 @@
       </div>
       <div class="grafico-evolucao" id="grafico-evolucao"></div>
       <p class="nota-grafico">As notas de todas as semanas são recalculadas com as regras atuais. Quando um item novo passa a ser verificado, ele só entra na conta a partir daquela semana.</p>
+    </section>
+
+    <section class="secao largura" id="medalhas" hidden>
+      <div class="cabeca">
+        <h2>Pódio da semana</h2>
+        <p>Toda semana as três prefeituras com a maior nota levam ouro, prata e bronze. Vale a última varredura de cada semana, de segunda a domingo. Empate divide a medalha.</p>
+      </div>
+      <div class="podio-topo">
+        <p id="podio-semana" class="podio-legenda"></p>
+        <label class="podio-escolha">
+          <span class="sr">Semana</span>
+          <select id="semana-podio"></select>
+        </label>
+      </div>
+      <div id="podio"></div>
+
+      <div class="hall-caixa">
+        <h3>Hall da fama</h3>
+        <p>Ouro vale 10 pontos, prata 5 e bronze 2,5. Em empate de pontos, ganha quem tem mais ouros, depois mais pratas. Se ainda empatar, divide a posição.</p>
+        <ol class="hall" id="hall"></ol>
+      </div>
     </section>
 
     <section class="secao largura" id="movimento" hidden>

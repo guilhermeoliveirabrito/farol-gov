@@ -95,3 +95,15 @@ def test_link_direto_da_cidade(navegador, endereco, pagina):
     outra.wait_for_selector("#ficha[open]")
     assert texto in outra.locator("#ficha").inner_text()
     outra.close()
+
+
+def test_medalhas_e_hall_da_fama(pagina):
+    pagina.wait_for_selector("#medalhas:not([hidden])")
+    assert pagina.locator("#podio .degrau").count() == 3
+    assert pagina.locator("#hall li").count() > 0
+    # trocar a semana redesenha o podio sem erro
+    opcoes = pagina.locator("#semana-podio option")
+    if opcoes.count() > 1:
+        pagina.select_option("#semana-podio", opcoes.last.get_attribute("value"))
+        assert pagina.locator("#podio .degrau").count() == 3
+    assert pagina.erros == []

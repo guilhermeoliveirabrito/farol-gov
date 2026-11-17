@@ -115,6 +115,40 @@ function selo(r) {
     : el("span", { class: "conceito sem", text: "–", title: "Sem nota" });
 }
 
+// "semana de 16 a 22/11/2026"
+function nomeSemana(s) {
+  const ini = new Date(`${s.s}T12:00:00`);
+  const fim = new Date(ini.getTime() + 6 * 86400000);
+  const dia = (d) => String(d.getDate()).padStart(2, "0");
+  const mes = (d) => String(d.getMonth() + 1).padStart(2, "0");
+  const inicio = ini.getMonth() === fim.getMonth() ? dia(ini) : `${dia(ini)}/${mes(ini)}`;
+  return `semana de ${inicio} a ${dia(fim)}/${mes(fim)}/${fim.getFullYear()}`;
+}
+
+function icone(tipo) {
+  return el("i", { class: `med-icone ${tipo}`, "aria-hidden": "true" });
+}
+
+// "ouro 2x" ao lado do nome; o title conta de quais semanas foi cada uma
+function chipsMedalhas(r) {
+  if (!r.medalhas?.length) return null;
+  const caixa = el("span", { class: "medalhas" });
+  for (const tipo of ["ouro", "prata", "bronze"]) {
+    const desse = r.medalhas.filter((m) => m.tipo === tipo);
+    if (!desse.length) continue;
+    const semanas = desse.map((m) => nomeSemana(m.semana) + (m.semana.parcial ? " (em andamento)" : "")).join("; ");
+    caixa.append(
+      el(
+        "span",
+        { class: `med ${tipo}`, title: `${NOME_MEDALHA[tipo]}: ${semanas}`, "aria-label": `${desse.length} ${desse.length > 1 ? "medalhas" : "medalha"} de ${tipo}` },
+        icone(tipo),
+        el("span", { text: `${desse.length}x`, "aria-hidden": "true" }),
+      ),
+    );
+  }
+  return caixa;
+}
+
 // quando o elemento aparece na tela, chama fn uma vez (barras e ladrilhos)
 function quandoAparecer(alvo, fn) {
   if (reduzirMovimento || !("IntersectionObserver" in window)) return fn();
@@ -136,8 +170,22 @@ async function buscarJson(url) {
   return resp.json();
 }
 
+// medalhas: premios.semanas tem a data de cada semana e premios.cidades[ibge] = [[indice da semana, "o"|"p"|"b"]]
+const MEDALHAS = { o: "ouro", p: "prata", b: "bronze" };
+const NOME_MEDALHA = { ouro: "Ouro", prata: "Prata", bronze: "Bronze" };
+let semanasPremio = [];
+
+function medalhasDe(premios, ibge) {
+  const lista = premios?.cidades?.[ibge];
+  if (!Array.isArray(lista)) return [];
+  return lista
+    .map(([i, t]) => ({ tipo: MEDALHAS[t], semana: semanasPremio[i] }))
+    .filter((m) => m.tipo && m.semana);
+}
+
 function decodificar(resumo) {
   const idx = Object.fromEntries(resumo.campos.map((c, i) => [c, i]));
+  semanasPremio = Array.isArray(resumo.premios?.semanas) ? resumo.premios.semanas : [];
   return resumo.municipios.map((l) => {
     const st = {};
     resumo.checks.forEach((c, i) => (st[c] = CODIGOS[l[idx.status][i]] || "error"));
@@ -157,6 +205,7 @@ function decodificar(resumo) {
       posBr: typeof l[idx.pos] === "number" ? l[idx.pos] : null,
       variacao: typeof l[idx.var] === "number" ? l[idx.var] : null,
       st,
+      medalhas: medalhasDe(resumo.premios, String(l[idx.ibge])),
       _busca: semAcento(`${municipio} ${dominio}`),
       _nome: semAcento(municipio),
     };
@@ -800,6 +849,24 @@ function regua(r) {
   );
 }
 
+function blocoMedalhas(r) {
+  if (!r.medalhas?.length) return null;
+  const ordem = { ouro: 0, prata: 1, bronze: 2 };
+  const lista = [...r.medalhas].sort((a, b) => b.semana.s.localeCompare(a.semana.s) || ordem[a.tipo] - ordem[b.tipo]);
+  return el(
+    "section",
+    { class: "medalhas-cidade" },
+    el("h3", { text: "Medalhas" }),
+    el(
+      "ul",
+      {},
+      ...lista.map((m) =>
+        el("li", {}, icone(m.tipo), el("b", { text: NOME_MEDALHA[m.tipo] }), ` na ${nomeSemana(m.semana)}`, m.semana.parcial ? el("span", { class: "parcial", text: "em andamento" }) : null),
+      ),
+    ),
+  );
+}
+
 function abrirFicha(r) {
   const dialogo = $("ficha");
   const corpo = $("ficha-corpo");
@@ -847,6 +914,7 @@ function abrirFicha(r) {
     placar,
     regua(r),
     posicoes,
+    blocoMedalhas(r),
     avisos,
     listaSinais(r),
     historicoCaixa,
@@ -1122,7 +1190,7 @@ function linhaCidade(r) {
   const botao = el(
     "button",
     { type: "button", class: "linha" },
-    el("span", { class: "nome" }, r.municipio || r.dominio, el("span", { class: "dominio", text: r.dominio })),
+    el("span", { class: "nome" }, r.municipio || r.dominio, chipsMedalhas(r), el("span", { class: "dominio", text: r.dominio })),
     el("span", { class: "uf", text: r.uf }),
     ...(r.nota != null
       ? [luzes, el("span", { class: "nota", text: Math.round(r.nota) }), el("span", { class: "mov" }, seta(r))]
@@ -1324,6 +1392,67 @@ function movimento(resumo) {
   $("movimento").hidden = false;
 }
 
+// ---------- medalhas: podio da semana e hall da fama ----------
+
+function podio(semana, porIbge, atual) {
+  const degrau = (tipo, altura) => {
+    const cidades = semana[tipo].map((ibge) => porIbge.get(ibge)).filter(Boolean);
+    const nomes = cidades.length
+      ? cidades.map((r) => {
+          const b = el("button", { type: "button", class: "podio-cidade" }, el("b", { text: r.municipio }), el("span", { text: atual ? `${r.uf}, nota ${fmtNota(r.nota)}` : r.uf }));
+          b.addEventListener("click", () => abrirFicha(r));
+          return b;
+        })
+      : [el("span", { class: "podio-vazio", text: tipo === "prata" ? "ninguém (empate no ouro)" : "ninguém (empate acima)" })];
+    return el("li", { class: `degrau ${tipo} ${altura}` }, el("div", { class: "podio-nomes" }, ...nomes), el("div", { class: "bloco" }, icone(tipo), el("span", { text: NOME_MEDALHA[tipo] })));
+  };
+  // prata na esquerda, ouro no meio, bronze na direita, como num podio de verdade
+  return el("ol", { class: "podio", "aria-label": "Pódio" }, degrau("prata", "medio"), degrau("ouro", "alto"), degrau("bronze", "baixo"));
+}
+
+function medalhasSecao(resumo) {
+  const premios = resumo.premios;
+  if (!premios || !semanasPremio.length) return;
+  const porIbge = new Map(todos.map((r) => [r.ibge, r]));
+  // monta o podio de cada semana a partir das medalhas de cada cidade
+  const semanas = semanasPremio.map((s) => ({ ...s, ouro: [], prata: [], bronze: [] }));
+  for (const [ibge, lista] of Object.entries(premios.cidades || {})) {
+    for (const [i, t] of lista) if (semanas[i] && MEDALHAS[t]) semanas[i][MEDALHAS[t]].push(ibge);
+  }
+
+  const escolha = $("semana-podio");
+  const legenda = $("podio-semana");
+  const mostrar = (i) => {
+    const s = semanas[i];
+    legenda.textContent = s.parcial
+      ? `Resultado parcial da ${nomeSemana(s)}: se houver outra varredura até domingo, o pódio pode mudar.`
+      : `Resultado da ${nomeSemana(s)}, pela varredura de ${fmtData(s.d, { day: "numeric", month: "long" })}.`;
+    $("podio").replaceChildren(podio(s, porIbge, i === semanas.length - 1));
+  };
+  escolha.replaceChildren(...semanas.map((s, i) => el("option", { value: i, text: nomeSemana(s).replace("semana de ", "") + (s.parcial ? " (em andamento)" : "") })).reverse());
+  escolha.value = String(semanas.length - 1);
+  escolha.addEventListener("change", () => mostrar(Number(escolha.value)));
+  mostrar(semanas.length - 1);
+
+  const hall = (premios.hall || []).map(([ibge, o, p, b, pontos, pos]) => ({ r: porIbge.get(String(ibge)), o, p, b, pontos, pos })).filter((h) => h.r);
+  const contagem = (tipo, n) => (n ? el("span", { class: `med ${tipo}`, title: `${n}x ${tipo}` }, icone(tipo), el("span", { text: `${n}x` })) : el("span", { "aria-hidden": "true" }));
+  $("hall").replaceChildren(
+    ...hall.map((h) => {
+      const b = el(
+        "button",
+        { type: "button", class: "hall-linha" },
+        el("span", { class: "hall-pos", text: `${h.pos}º` }),
+        el("span", { class: "hall-nome" }, h.r.municipio, el("span", { class: "uf", text: h.r.uf })),
+        el("span", { class: "hall-medalhas" }, contagem("ouro", h.o), contagem("prata", h.p), contagem("bronze", h.b)),
+        el("span", { class: "hall-pontos", text: `${num(h.pontos)} pts` }),
+      );
+      b.addEventListener("click", () => abrirFicha(h.r));
+      return el("li", {}, b);
+    }),
+  );
+  $("medalhas").hidden = false;
+}
+
 // ---------- topo ----------
 
 function contarAte(elemento, valor) {
@@ -1436,6 +1565,7 @@ async function iniciar() {
     estados(ranqueados, lista);
     evolucao(lista);
     if (resumo.anterior) movimento(resumo);
+    medalhasSecao(resumo);
     abrirDoLink();
   });
 }

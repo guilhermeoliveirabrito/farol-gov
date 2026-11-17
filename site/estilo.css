@@ -316,6 +316,68 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .sugestoes .seta.sobe { color: #12805f; } .sugestoes .seta.desce { color: #c4362a; }
 
 /* quem subiu e quem caiu */
+/* medalhas */
+.med-icone {
+  --metal: #d9a520; --borda: #9c7412;
+  position: relative; display: inline-block; flex: none; width: 14px; height: 14px; margin-top: 5px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.7) 0 18%, transparent 20%), var(--metal);
+  box-shadow: inset 0 0 0 1.5px var(--borda);
+}
+.med-icone::before {
+  content: ""; position: absolute; left: 3px; top: -6px; width: 8px; height: 7px; z-index: -1;
+  background: linear-gradient(90deg, #2f6fb5 50%, #c8423a 50%); clip-path: polygon(0 0, 100% 0, 78% 100%, 22% 100%);
+}
+.med-icone.prata { --metal: #b9c3cc; --borda: #7d8894; }
+.med-icone.bronze { --metal: #c57d43; --borda: #8a5226; }
+.medalhas { display: inline-flex; gap: 8px; margin-left: 8px; vertical-align: 1px; }
+.med { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; font-weight: 700; color: var(--suave); isolation: isolate; }
+
+
+.podio-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 28px; }
+.podio-legenda { margin: 0; color: var(--suave); max-width: 60ch; }
+.podio { list-style: none; margin: 0 auto; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 10px; max-width: 760px; }
+.degrau { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.podio-nomes { display: flex; flex-direction: column; gap: 6px; text-align: center; }
+.podio-cidade { background: none; border: 0; padding: 4px; cursor: pointer; color: inherit; font: inherit; display: flex; flex-direction: column; align-items: center; border-radius: 8px; }
+.podio-cidade:hover { background: var(--papel); }
+.podio-cidade b { font-family: var(--titulo); font-size: 1.15rem; line-height: 1.15; overflow-wrap: anywhere; }
+.podio-cidade span { color: var(--suave); font-size: .85rem; }
+.podio-vazio { color: var(--suave); font-size: .85rem; font-style: italic; }
+.degrau .bloco {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 18px;
+  border-radius: 10px 10px 0 0; background: var(--papel); border: 1px solid var(--linha); border-bottom: 0;
+  font-family: var(--titulo); font-weight: 800; font-size: 1.05rem; isolation: isolate;
+}
+.degrau .bloco .med-icone { width: 34px; height: 34px; margin-top: 12px; box-shadow: inset 0 0 0 3px var(--borda); }
+.degrau .bloco .med-icone::before { left: 8px; top: -14px; width: 18px; height: 16px; }
+.degrau.alto .bloco { height: 170px; }
+.degrau.medio .bloco { height: 125px; }
+.degrau.baixo .bloco { height: 95px; }
+.degrau.alto .podio-cidade b { font-size: 1.35rem; }
+
+.hall-caixa { margin-top: 64px; max-width: 760px; }
+.hall-caixa h3 { font-size: 1.6rem; margin: 0 0 6px; }
+.hall-caixa > p { color: var(--suave); margin: 0 0 16px; font-size: .94rem; }
+.hall { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); }
+.hall-linha {
+  width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto 72px; gap: 14px; align-items: center;
+  padding: 10px 8px; background: none; border: 0; border-bottom: 1px solid var(--linha); text-align: left; cursor: pointer; color: inherit; font: inherit;
+}
+.hall-linha:hover { background: var(--papel); }
+.hall-pos { font-family: var(--titulo); font-weight: 800; }
+.hall-nome { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hall-nome .uf { color: var(--suave); font-weight: 400; font-size: .85rem; margin-left: 6px; }
+.hall-medalhas { display: grid; grid-template-columns: repeat(3, 40px); gap: 8px; }
+.podio { border-bottom: 2px solid var(--linha); }
+.hall-pontos { white-space: nowrap; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.medalhas-cidade { padding: 14px 0; border-bottom: 1px solid var(--linha); }
+.medalhas-cidade h3 { font-size: 1.05rem; margin: 0 0 8px; }
+.medalhas-cidade ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.medalhas-cidade li { display: flex; align-items: center; gap: 8px; font-size: .94rem; isolation: isolate; }
+.medalhas-cidade li .med-icone { margin-top: 4px; }
+.medalhas-cidade .parcial { font-size: .76rem; color: var(--suave); border: 1px solid var(--linha); border-radius: 99px; padding: 1px 8px; }
+
 .movimento-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 56px; }
 .mov-titulo { font-size: 1.25rem; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
 .mov-titulo.sobe::before, .mov-titulo.desce::before { font-family: var(--texto); font-size: 1.1rem; }
@@ -335,7 +397,7 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 
 /* evolucao semana a semana */
 .controles-grafico { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; color: var(--suave); font-size: .92rem; }
-.controles-grafico select { font: inherit; color: var(--tinta); background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 9px 12px; }
+.podio-escolha select, .controles-grafico select { font: inherit; color: var(--tinta); background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 9px 12px; }
 .grafico-evolucao { background: var(--papel); border-radius: 16px; padding: 16px 12px 8px; }
 .grafico-evolucao svg { display: block; width: 100%; height: auto; overflow: visible; }
 .grafico-evolucao .guia, .grafico-cidade .guia { stroke: var(--linha); stroke-width: 1; }
@@ -471,6 +533,11 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
   .mapa { height: 360px; }
   .linha { grid-template-columns: minmax(0, 1fr) 36px 52px 34px; gap: 10px; }
   .linha .uf, .linha .luzes { display: none; }
+  .hall-linha { grid-template-columns: 34px minmax(0, 1fr) 68px; }
+  .hall-medalhas { grid-column: 2; grid-row: 2; }
+  .hall-pontos { grid-column: 3; grid-row: 1; }
+  .podio-cidade b, .degrau.alto .podio-cidade b { font-size: 1rem; }
+  .degrau.alto .bloco { height: 130px; } .degrau.medio .bloco { height: 98px; } .degrau.baixo .bloco { height: 86px; }
   .legenda-luzes { display: none; }
   .esqueleto { grid-template-columns: minmax(0, 1fr) 52px; }
   .esqueleto span:nth-child(2) { display: none; }

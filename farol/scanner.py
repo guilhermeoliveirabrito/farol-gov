@@ -122,16 +122,19 @@ def marcar_compartilhados(resultados):
             r["ranking"] = False
 
 
-def _rodar(entidades, resolver_factory, cliente, workers, limite, progresso=None):
+def _rodar(entidades, resolver_factory, cliente, workers, limite, progresso=None, prazo=None):
+    """Avalia em paralelo. Com `prazo` (segundos), para de esperar quando o tempo acaba
+    e devolve so o que terminou; o que ainda estava na fila e cancelado."""
     resultados = {}
 
     # dnspython nao garante ser thread-safe, entao cada tarefa cria o seu resolver
     def tarefa(ent):
         return avaliar(ent, resolver_factory(), cliente, limite)
 
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        futuros = {pool.submit(tarefa, e): e for e in entidades}
-        for i, fut in enumerate(as_completed(futuros), 1):
+    pool = ThreadPoolExecutor(max_workers=workers)
+    futuros = {pool.submit(tarefa, e): e for e in entidades}
+    try:
+        for i, fut in enumerate(as_completed(futuros, timeout=prazo), 1):
             ent = futuros[fut]
             try:
                 resultados[ent.ibge] = fut.result()
@@ -140,14 +143,19 @@ def _rodar(entidades, resolver_factory, cliente, workers, limite, progresso=None
                 log.exception("erro inesperado em %s", ent.dominio)
             if progresso:
                 progresso(i, len(futuros))
+    except TimeoutError:
+        log.warning("prazo de %ss acabou com %d de %d terminados", prazo, len(resultados), len(futuros))
+    finally:
+        pool.shutdown(wait=prazo is None, cancel_futures=True)
     return resultados
 
 
-def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3):
+def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3, prazo_repescagem=600):
     """Roda avaliar() em paralelo, com uma repescagem no fim pra quem deu timeout.
 
     resolver_factory cria um resolver por tarefa. cliente_lento (timeout maior) e usado
-    so na repescagem; se nao vier, a repescagem usa o mesmo cliente.
+    so na repescagem; se nao vier, a repescagem usa o mesmo cliente. A repescagem tem
+    prazo: na varredura de 17/11 ela sozinha passou de 50 minutos.
     """
     # embaralha com semente fixa: a lista vem por codigo IBGE, o que junta cidades do mesmo
     # estado (e muitas vezes do mesmo servidor) uma atras da outra
@@ -161,7 +169,7 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
     if pendentes:
         log.warning("repescagem: %d dominios com timeout, tentando de novo com mais calma", len(pendentes))
         # 2 por IP: com 1 so, um servidor com centenas de prefeituras virava fila de horas
-        segunda = _rodar(pendentes, resolver_factory, cliente_lento or cliente, max(2, workers // 4), LimitePorServidor(2))
+        segunda = _rodar(pendentes, resolver_factory, cliente_lento or cliente, max(2, workers // 4), LimitePorServidor(2), prazo=prazo_repescagem)
         for ibge, novo in segunda.items():
             if erros_transitorios(novo) < erros_transitorios(resultados[ibge]):
                 resultados[ibge] = novo

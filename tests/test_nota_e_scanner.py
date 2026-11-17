@@ -154,6 +154,7 @@ def test_sem_nota_quando_falta_verificar_demais():
 
 def test_repescagem_recupera_quem_deu_timeout():
     ent, resolver, cliente = _ambiente()
+
     class ClienteInstavel(FakeCliente):
         def get(self, url, verificar=True, ler=0):
             raise ErroConexao("timeout")
@@ -164,6 +165,28 @@ def test_repescagem_recupera_quem_deu_timeout():
     assert dados["repescagem"] == {"tentados": 1, "recuperados": 1}
     assert r["checks"]["https"]["status"] != "error"
     assert r["acessivel"]
+
+
+def test_repescagem_respeita_o_prazo():
+    import time
+
+    ent, resolver, cliente = _ambiente()
+
+    class ClienteInstavel(FakeCliente):
+        def get(self, url, verificar=True, ler=0):
+            raise ErroConexao("timeout")
+
+    class ClienteTravado(FakeCliente):
+        def get(self, url, verificar=True, ler=0):
+            time.sleep(0.6)
+            return super().get(url, verificar, ler)
+
+    inicio = time.monotonic()
+    dados = varrer([ent], lambda: resolver, ClienteInstavel({}), workers=1, cliente_lento=ClienteTravado(cliente.rotas), prazo_repescagem=0.1)
+    assert time.monotonic() - inicio < 0.5
+    # o resultado da primeira passada fica valendo
+    assert dados["repescagem"] == {"tentados": 1, "recuperados": 0}
+    assert dados["resultados"][0]["checks"]["https"]["status"] == "error"
 
 
 def test_limite_por_servidor():

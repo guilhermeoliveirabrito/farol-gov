@@ -36,7 +36,7 @@ CODIGO = historico.CODIGO
 
 ACESSIVEL = 1
 RANKING = 2  # tem nota e entra no ranking geral
-OFICIAL = 4  # todos os itens verificados: ranking oficial (o que vale pras medalhas)
+OFICIAL = 4  # todos os itens verificados: tem posicao no ranking e concorre a medalha
 SEMANAS_POR_CIDADE = 12
 HALL_MAXIMO = 30
 
@@ -56,9 +56,14 @@ def populacoes(raiz):
 
 
 def premios(tempo, populacao=None):
-    """Podio de cada semana, medalhas de cada cidade e o hall da fama, pros dois rankings."""
-    saida = {"semanas": [], "oficial": {}, "geral": {}}
-    for ranking in medalhas.RANKINGS:
+    """Podio de cada semana, medalhas de cada cidade e o hall da fama.
+
+    Um ranking so: concorre quem teve todos os itens verificados. Chegou a ter um
+    "geral" com todo mundo que tem nota, mas depois que a varredura passou a verificar
+    quase tudo ele dava sempre o mesmo podio.
+    """
+    saida = {"semanas": [], "oficial": {}}
+    for ranking in ("oficial",):
         semanas = medalhas.podios(tempo, ranking, populacao)
         por_cidade = defaultdict(list)
         for i, s in enumerate(semanas):
@@ -111,7 +116,7 @@ def resumir(dados, snapshots=(), populacao=None):
         linhas.append([
             r["ibge"], r["municipio"], r["uf"], r["dominio"],
             r.get("lat"), r.get("lon"), nota, conceito,
-            flags, status, pos, variacao, pos_geral,
+            flags, status, pos, variacao,
         ])
         semanas = [[data, aval[r["ibge"]][0], aval[r["ibge"]][2]] for data, _, aval in tempo if r["ibge"] in aval]
         por_uf[r["uf"] or "XX"][r["ibge"]] = {
@@ -128,7 +133,7 @@ def resumir(dados, snapshots=(), populacao=None):
         "ranqueados": sum(1 for v in agora.values() if v[3] is not None),
         "oficiais": sum(1 for v in agora.values() if v[2] is not None),
         "checks": CHECKS,
-        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var", "posg"],
+        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var"],
         "municipios": linhas,
         "premios": premios(tempo, populacao),
     }

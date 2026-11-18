@@ -273,12 +273,7 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 
 .sem-js { padding-block: 20px; font-size: .95rem; }
 
-/* ranking oficial x geral */
-.modo-ranking { display: inline-flex; padding: 4px; gap: 4px; border-radius: 12px; background: var(--papel); border: 1px solid var(--linha); }
-.modo-ranking button {
-  font: inherit; font-weight: 600; color: var(--suave); background: none; border: 0; border-radius: 9px; padding: 9px 16px; cursor: pointer;
-}
-.modo-ranking button[aria-pressed="true"] { background: var(--tinta); color: var(--papel); }
+/* texto sobre quem entra no ranking */
 .explica-ranking { color: var(--suave); font-size: .92rem; max-width: 78ch; margin: 12px 0 22px; }
 .pos-lista { display: inline-block; min-width: 2.6em; margin-right: 6px; color: var(--suave); font-weight: 600; font-variant-numeric: tabular-nums; }
 .incompleta { margin-left: 8px; font-size: .74rem; font-weight: 600; color: var(--suave); border: 1px solid var(--linha); border-radius: 99px; padding: 1px 8px; white-space: nowrap; }
@@ -340,12 +335,6 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 }
 .med-icone.prata { --metal: #b9c3cc; --borda: #7d8894; }
 .med-icone.bronze { --metal: #c57d43; --borda: #8a5226; }
-/* premiacao geral: medalha vazada, sem fita */
-.med-icone.geral { background: transparent; box-shadow: inset 0 0 0 3.5px var(--metal), 0 0 0 1px var(--borda); }
-.med-icone.geral::before { display: none; }
-.degrau .bloco .med-icone.geral { box-shadow: inset 0 0 0 8px var(--metal), 0 0 0 1.5px var(--borda); }
-.modo-ranking button { isolation: isolate; }
-.modo-ranking button .med-icone { margin: 0 4px 0 0; vertical-align: -1px; }
 .hall-vazio { padding: 16px 8px; color: var(--suave); }
 .medalhas { display: inline-flex; gap: 8px; margin-left: 8px; vertical-align: 1px; }
 .med { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; font-weight: 700; color: var(--suave); isolation: isolate; }

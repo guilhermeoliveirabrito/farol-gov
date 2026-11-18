@@ -69,11 +69,11 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 | D | >= 35 |
 | F | < 35 |
 
-## Ranking oficial e ranking geral
+## Quem entra no ranking
 
-- **Oficial:** só entram as prefeituras com todos os itens daquela varredura verificados. É o ranking principal da página. Dele saem as posições, as setas de quem subiu ou caiu e a premiação oficial.
-- **Geral:** entram todas as prefeituras com nota, inclusive as que tiveram algum item sem resposta. Item não verificado sai da conta, então a nota delas é calculada sobre menos itens e pode ficar acima da real. Por isso o primeiro do geral pode não ser o primeiro de verdade.
-- Médias, adoção de cada item e o gráfico semana a semana usam todas as prefeituras com nota, como antes.
+- Só entram as prefeituras com todos os itens daquela varredura verificados. Dele saem as posições, as setas de quem subiu ou caiu e as medalhas.
+- Quem teve algum item sem resposta continua na lista, no fim e sem posição. Item não verificado sai da conta da nota, então a nota dessa cidade é calculada sobre menos itens e pode ficar acima da real.
+- Médias, adoção de cada item e o gráfico semana a semana usam todas as prefeituras com nota.
 
 ## Posição e histórico
 
@@ -84,7 +84,7 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 ## Medalhas e hall da fama
 
 - **Semana** vai de segunda a domingo, no horário de Brasília. Se houver mais de uma varredura na semana, vale só a última, do mesmo jeito que no histórico vale só a última varredura de cada dia.
-- **Duas premiações:** a oficial (medalha cheia, com fita) só aceita quem teve todos os itens verificados naquela varredura. A geral (medalha vazada) aceita todo mundo com nota. Cada uma tem o seu pódio e o seu hall da fama, e as duas aparecem ao lado do nome da cidade.
+- **Quem concorre:** só quem teve todos os itens verificados naquela varredura.
 - **Pódio:** ouro, prata e bronze vão para as três maiores notas. Nota igual desempata, nesta ordem, por:
   1. mais itens cumpridos por inteiro (dois parciais somam o mesmo que um inteiro, mas valem menos aqui);
   2. mais pontos de excelência, que não mudam a nota e só desempatam: DMARC com `p=reject`, DMARC mandando relatórios (`rua=`), SPF com `-all`, TLS 1.3, HSTS com `includeSubDomains`, HSTS com `preload`, HSTS de 2 anos ou mais, Content-Security-Policy, Referrer-Policy, Permissions-Policy e CAA no próprio domínio;

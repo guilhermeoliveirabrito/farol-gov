@@ -37,7 +37,6 @@ def test_resumo_compacto():
     assert pe[campo["status"]] == "p" * len(PESOS)
     assert pe[campo["flags"]] == montar_site.ACESSIVEL | montar_site.RANKING | montar_site.OFICIAL
     assert pe[campo["pos"]] == 1
-    assert pe[campo["posg"]] == 1
     assert pe[campo["var"]] is None  # sem semana anterior
     assert resumo["municipios"][1][campo["status"]] == "w" * len(PESOS)
     assert len(evolucao) == 1
@@ -180,17 +179,16 @@ def test_premios_no_resumo():
     resumo, _, _ = montar_site.resumir(dados, [])
     premios = resumo["premios"]
     assert premios["semanas"] == [{"s": "2026-11-16", "d": "2026-11-17", "parcial": True}]
-    for ranking in ("oficial", "geral"):
-        # as duas com nota maxima empatam no ouro
-        assert premios[ranking]["cidades"] == {"2611606": [[0, "o"]], "2304400": [[0, "o"]]}
-        assert [linha[5] for linha in premios[ranking]["hall"]] == [1, 1]
+    # empate total: as duas levam ouro
+    assert premios["oficial"]["cidades"] == {"2611606": [[0, "o"]], "2304400": [[0, "o"]]}
+    assert [linha[5] for linha in premios["oficial"]["hall"]] == [1, 1]
+    assert "geral" not in premios
 
 
-def test_premio_geral_aceita_quem_teve_item_sem_verificar():
+def test_quem_teve_item_sem_verificar_nao_concorre():
     incompleta = _resultado("2611606", "PE")
     incompleta["checks"]["caa"]["status"] = "error"
     dados = {"gerado_em": "2026-11-17T09:00:00+00:00", "total": 2, "resultados": [incompleta, _resultado("2304400", "CE", status="warn")]}
     premios = montar_site.resumir(dados, [])[0]["premios"]
-    assert premios["geral"]["cidades"]["2611606"] == [[0, "o"]]
     assert "2611606" not in premios["oficial"]["cidades"]
     assert premios["oficial"]["cidades"]["2304400"] == [[0, "o"]]

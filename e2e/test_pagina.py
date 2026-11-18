@@ -109,11 +109,8 @@ def test_medalhas_e_hall_da_fama(pagina):
     assert pagina.erros == []
 
 
-def test_ranking_oficial_e_geral(pagina):
-    assert pagina.get_attribute("#modo-ranking button[data-modo=oficial]", "aria-pressed") == "true"
-    oficial = pagina.locator("#contagem").inner_text()
-    pagina.click("#modo-ranking button[data-modo=geral]")
-    assert pagina.get_attribute("#modo-ranking button[data-modo=geral]", "aria-pressed") == "true"
-    assert "geral" in pagina.locator("#explica-ranking").inner_text()
-    assert pagina.locator("#contagem").inner_text() != oficial
+def test_cidade_sem_posicao_vem_depois_do_ranking(pagina):
+    # as primeiras linhas tem posicao; quem nao tem fica pro fim
+    assert pagina.locator("#lista .linha").first.locator(".pos-lista").inner_text() == "1º"
+    assert pagina.locator("#modo-ranking").count() == 0
     assert pagina.erros == []

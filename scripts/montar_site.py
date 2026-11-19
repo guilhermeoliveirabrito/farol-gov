@@ -247,6 +247,60 @@ def json_ld(resumo):
     return f'<script type="application/ld+json">{texto}</script>'
 
 
+def feed_podio(resumo):
+    """Atom com o podio de cada semana, pra quem quiser acompanhar num leitor de feed."""
+    from datetime import date, timedelta
+    from xml.sax.saxutils import escape
+
+    premios = resumo.get("premios") or {}
+    semanas = premios.get("semanas") or []
+    cidades = (premios.get("oficial") or {}).get("cidades") or {}
+    campo = {c: i for i, c in enumerate(resumo["campos"])}
+    nomes = {str(m[campo["ibge"]]): f'{m[campo["municipio"]]} ({m[campo["uf"]]})' for m in resumo["municipios"]}
+
+    podio = [{"o": [], "p": [], "b": []} for _ in semanas]
+    for ibge, lista in cidades.items():
+        for i, tipo in lista:
+            if 0 <= i < len(podio) and tipo in podio[i]:
+                podio[i][tipo].append(nomes.get(ibge, ibge))
+
+    entradas = []
+    for i in reversed(range(len(semanas))):
+        s = semanas[i]
+        try:
+            inicio = date.fromisoformat(s["s"])
+        except ValueError:
+            continue  # semana com data estranha (so acontece em teste)
+        fim = inicio + timedelta(days=6)
+        periodo = f"{inicio:%d/%m} a {fim:%d/%m/%Y}"
+        partes = [f"{nome}: {', '.join(podio[i][t]) or 'ninguém'}" for t, nome in (("o", "Ouro"), ("p", "Prata"), ("b", "Bronze"))]
+        titulo = f"Pódio da semana de {periodo}" + (" (parcial)" if s.get("parcial") else "")
+        # o id muda quando a semana fecha, pra o leitor mostrar o resultado final de novo
+        ident = f"{URL}#podio-{s['s']}" + ("-parcial" if s.get("parcial") else "")
+        entradas.append(
+            "  <entry>\n"
+            f"    <title>{escape(titulo)}</title>\n"
+            f'    <link href="{URL}#medalhas"/>\n'
+            f"    <id>{escape(ident)}</id>\n"
+            f"    <updated>{s['d']}T12:00:00-03:00</updated>\n"
+            f"    <summary>{escape('. '.join(partes))}.</summary>\n"
+            "  </entry>\n"
+        )
+    atualizado = f"{semanas[-1]['d']}T12:00:00-03:00" if semanas else (resumo.get("gerado_em") or "")
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<feed xmlns="http://www.w3.org/2005/Atom">\n'
+        "  <title>farol-gov: pódio da semana</title>\n"
+        f'  <link href="{URL}"/>\n'
+        f'  <link rel="self" href="{URL}podio.xml"/>\n'
+        f"  <id>{URL}podio.xml</id>\n"
+        f"  <updated>{atualizado}</updated>\n"
+        "  <author><name>farol-gov</name></author>\n"
+        + "".join(entradas)
+        + "</feed>\n"
+    )
+
+
 def sitemap(resumo):
     data = (resumo.get("gerado_em") or "")[:10]
     lastmod = f"<lastmod>{data}</lastmod>" if data else ""
@@ -307,6 +361,7 @@ def montar(raiz, saida):
             html = html.replace("</head>", f"  {json_ld(resumo)}\n</head>", 1)
             index.write_text(html, encoding="utf-8")
         (saida / "sitemap.xml").write_text(sitemap(resumo), encoding="utf-8")
+        (saida / "podio.xml").write_text(feed_podio(resumo), encoding="utf-8")
         print(f"{len(resumo['municipios'])} municipios no resumo, {len(evolucao)} semanas no historico")
     else:
         print("sem resultados ainda, a pagina vai mostrar aviso")

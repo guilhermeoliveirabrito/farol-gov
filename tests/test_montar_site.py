@@ -199,3 +199,16 @@ def test_quem_teve_item_sem_verificar_nao_concorre():
     premios = montar_site.resumir(dados, [])[0]["premios"]
     assert "2611606" not in premios["oficial"]["cidades"]
     assert premios["oficial"]["cidades"]["2304400"] == [[0, "o"]]
+
+
+def test_feed_do_podio(tmp_path):
+    import xml.etree.ElementTree as ET
+
+    dados = {"gerado_em": "2026-11-17T09:00:00+00:00", "total": 2, "resultados": [_resultado("2611606", "PE"), _resultado("2304400", "CE", status="warn")]}
+    resumo, _, _ = montar_site.resumir(dados, [])
+    raiz = ET.fromstring(montar_site.feed_podio(resumo))
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    entradas = raiz.findall("a:entry", ns)
+    assert len(entradas) == 1
+    assert "16/11 a 22/11/2026 (parcial)" in entradas[0].find("a:title", ns).text
+    assert "Ouro: Cidade (PE)" in entradas[0].find("a:summary", ns).text

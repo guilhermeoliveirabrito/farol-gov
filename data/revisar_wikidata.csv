@@ -1,13 +1,12 @@
 ibge,municipio,uf,dominio_wikidata,motivo
 1502103,Cametá,PA,www.cameta.pa.gov.br,domínio não existe no DNS
 2100550,Amapá do Maranhão,MA,www.amapadomaranhao.ma.gov.br,domínio não existe no DNS
+2202901,Corrente,PI,corrente.pi.gov.br,só funciona com/sem www
 2306207,Itaiçaba,CE,www.itaitinga.ce.gov.br,mesmo domínio usado por outro município
 2306256,Itaitinga,CE,www.itaitinga.ce.gov.br,mesmo domínio usado por outro município
-2401305,Campo Grande,RN,campogrande.rn.gov.br,mesmo domínio usado por outro município
 2607505,Itaíba,PE,www.itaenga.pe.gov.br,mesmo domínio usado por outro município
 2608503,Lagoa de Itaenga,PE,www.itaenga.pe.gov.br,mesmo domínio usado por outro município
 2702900,Girau do Ponciano,AL,www.giraudoponciano.al.gov.br,mesmo domínio usado por outro município
-2705002,Mata Grande,AL,www.matagrande.al.cnm.org.br,domínio não existe no DNS; domínio fora do .gov.br
 2706901,Pilar,AL,www.giraudoponciano.al.gov.br,mesmo domínio usado por outro município
 2927705,Santa Cruz Cabrália,BA,www.pmsantacruzcabralia.ba.ipmbrasil.org.br,domínio não existe no DNS; domínio fora do .gov.br
 2928703,Santo Antônio de Jesus,BA,www.santoantoniodejesus.ba.io.org.br,domínio fora do .gov.br
@@ -23,6 +22,8 @@ ibge,municipio,uf,dominio_wikidata,motivo
 3550803,São Sebastião da Grama,SP,www.ssgrama.sp.gov.br,só funciona com/sem www
 4100400,Almirante Tamandaré,PR,www.temandare.pr.gov.br,domínio não existe no DNS
 4112603,Jardim Olinda,PR,www.pontagrossa.pr.gov.br,mesmo domínio usado por outro município
+4119400,Piraí do Sul,PR,www.piraidosul.pr.gov.br,mesmo domínio usado por outro município
+4119657,Pitangueiras,PR,www.piraidosul.pr.gov.br,mesmo domínio usado por outro município
 4119905,Ponta Grossa,PR,www.pontagrossa.pr.gov.br,mesmo domínio usado por outro município
 4122909,Salto do Itararé,PR,www.saltodoitarare.pr.gov.br,mesmo domínio usado por outro município
 4124004,Santana do Itararé,PR,www.saltodoitarare.pr.gov.br,mesmo domínio usado por outro município
@@ -34,6 +35,5 @@ ibge,municipio,uf,dominio_wikidata,motivo
 4317558,Santo Antônio do Palma,RS,www.pmpalma.com.br,domínio fora do .gov.br
 4319158,São Miguel das Missões,RS,www.saomiguel-rs.com.br,domínio fora do .gov.br
 4319406,São Pedro do Sul,RS,www.saopedrodosul.rs.gov.br,domínio não existe no DNS
-5002704,Campo Grande,MS,campogrande.rn.gov.br,mesmo domínio usado por outro município
 5006200,Nova Andradina,MS,www.novaandradina.ms.gov.br,domínio não existe no DNS
 5107800,Santo Antônio de Leverger,MT,www.santoantoniodeleverger.mt.gov.br,domínio não existe no DNS

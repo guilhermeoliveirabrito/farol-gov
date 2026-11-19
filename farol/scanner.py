@@ -351,7 +351,7 @@ def _repescar_dns(entidades, resultados, resolver_factory, workers, prazo):
     return melhoraram
 
 
-def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3, prazo=90 * 60, prazo_repescagem=600, sondagem=None):
+def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3, prazo=90 * 60, prazo_repescagem=1200, sondagem=None):
     """Roda avaliar() em paralelo, com uma repescagem no fim pra quem deu timeout.
 
     resolver_factory cria um resolver por tarefa. cliente_lento (timeout maior) e usado
@@ -392,7 +392,7 @@ def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cli
         log.warning("repescagem: %d dominios com timeout, tentando de novo com mais calma", len(visita))
         # 2 por IP: com 1 so, um servidor com centenas de prefeituras virava fila de horas
         restante = max(0.0, fim_repescagem - time.monotonic())
-        segunda, nao_visitados = _rodar(visita, resolver_factory, cliente_lento or cliente, max(2, workers // 4), 2, prazo=restante)
+        segunda, nao_visitados = _rodar(visita, resolver_factory, cliente_lento or cliente, max(2, workers // 2), 2, prazo=restante)
         sem_resposta = len(nao_visitados)
         for ibge, novo in segunda.items():
             # quem ficou sem visita na repescagem mantem o resultado da primeira passada

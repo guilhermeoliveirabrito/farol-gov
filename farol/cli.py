@@ -55,9 +55,9 @@ def cmd_scan(args):
         if i % 100 == 0 or i == total:
             print(f"  {i}/{total}", file=sys.stderr)
 
-    # uma tentativa so na primeira passada: quem der timeout vai pra repescagem, que tenta
-    # de novo com mais calma. com duas, cada site lento segurava uma thread por 1 minuto
-    cliente = ClienteHTTP(timeout=args.timeout, tentativas=1)
+    # duas tentativas: com uma so, na varredura de 19/11 responderam 150 sites a menos
+    # e a repescagem nao deu conta. depois que o dns deixou de ser gargalo, sobra tempo
+    cliente = ClienteHTTP(timeout=args.timeout, tentativas=2)
     # repescagem com mais paciencia, mas uma tentativa so: com duas, um site fora do ar
     # gastava mais de 2 minutos e quase nenhum voltava (2 de 36 na amostra de 17/11)
     lento = ClienteHTTP(timeout=args.timeout * 1.5, tentativas=1)

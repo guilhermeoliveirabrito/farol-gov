@@ -880,6 +880,39 @@ function blocoMedalhas(r) {
   );
 }
 
+// mesmas chaves e ordem de farol/nota.py EXCELENCIA
+const EXCELENCIA = {
+  dmarc_reject: "DMARC com p=reject: o e-mail falso é recusado, não vai para o spam",
+  dmarc_relatorios: "DMARC mandando relatórios (rua=): a prefeitura fica sabendo de quem tenta se passar por ela",
+  spf_hardfail: "SPF terminando em -all: recusa quem não está na lista",
+  tls13: "TLS 1.3",
+  hsts_subdominios: "HSTS cobrindo os subdomínios",
+  hsts_preload: "HSTS pronto para a lista de preload dos navegadores",
+  hsts_2_anos: "HSTS valendo por 2 anos ou mais",
+  csp: "Content-Security-Policy na página",
+  referrer_policy: "Referrer-Policy: não vaza o endereço da página para outros sites",
+  permissions_policy: "Permissions-Policy: desliga câmera, microfone e afins que o site não usa",
+  caa_proprio: "CAA no próprio domínio",
+};
+
+// o que desempata o podio quando a nota empata; nao muda a nota
+function blocoExcelencia(r, feitos) {
+  if (r.nota == null || !Array.isArray(feitos)) return null;
+  const tem = new Set(feitos);
+  const chaves = Object.keys(EXCELENCIA);
+  return el(
+    "details",
+    { class: "excelencia" },
+    el("summary", {}, el("b", { text: "Pontos de excelência" }), ` ${tem.size} de ${chaves.length}`),
+    el("p", { text: "Não mudam a nota. Servem para desempatar o pódio da semana quando duas cidades ficam com a mesma nota." }),
+    el(
+      "ul",
+      {},
+      ...chaves.map((c) => el("li", { class: tem.has(c) ? "feito" : "falta" }, el("span", { class: "marca", "aria-label": tem.has(c) ? "tem" : "não tem", text: tem.has(c) ? "✓" : "–" }), EXCELENCIA[c])),
+    ),
+  );
+}
+
 function abrirFicha(r) {
   const dialogo = $("ficha");
   const corpo = $("ficha-corpo");
@@ -934,6 +967,7 @@ function abrirFicha(r) {
 
   const avisos = el("div");
   const historicoCaixa = el("div");
+  const excelenciaCaixa = el("div");
   corpo.replaceChildren(...[
     el("h2", { id: "ficha-nome", text: r.municipio }),
     el("p", { class: "onde", text: `${r.uf}, ${r.dominio}` }),
@@ -943,6 +977,7 @@ function abrirFicha(r) {
     blocoMedalhas(r),
     avisos,
     listaSinais(r),
+    excelenciaCaixa,
     historicoCaixa,
     acoes,
     blocoSelo(r),
@@ -968,6 +1003,8 @@ function abrirFicha(r) {
       avisos.replaceChildren(...(extra.a || []).filter((a) => AVISOS[a]).map((a) => el("p", { class: "avisos", text: AVISOS[a] })));
       const hist = blocoHistorico(extra.h);
       if (hist) historicoCaixa.replaceChildren(hist);
+      const ex = blocoExcelencia(r, extra.x);
+      if (ex) excelenciaCaixa.replaceChildren(ex);
     })
     .catch(() => {
       corpo.querySelectorAll(".sinais .carregando").forEach((i) => (i.textContent = "detalhe indisponível agora, tente abrir de novo"));

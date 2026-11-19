@@ -185,6 +185,13 @@ def test_premios_no_resumo():
     assert "geral" not in premios
 
 
+def test_detalhe_por_uf_traz_os_pontos_de_excelencia():
+    r = _resultado("2611606", "PE")
+    r["checks"]["dmarc"]["detalhe"] = "p=reject; com relatorios"
+    _, por_uf, _ = montar_site.resumir({"gerado_em": "2026-11-17T09:00:00+00:00", "total": 1, "resultados": [r]}, [])
+    assert por_uf["PE"]["2611606"]["x"] == ["dmarc_reject", "dmarc_relatorios", "caa_proprio"]
+
+
 def test_quem_teve_item_sem_verificar_nao_concorre():
     incompleta = _resultado("2611606", "PE")
     incompleta["checks"]["caa"]["status"] = "error"

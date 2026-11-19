@@ -380,6 +380,16 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .podio { border-bottom: 2px solid var(--linha); }
 .hall-pontos { white-space: nowrap; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
+.excelencia { padding: 14px 0; border-bottom: 1px solid var(--linha); }
+.excelencia summary { cursor: pointer; }
+.excelencia summary b { margin-right: 4px; }
+.excelencia p { color: var(--suave); font-size: .88rem; margin: 10px 0 8px; }
+.excelencia ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .9rem; }
+.excelencia li { display: flex; align-items: baseline; gap: 8px; }
+.excelencia li.falta { color: var(--suave); }
+.excelencia .marca { width: 1em; flex: none; font-weight: 700; }
+.excelencia li.feito .marca { color: var(--cA); }
+
 .medalhas-cidade { padding: 14px 0; border-bottom: 1px solid var(--linha); }
 .medalhas-cidade h3 { font-size: 1.05rem; margin: 0 0 8px; }
 .medalhas-cidade ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }

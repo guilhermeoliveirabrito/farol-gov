@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from farol import historico, medalhas  # noqa: E402
 from farol.dominios import ler_csv  # noqa: E402
-from farol.nota import PESOS  # noqa: E402
+from farol.nota import PESOS, criterios_de_excelencia  # noqa: E402
 
 CHECKS = list(PESOS)
 CODIGO = historico.CODIGO
@@ -123,6 +123,8 @@ def resumir(dados, snapshots=(), populacao=None):
             "d": [checks.get(c, {}).get("detalhe", "") for c in CHECKS],
             "a": r.get("avisos", []),
             "h": semanas[-SEMANAS_POR_CIDADE:],
+            # pontos de excelencia (desempate do podio) que a cidade ja tem
+            "x": criterios_de_excelencia(checks) if r.get("acessivel") else [],
         }
 
     resumo = {

@@ -65,14 +65,25 @@ class ResolverDNS:
             except dns.exception.DNSException as e:
                 raise ErroDNS(f"{type(e).__name__}: {str(e)[:120]}") from e
 
-    def _resolve(self, nome, tipo):
-        """Devolve (resposta, veio_do_publico)."""
-        try:
-            return self._consulta(self._r, nome, tipo, self._tentativas), True
-        except ErroDNS:
-            if self._reserva is None:
-                raise
-        return self._consulta(self._reserva, nome, tipo, 1), False
+    def _resolve(self, nome, tipo, validar=False):
+        """Devolve (resposta, veio_do_publico).
+
+        validar=True (so o endereco, que precisa da flag AD do DNSSEC): resolvers publicos
+        primeiro e o do sistema de reserva. O resto (TXT, CAA) vai primeiro pro resolver
+        do sistema, que fica do lado e nao limita a taxa; na varredura de 19/11 o dns
+        pelos publicos virou o gargalo e mais de mil dominios precisaram de repescagem.
+        """
+        ordem = [(self._r, self._tentativas, True)]
+        if self._reserva is not None:
+            reserva = (self._reserva, 1, False)
+            ordem = ordem + [reserva] if validar else [reserva, *ordem]
+        for i, (resolver, tentativas, publico) in enumerate(ordem):
+            try:
+                return self._consulta(resolver, nome, tipo, tentativas), publico
+            except ErroDNS:
+                if i == len(ordem) - 1:
+                    raise
+        raise AssertionError("inalcancavel")
 
     def txt(self, nome):
         resp, _ = self._resolve(nome, "TXT")
@@ -85,12 +96,12 @@ class ResolverDNS:
         resolver do sistema respondeu (ele nao valida, entao nao da pra saber)."""
         import dns.flags
 
-        resp, publico = self._resolve(nome, "A")
+        resp, publico = self._resolve(nome, "A", validar=True)
         if resp is None:
             return False, False, []
         if resp.rrset is None:
             # sem A, tenta AAAA antes de dizer que nao existe
-            resp, publico = self._resolve(nome, "AAAA")
+            resp, publico = self._resolve(nome, "AAAA", validar=True)
             if resp is None or resp.rrset is None:
                 return False, False, []
         ips = sorted(r.to_text() for r in resp.rrset)

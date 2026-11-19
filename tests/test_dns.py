@@ -152,6 +152,16 @@ def test_resolver_do_sistema_cobre_quando_os_publicos_nao_respondem():
     assert r.txt("cidade.sp.gov.br") == ["v=spf1 -all"]
 
 
+def test_txt_vai_primeiro_pro_resolver_do_sistema_e_cai_pro_publico():
+    pytest.importorskip("dns.resolver")
+    # sistema responde: nem chega nos publicos
+    r = _resolver(_Fora(), _Responde({("cidade.sp.gov.br", "TXT"): ["v=spf1 -all"]}))
+    assert r._resolve("cidade.sp.gov.br", "TXT")[1] is False
+    # sistema fora: usa os publicos
+    r = _resolver(_Responde({("cidade.sp.gov.br", "TXT"): ["v=spf1 ~all"]}), _Fora())
+    assert r.txt("cidade.sp.gov.br") == ["v=spf1 ~all"]
+
+
 def test_sem_os_publicos_o_dnssec_fica_nao_verificado_mas_o_site_segue():
     pytest.importorskip("dns.resolver")
     r = _resolver(_Fora(), _Responde({("www.cidade.sp.gov.br", "A"): ["10.0.0.1"]}))

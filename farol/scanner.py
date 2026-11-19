@@ -232,9 +232,9 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
 
     # dnspython nao garante ser thread-safe, entao cada consulta cria o seu resolver.
     # mesmas 32 threads: com 64 os resolvers publicos comecaram a deixar consulta sem resposta
-    # dns fica em no maximo 32 threads: mais que isso os resolvers publicos comecam a
-    # deixar consulta sem resposta. as visitas podem ter mais, porque cada servidor ja
-    # tem o seu limite (por_ip) e quase todo o tempo e espera de rede
+    # dns fica em no maximo 32 threads pra nao estourar o limite dos resolvers publicos
+    # (eles so sao usados primeiro na consulta do endereco). as visitas podem ter mais,
+    # porque cada servidor ja tem o seu limite (por_ip) e quase todo o tempo e espera de rede
     pool_dns = ThreadPoolExecutor(max_workers=min(workers, 32))
     pool_web = ThreadPoolExecutor(max_workers=workers)
     pendentes = {pool_dns.submit(preparar, e, resolver_factory()): ("dns", e) for e in entidades}

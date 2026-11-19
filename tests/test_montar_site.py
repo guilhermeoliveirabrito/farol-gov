@@ -230,3 +230,13 @@ def test_seta_compara_com_a_semana_anterior_e_nao_com_a_rodada_do_mesmo_dia_da_s
     campo = {c: i for i, c in enumerate(resumo["campos"])}
     pe = next(m for m in resumo["municipios"] if m[campo["ibge"]] == "2611606")
     assert pe[campo["var"]] == 1  # de 2o pra 1o em relacao a semana passada
+
+
+def test_lista_segue_a_ordem_do_desempate():
+    # mesma nota: quem tem mais pontos de excelencia vem primeiro, como no podio
+    a, b = _resultado("2611606", "PE"), _resultado("2304400", "CE")
+    b["checks"]["dmarc"]["detalhe"] = "p=reject; com relatorios"
+    resumo, _, _ = montar_site.resumir({"gerado_em": "2026-11-17T09:00:00+00:00", "total": 2, "resultados": [a, b]}, [])
+    campo = {c: i for i, c in enumerate(resumo["campos"])}
+    ordem = {m[campo["ibge"]]: m[campo["ord"]] for m in resumo["municipios"]}
+    assert ordem == {"2304400": 1, "2611606": 2}

@@ -83,6 +83,7 @@ Tudo que a página mostra sai de arquivos JSON estáticos, que podem ser usados 
 | [`dados/latest.json`](https://guilhermeoliveirabrito.github.io/farol-gov/dados/latest.json) | Resultado completo da última varredura, com o detalhe de cada item |
 | [`dados/historico.json`](https://guilhermeoliveirabrito.github.io/farol-gov/dados/historico.json) | Média nacional e adoção de cada item, varredura por varredura |
 | `dados/uf/<UF>.json` | Detalhes das cidades de um estado (ex.: [`PE.json`](https://guilhermeoliveirabrito.github.io/farol-gov/dados/uf/PE.json)) |
+| [`podio.xml`](https://guilhermeoliveirabrito.github.io/farol-gov/podio.xml) | Feed Atom com o pódio de cada semana |
 | [`data/historico/`](data/historico) | Um arquivo compacto por dia de varredura, para reconstruir a série inteira |
 
 ### Selo

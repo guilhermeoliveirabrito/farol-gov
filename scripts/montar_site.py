@@ -115,6 +115,10 @@ def resumir(dados, snapshots=(), populacao=None):
     semanal = por_semana(tempo)
     _, _, agora = tempo[-1]
     antes = semanal[-2][2] if len(semanal) > 1 else {}
+    # ordem completa do desempate desta semana (a mesma do podio), pra lista nao
+    # botar as empatadas em ordem alfabetica e contradizer as medalhas
+    ordem = medalhas.podios(tempo, "oficial", populacao)[-1]["ordem"] if tempo else []
+    ordem_desempate = {ibge: n for n, ibge in enumerate(ordem, 1)}
 
     linhas = []
     por_uf = defaultdict(dict)
@@ -130,7 +134,7 @@ def resumir(dados, snapshots=(), populacao=None):
         linhas.append([
             r["ibge"], r["municipio"], r["uf"], r["dominio"],
             r.get("lat"), r.get("lon"), nota, conceito,
-            flags, status, pos, variacao,
+            flags, status, pos, variacao, ordem_desempate.get(r["ibge"]),
         ])
         semanas = [[data, aval[r["ibge"]][0], aval[r["ibge"]][2]] for data, _, aval in semanal if r["ibge"] in aval]
         por_uf[r["uf"] or "XX"][r["ibge"]] = {
@@ -151,7 +155,7 @@ def resumir(dados, snapshots=(), populacao=None):
         "ranqueados": sum(1 for v in agora.values() if v[3] is not None),
         "oficiais": sum(1 for v in agora.values() if v[2] is not None),
         "checks": CHECKS,
-        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var"],
+        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var", "ord"],
         "municipios": linhas,
         "premios": premios(tempo, populacao),
     }

@@ -99,7 +99,7 @@ def podios(tempo, ranking="oficial", populacao=None):
         data, snap, aval = ultima_da_semana[semana]
         chaves = _chaves(snap, aval, finais[-SEMANAS_DE_CONSTANCIA:], ranking, populacao)
         posicoes, ordem = _classificar(chaves)
-        podio = {"semana": semana, "data": data, "parcial": i == len(ordem_semanas) - 1, "desempate": {}}
+        podio = {"semana": semana, "data": data, "parcial": i == len(ordem_semanas) - 1, "desempate": {}, "ordem": ordem}
         for p, tipo in enumerate(TIPOS, 1):
             podio[tipo] = sorted(ibge for ibge, pos in posicoes.items() if pos == p)
             if podio[tipo]:

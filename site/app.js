@@ -215,6 +215,7 @@ function decodificar(resumo) {
       ranking: Boolean(l[idx.flags] & 2),
       oficial: Boolean(l[idx.flags] & 4),
       posBr: typeof l[idx.pos] === "number" ? l[idx.pos] : null,
+      ordem: typeof l[idx.ord] === "number" ? l[idx.ord] : null,
       variacao: typeof l[idx.var] === "number" ? l[idx.var] : null,
       st,
       medalhas: medalhasDe(resumo.premios, String(l[idx.ibge])),
@@ -1602,7 +1603,10 @@ async function iniciar() {
     return;
   }
 
-  todos = decodificar(resumo).sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1) || ordemAlfabetica(a.municipio, b.municipio));
+  // nota igual: segue a ordem de desempate do podio (vem pronta do build), depois o nome
+  todos = decodificar(resumo).sort(
+    (a, b) => (b.nota ?? -1) - (a.nota ?? -1) || (a.ordem ?? 1e9) - (b.ordem ?? 1e9) || ordemAlfabetica(a.municipio, b.municipio),
+  );
   ranqueados = todos.filter((r) => r.acessivel && r.ranking);
   oficiais = todos.filter((r) => r.acessivel && r.oficial);
   // resumo antigo (antes do ranking oficial) nao tem o campo: trata todo mundo como oficial

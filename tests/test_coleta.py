@@ -51,7 +51,7 @@ def test_populacao_fica_com_o_maior_valor():
 
 def test_slug_e_candidatos():
     assert coleta.slug("Alta Floresta d'Oeste") == "altaflorestadoeste"
-    assert coleta.candidatos("Niterói", "RJ")[:2] == ["niteroi.rj.gov.br", "www.niteroi.rj.gov.br"]
+    assert coleta.candidatos("Niterói", "RJ")[:2] == ["www.niteroi.rj.gov.br", "niteroi.rj.gov.br"]
 
 
 def test_sites_suspeitos():

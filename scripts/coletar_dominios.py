@@ -125,7 +125,8 @@ def candidatos(nome, uf):
     base, uf = slug(nome), uf.lower()
     if not base or not uf:
         return []
-    return [f"{base}.{uf}.gov.br", f"www.{base}.{uf}.gov.br", f"pm{base}.{uf}.gov.br", f"prefeitura{base}.{uf}.gov.br"]
+    # www primeiro: quando os dois existem, o site costuma estar no www
+    return [f"www.{base}.{uf}.gov.br", f"{base}.{uf}.gov.br", f"pm{base}.{uf}.gov.br", f"prefeitura{base}.{uf}.gov.br"]
 
 
 def motivo_suspeito(host, nome):

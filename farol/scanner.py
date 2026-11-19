@@ -64,6 +64,9 @@ class Preparo:
     ips: list
     avisos: list
     dns: list = field(default_factory=list)
+    # www.<host> quando o host e o dominio "pelado" e o www tambem existe: muita
+    # prefeitura tem o site so no www (guarulhos.sp.gov.br nao responde, o www sim)
+    reserva: str = ""
 
     @property
     def servidor(self):
@@ -87,6 +90,14 @@ def preparar(entidade, resolver):
         else:
             avisos.append(NAO_RESOLVE)
 
+    reserva = ""
+    if existe and not host.startswith("www."):
+        try:
+            if resolver.endereco("www." + host)[0]:
+                reserva = "www." + host
+        except checks_dns.ErroDNS:
+            pass
+
     # dominio fora do .gov.br conferido a mao (data/correcoes.csv) e da prefeitura sim
     if fora_do_gov_br(host) and getattr(entidade, "origem", "") != "manual":
         avisos.append(FORA_GOV_BR)
@@ -103,14 +114,22 @@ def preparar(entidade, resolver):
             checks_dns.checar_spf(email, resolver),
             checks_dns.checar_dmarc(email, resolver),
         ]
-    return Preparo(entidade, host, existe, list(ips or []), avisos, dns)
+    return Preparo(entidade, host, existe, list(ips or []), avisos, dns, reserva)
 
 
 def visitar(prep, cliente):
     """Parte web. Devolve (acessivel, resultados)."""
     if not prep.existe:
         return False, [Resultado(nome, ERROR, "dominio nao resolve") for nome in PESOS if nome not in CHECKS_DNS]
-    return checks_web.checar_web(prep.host, cliente)
+    acessivel, web = checks_web.checar_web(prep.host, cliente)
+    if not acessivel and prep.reserva:
+        acessivel_www, web_www = checks_web.checar_web(prep.reserva, cliente)
+        if acessivel_www:
+            prep.host = prep.reserva
+            if ALTERNATIVO not in prep.avisos:
+                prep.avisos.append(ALTERNATIVO)
+            return acessivel_www, web_www
+    return acessivel, web
 
 
 def sem_tempo(prep):

@@ -309,8 +309,9 @@ def test_servidor_mudo_passa_a_ser_sondado():
 
     assert dados["total"] == 10
     # as 3 primeiras levam a visita completa; as outras so a sondagem rapida
-    assert len(principal.hosts) == 3
-    assert len(sondagem.hosts) == 7
+    # (o www de cada um tambem e tentado, por isso conta sem o www)
+    assert len({h.removeprefix("www.") for h in principal.hosts}) == 3
+    assert len({h.removeprefix("www.") for h in sondagem.hosts}) == 7
     assert not any(r["acessivel"] for r in dados["resultados"])
 
 
@@ -441,3 +442,20 @@ def test_dominio_corrigido_a_mao_fora_do_gov_br_continua_no_ranking():
     resolver = FakeResolver(enderecos={"prefeitura.rio": (True, False)})
     assert FORA_GOV_BR in preparar(ent, resolver).avisos
     assert FORA_GOV_BR not in preparar(replace(ent, origem="manual"), resolver).avisos
+
+
+def test_site_so_no_www_e_visitado_no_www():
+    from farol.scanner import ALTERNATIVO
+
+    ent = Entidade("3518800", "Guarulhos", "SP", "guarulhos.sp.gov.br")
+    resolver = FakeResolver(enderecos={"guarulhos.sp.gov.br": (True, False), "www.guarulhos.sp.gov.br": (True, False)})
+
+    class SoWww(FakeCliente):
+        def get(self, url, verificar=True, ler=0):
+            if "//guarulhos." in url:
+                raise ErroConexao("timeout")
+            return resp(url)
+
+    r = avaliar(ent, resolver, SoWww({}))
+    assert r["acessivel"] and r["dominio"] == "www.guarulhos.sp.gov.br"
+    assert ALTERNATIVO in r["avisos"]

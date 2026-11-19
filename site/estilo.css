@@ -552,6 +552,7 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
   .mapa { height: 360px; }
   .linha { grid-template-columns: minmax(0, 1fr) 36px 52px 34px; gap: 10px; }
   .linha .uf, .linha .luzes { display: none; }
+  .pos-lista { min-width: 0; margin-right: 4px; }
   .hall-linha { grid-template-columns: 34px minmax(0, 1fr) 68px; }
   .hall-medalhas { grid-column: 2; grid-row: 2; }
   .hall-pontos { grid-column: 3; grid-row: 1; }

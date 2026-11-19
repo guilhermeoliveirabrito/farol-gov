@@ -78,8 +78,8 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 ## Posição e histórico
 
 - **Posição no Brasil**: ordem das notas entre as cidades que estão no ranking. Empates dividem a mesma posição (1º, 2º, 2º, 4º...).
-- **Variação**: diferença de posição em relação à varredura anterior. Como as notas têm poucos valores possíveis, muitas cidades empatam, e uma mudança pequena de nota pode mover uma cidade centenas de posições.
-- **Histórico**: cada varredura completa é guardada em `data/historico/AAAA-MM-DD.json`, só com o status de cada item. **As notas das semanas antigas são recalculadas com as regras atuais**, para que a comparação faça sentido. Um item novo só entra na conta a partir da semana em que começou a ser verificado. No gráfico da página, a semana em que a metodologia mudou aparece marcada.
+- **Variação**: diferença de posição em relação à semana anterior (a última varredura daquela semana). Se a varredura rodar de novo na mesma semana, a seta não compara as duas rodadas, porque a diferença entre elas não tem a ver com os sites. Quando entram itens novos entre uma semana e outra, a página avisa que parte do movimento vem deles. Como as notas têm poucos valores possíveis, muitas cidades empatam, e uma mudança pequena de nota pode mover uma cidade centenas de posições.
+- **Histórico**: cada varredura completa é guardada em `data/historico/AAAA-MM-DD.json` (vale a última do dia), só com o status de cada item. O gráfico da página e o histórico de cada cidade mostram uma varredura por semana. **As notas das semanas antigas são recalculadas com as regras atuais**, para que a comparação faça sentido. Um item novo só entra na conta a partir da semana em que começou a ser verificado. No gráfico da página, a semana em que a metodologia mudou aparece marcada.
 
 ## Medalhas e hall da fama
 

@@ -96,11 +96,25 @@ def linha_do_tempo(dados, snapshots):
     return [(data, por_data[data], historico.avaliar_snapshot(por_data[data])) for data in sorted(por_data)]
 
 
+def por_semana(tempo):
+    """So a ultima varredura de cada semana (seg a dom), como nas medalhas.
+
+    Setas, grafico e historico da cidade comparam semana com semana. Se a varredura
+    rodar de novo na mesma semana (como em 16 e 17/11, a primeira com problema no
+    DNS), a seta nao mostra a diferenca entre as duas, que nao tem a ver com o site.
+    """
+    ultima = {}
+    for item in tempo:
+        ultima[medalhas.semana_de(item[0])] = item
+    return [ultima[s] for s in sorted(ultima)]
+
+
 def resumir(dados, snapshots=(), populacao=None):
     """Devolve (resumo, detalhes_por_uf, evolucao_nacional)."""
     tempo = linha_do_tempo(dados, snapshots)
+    semanal = por_semana(tempo)
     _, _, agora = tempo[-1]
-    antes = tempo[-2][2] if len(tempo) > 1 else {}
+    antes = semanal[-2][2] if len(semanal) > 1 else {}
 
     linhas = []
     por_uf = defaultdict(dict)
@@ -118,7 +132,7 @@ def resumir(dados, snapshots=(), populacao=None):
             r.get("lat"), r.get("lon"), nota, conceito,
             flags, status, pos, variacao,
         ])
-        semanas = [[data, aval[r["ibge"]][0], aval[r["ibge"]][2]] for data, _, aval in tempo if r["ibge"] in aval]
+        semanas = [[data, aval[r["ibge"]][0], aval[r["ibge"]][2]] for data, _, aval in semanal if r["ibge"] in aval]
         por_uf[r["uf"] or "XX"][r["ibge"]] = {
             "d": [checks.get(c, {}).get("detalhe", "") for c in CHECKS],
             "a": r.get("avisos", []),
@@ -131,7 +145,9 @@ def resumir(dados, snapshots=(), populacao=None):
         "gerado_em": dados["gerado_em"],
         "total": dados.get("total", len(linhas)),
         "amostra": dados.get("amostra"),
-        "anterior": tempo[-2][0] if len(tempo) > 1 else None,
+        "anterior": semanal[-2][0] if len(semanal) > 1 else None,
+        # itens que a varredura anterior ainda nao verificava: explicam parte das setas
+        "itens_novos": len(set(semanal[-1][1]["checks"]) - set(semanal[-2][1]["checks"])) if len(semanal) > 1 else 0,
         "ranqueados": sum(1 for v in agora.values() if v[3] is not None),
         "oficiais": sum(1 for v in agora.values() if v[2] is not None),
         "checks": CHECKS,
@@ -139,7 +155,7 @@ def resumir(dados, snapshots=(), populacao=None):
         "municipios": linhas,
         "premios": premios(tempo, populacao),
     }
-    evolucao = [s for s in (historico.resumo_nacional(snap, aval) for _, snap, aval in tempo) if s]
+    evolucao = [s for s in (historico.resumo_nacional(snap, aval) for _, snap, aval in semanal) if s]
     return resumo, por_uf, evolucao
 
 

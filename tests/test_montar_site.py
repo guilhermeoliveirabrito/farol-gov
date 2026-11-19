@@ -212,3 +212,21 @@ def test_feed_do_podio(tmp_path):
     assert len(entradas) == 1
     assert "16/11 a 22/11/2026 (parcial)" in entradas[0].find("a:title", ns).text
     assert "Ouro: Cidade (PE)" in entradas[0].find("a:summary", ns).text
+
+
+def test_seta_compara_com_a_semana_anterior_e_nao_com_a_rodada_do_mesmo_dia_da_semana():
+    from farol import historico
+
+    def snap(data, status_pe):
+        r1, r2 = _resultado("2611606", "PE", status=status_pe), _resultado("2304400", "CE", status="warn")
+        return historico.compactar({"gerado_em": f"{data}T09:00:00+00:00", "resultados": [r1, r2]})
+
+    # semana passada PE era 2a; segunda-feira desta semana teve rodada ruim; a de hoje vale
+    snapshots = [snap("2026-11-13", "fail"), snap("2026-11-16", "fail")]
+    dados = {"gerado_em": "2026-11-17T09:00:00+00:00", "total": 2, "resultados": [_resultado("2611606", "PE"), _resultado("2304400", "CE", status="warn")]}
+    resumo, _, evolucao = montar_site.resumir(dados, snapshots)
+    assert resumo["anterior"] == "2026-11-13"
+    assert [e["data"] for e in evolucao] == ["2026-11-13", "2026-11-17"]
+    campo = {c: i for i, c in enumerate(resumo["campos"])}
+    pe = next(m for m in resumo["municipios"] if m[campo["ibge"]] == "2611606")
+    assert pe[campo["var"]] == 1  # de 2o pra 1o em relacao a semana passada

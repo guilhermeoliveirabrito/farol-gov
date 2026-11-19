@@ -1461,7 +1461,11 @@ function movimento(resumo) {
   const caiuTotal = comVariacao.length - subiuTotal;
   $("movimento-texto").textContent =
     `Comparação com a varredura de ${fmtData(resumo.anterior, { day: "numeric", month: "long" })}: ` +
-    `${num(subiuTotal)} cidades subiram e ${num(caiuTotal)} caíram no ranking. Toque em uma para ver o detalhe.`;
+    `${num(subiuTotal)} cidades subiram e ${num(caiuTotal)} caíram no ranking.` +
+    (resumo.itens_novos > 0
+      ? ` Boa parte do movimento vem ${resumo.itens_novos === 1 ? "do item que passou" : `dos ${resumo.itens_novos} itens que passaram`} a ser verificado${resumo.itens_novos === 1 ? "" : "s"} depois daquela varredura, não de mudança nos sites.`
+      : "") +
+    " Toque em uma para ver o detalhe.";
   $("movimento").hidden = false;
 }
 

@@ -423,7 +423,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2112803,Viana,MA,,viana.ma.gov.br,sem site no Wikidata
 2112852,Vila Nova dos Martírios,MA,,vilanovadosmartirios.ma.gov.br,sem site no Wikidata
 2113009,Vitorino Freire,MA,,vitorinofreire.ma.gov.br,sem site no Wikidata
-2200053,Acauã,PI,,www.acaua.pi.gov.br,sem site no Wikidata
+2200053,Acauã,PI,,acaua.pi.gov.br,sem site no Wikidata
 2200103,Agricolândia,PI,,agricolandia.pi.gov.br,sem site no Wikidata
 2200202,Água Branca,PI,www.aguabranca.pi.gov.br,prefeituraaguabranca.pi.gov.br,domínio do Wikidata não existe no DNS
 2200301,Alto Longá,PI,altolonga.org,altolonga.pi.gov.br,fora do .gov.br
@@ -744,11 +744,9 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2404507,Guamaré,RN,,guamare.rn.gov.br,sem site no Wikidata
 2404606,Ielmo Marinho,RN,,ielmomarinho.rn.gov.br,sem site no Wikidata
 2404705,Ipanguaçu,RN,,ipanguacu.rn.gov.br,sem site no Wikidata
-2404804,Ipueira,RN,,ipueira.rn.gov.br,sem site no Wikidata
 2404903,Itaú,RN,,itau.rn.gov.br,sem site no Wikidata
 2405009,Jaçanã,RN,,jacana.rn.gov.br,sem site no Wikidata
 2405108,Jandaíra,RN,,jandaira.rn.gov.br,sem site no Wikidata
-2405207,Janduís,RN,,janduis.rn.gov.br,sem site no Wikidata
 2405405,Japi,RN,,japi.rn.gov.br,sem site no Wikidata
 2405504,Jardim de Angicos,RN,,jardimdeangicos.rn.gov.br,sem site no Wikidata
 2405702,Jardim do Seridó,RN,,jardimdoserido.rn.gov.br,sem site no Wikidata
@@ -818,6 +816,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2414209,Tibau do Sul,RN,,tibaudosul.rn.gov.br,sem site no Wikidata
 2414308,Timbaúba dos Batistas,RN,,timbaubadosbatistas.rn.gov.br,sem site no Wikidata
 2414456,Triunfo Potiguar,RN,,triunfopotiguar.rn.gov.br,sem site no Wikidata
+2414605,Upanema,RN,,upanema.rn.gov.br,sem site no Wikidata
 2414704,Várzea,RN,,varzea.rn.gov.br,sem site no Wikidata
 2414753,Venha-Ver,RN,,venhaver.rn.gov.br,sem site no Wikidata
 2414803,Vera Cruz,RN,,veracruz.rn.gov.br,sem site no Wikidata
@@ -997,21 +996,21 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2604155,Casinhas,PE,www.prefeituracasinhas.pe.gov.br,casinhas.pe.gov.br,domínio do Wikidata não existe no DNS
 2605152,Dormentes,PE,www.dormentes.pe.gov.br,dormentes.pe.gov.br,domínio do Wikidata não existe no DNS
 2609006,Macaparana,PE,www.bb.com.br,macaparana.pe.gov.br,"portal genérico, não é da prefeitura"
+2700102,Água Branca,AL,www.aguabranca.al.gov.br,aguabranca.al.gov.br,domínio do Wikidata não existe no DNS
 2700201,Anadia,AL,,anadia.al.gov.br,sem site no Wikidata
 2700508,Barra de Santo Antônio,AL,,barradesantoantonio.al.gov.br,sem site no Wikidata
 2700607,Barra de São Miguel,AL,,barradesaomiguel.al.gov.br,sem site no Wikidata
 2700805,Belém,AL,,belem.al.gov.br,sem site no Wikidata
 2701100,Branquinha,AL,,branquinha.al.gov.br,sem site no Wikidata
 2701209,Cacimbinhas,AL,,cacimbinhas.al.gov.br,sem site no Wikidata
-2701357,Campestre,AL,,campestre.al.gov.br,sem site no Wikidata
 2701506,Campo Grande,AL,,campogrande.al.gov.br,sem site no Wikidata
 2701605,Canapi,AL,,canapi.al.gov.br,sem site no Wikidata
 2701704,Capela,AL,,capela.al.gov.br,sem site no Wikidata
+2701803,Carneiros,AL,www.carneiros.al.gov.br,carneiros.al.gov.br,domínio do Wikidata não existe no DNS
 2701902,Chã Preta,AL,,chapreta.al.gov.br,sem site no Wikidata
 2702009,Coité do Noia,AL,,coitedonoia.al.gov.br,sem site no Wikidata
 2702108,Colônia Leopoldina,AL,,colonialeopoldina.al.gov.br,sem site no Wikidata
 2702207,Coqueiro Seco,AL,,coqueiroseco.al.gov.br,sem site no Wikidata
-2702355,Craíbas,AL,,craibas.al.gov.br,sem site no Wikidata
 2702553,Estrela de Alagoas,AL,,estreladealagoas.al.gov.br,sem site no Wikidata
 2702702,Feliz Deserto,AL,,felizdeserto.al.gov.br,sem site no Wikidata
 2702801,Flexeiras,AL,,flexeiras.al.gov.br,sem site no Wikidata
@@ -1019,7 +1018,6 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2703106,Igaci,AL,,igaci.al.gov.br,sem site no Wikidata
 2703403,Jacaré dos Homens,AL,,jacaredoshomens.al.gov.br,sem site no Wikidata
 2703502,Jacuípe,AL,,jacuipe.al.gov.br,sem site no Wikidata
-2703601,Japaratinga,AL,,japaratinga.al.gov.br,sem site no Wikidata
 2703700,Jaramataia,AL,,jaramataia.al.gov.br,sem site no Wikidata
 2703809,Joaquim Gomes,AL,,joaquimgomes.al.gov.br,sem site no Wikidata
 2703908,Jundiá,AL,,jundia.al.gov.br,sem site no Wikidata
@@ -1029,22 +1027,18 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2704609,Maravilha,AL,,maravilha.al.gov.br,sem site no Wikidata
 2704807,Maribondo,AL,,maribondo.al.gov.br,sem site no Wikidata
 2704906,Mar Vermelho,AL,,marvermelho.al.gov.br,sem site no Wikidata
-2705002,Mata Grande,AL,www.matagrande.al.cnm.org.br,matagrande.al.gov.br,"portal genérico, não é da prefeitura"
 2705101,Matriz de Camaragibe,AL,,matrizdecamaragibe.al.gov.br,sem site no Wikidata
 2705200,Messias,AL,,messias.al.gov.br,sem site no Wikidata
 2705309,Minador do Negrão,AL,,minadordonegrao.al.gov.br,sem site no Wikidata
 2705408,Monteirópolis,AL,,monteiropolis.al.gov.br,sem site no Wikidata
-2705705,Olho d'Água das Flores,AL,,olhodaguadasflores.al.gov.br,sem site no Wikidata
 2705804,Olho d'Água do Casado,AL,,olhodaguadocasado.al.gov.br,sem site no Wikidata
 2706000,Olivença,AL,,olivenca.al.gov.br,sem site no Wikidata
-2706109,Ouro Branco,AL,,ourobranco.al.gov.br,sem site no Wikidata
 2706406,Pão de Açúcar,AL,,paodeacucar.al.gov.br,sem site no Wikidata
 2706422,Pariconha,AL,,pariconha.al.gov.br,sem site no Wikidata
 2706448,Paripueira,AL,,paripueira.al.gov.br,sem site no Wikidata
 2706505,Passo de Camaragibe,AL,,passodecamaragibe.al.gov.br,sem site no Wikidata
 2706802,Piaçabuçu,AL,,piacabucu.al.gov.br,sem site no Wikidata
 2707107,Piranhas,AL,,piranhas.al.gov.br,sem site no Wikidata
-2707206,Poço das Trincheiras,AL,,pocodastrincheiras.al.gov.br,sem site no Wikidata
 2707305,Porto Calvo,AL,,portocalvo.al.gov.br,sem site no Wikidata
 2707404,Porto de Pedras,AL,,portodepedras.al.gov.br,sem site no Wikidata
 2707503,Porto Real do Colégio,AL,,portorealdocolegio.al.gov.br,sem site no Wikidata
@@ -1123,7 +1117,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2903235,Barro Alto,BA,,barroalto.ba.gov.br,sem site no Wikidata
 2903300,Barro Preto,BA,www.barropreto.ba.io.org.br,barropreto.ba.gov.br,fora do .gov.br
 2903409,Belmonte,BA,,belmonte.ba.gov.br,sem site no Wikidata
-2904050,Bonito,BA,,bonito.ba.gov.br,sem site no Wikidata
+2904050,Bonito,BA,,www.bonito.ba.gov.br,sem site no Wikidata
 2904407,Brejolândia,BA,,brejolandia.ba.gov.br,sem site no Wikidata
 2904803,Caatiba,BA,www.ipmbrasil.org.br,caatiba.ba.gov.br,fora do .gov.br
 2905156,Caetanos,BA,www.caetanos.ba.io.org.br,caetanos.ba.gov.br,fora do .gov.br
@@ -1139,7 +1133,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2907103,Carinhanha,BA,www.carinhanha.com,carinhanha.ba.gov.br,fora do .gov.br
 2907202,Casa Nova,BA,www.casanova.ba.io.org.br,casanova.ba.gov.br,fora do .gov.br
 2907301,Castro Alves,BA,,castroalves.ba.gov.br,sem site no Wikidata
-2907400,Catolândia,BA,,catolandia.ba.gov.br,sem site no Wikidata
+2907400,Catolândia,BA,,www.catolandia.ba.gov.br,sem site no Wikidata
 2907558,Caturama,BA,,caturama.ba.gov.br,sem site no Wikidata
 2907707,Chorrochó,BA,,chorrocho.ba.gov.br,sem site no Wikidata
 2908200,Conceição da Feira,BA,,conceicaodafeira.ba.gov.br,sem site no Wikidata
@@ -1171,7 +1165,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2911907,Iaçu,BA,,iacu.ba.gov.br,sem site no Wikidata
 2912004,Ibiassucê,BA,,ibiassuce.ba.gov.br,sem site no Wikidata
 2912400,Ibipeba,BA,,ibipeba.ba.gov.br,sem site no Wikidata
-2913002,Ibitiara,BA,,ibitiara.ba.gov.br,sem site no Wikidata
+2913002,Ibitiara,BA,,www.ibitiara.ba.gov.br,sem site no Wikidata
 2913101,Ibititá,BA,,ibitita.ba.gov.br,sem site no Wikidata
 2913200,Ibotirama,BA,www.ibotirama.ba.io.org.br,ibotirama.ba.gov.br,fora do .gov.br
 2913309,Ichu,BA,,ichu.ba.gov.br,sem site no Wikidata
@@ -1223,7 +1217,6 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2919702,Macarani,BA,,macarani.ba.gov.br,sem site no Wikidata
 2919900,Macururé,BA,,macurure.ba.gov.br,sem site no Wikidata
 2919959,Maetinga,BA,,maetinga.ba.gov.br,sem site no Wikidata
-2920007,Maiquinique,BA,www.maiquinique.ba.gov.br,maiquinique.ba.gov.br,domínio do Wikidata não existe no DNS
 2920106,Mairi,BA,,mairi.ba.gov.br,sem site no Wikidata
 2920205,Malhada,BA,,malhada.ba.gov.br,sem site no Wikidata
 2920304,Malhada de Pedras,BA,,malhadadepedras.ba.gov.br,sem site no Wikidata
@@ -1523,7 +1516,6 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 3515004,Embu das Artes,SP,www.embu.sp.gov.br,embudasartes.sp.gov.br,domínio do Wikidata não existe no DNS
 3518800,Guarulhos,SP,www.guarulhos.sp.leg.br,guarulhos.sp.gov.br,site da câmara municipal (.leg.br)
 3520905,Ipaussu,SP,,ipaussu.sp.gov.br,sem site no Wikidata
-3528858,Marapoama,SP,www.marapoama.sp.gov.br,marapoama.sp.gov.br,domínio do Wikidata não existe no DNS
 3533403,Nova Odessa,SP,camaranovaodessa.sp.gov.br,novaodessa.sp.gov.br,site da câmara municipal
 3542503,Reginópolis,SP,www.camarareginopolis.sp.gov.br,reginopolis.sp.gov.br,site da câmara municipal
 3554706,Torrinha,SP,,torrinha.sp.gov.br,sem site no Wikidata
@@ -1617,7 +1609,6 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 4111605,Ivatuba,PR,,ivatuba.pr.gov.br,sem site no Wikidata
 4111902,Jaguapitã,PR,,jaguapita.pr.gov.br,sem site no Wikidata
 4112108,Jandaia do Sul,PR,,jandaiadosul.pr.gov.br,sem site no Wikidata
-4112207,Janiópolis,PR,,janiopolis.pr.gov.br,sem site no Wikidata
 4112405,Japurá,PR,,japura.pr.gov.br,sem site no Wikidata
 4112504,Jardim Alegre,PR,,jardimalegre.pr.gov.br,sem site no Wikidata
 4112751,Jesuítas,PR,,jesuitas.pr.gov.br,sem site no Wikidata
@@ -1857,7 +1848,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 5004809,Japorã,MS,,japora.ms.gov.br,sem site no Wikidata
 5004908,Jaraguari,MS,,jaraguari.ms.gov.br,sem site no Wikidata
 5005806,Nioaque,MS,www.prefeituranioaque.com.br,nioaque.ms.gov.br,fora do .gov.br
-5007703,Sete Quedas,MS,,setequedas.ms.gov.br,sem site no Wikidata
+5007703,Sete Quedas,MS,,www.setequedas.ms.gov.br,sem site no Wikidata
 5007950,Tacuru,MS,,tacuru.ms.gov.br,sem site no Wikidata
 5200134,Acreúna,GO,www.acreunagoias.com.br,acreuna.go.gov.br,fora do .gov.br
 5200159,Adelândia,GO,,adelandia.go.gov.br,sem site no Wikidata

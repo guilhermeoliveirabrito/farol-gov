@@ -19,13 +19,19 @@ Domínios que não resolvem no DNS ou não respondem nem em HTTP nem em HTTPS fi
 
 ## Qualidade do cadastro
 
-O site de cada município vem do Wikidata, e nem sempre o cadastro está certo. Antes de avaliar, o farol faz algumas checagens:
+O site de cada município vem do Wikidata, e nem sempre o cadastro está certo. Na coleta, o farol confere a lista:
+
+- aplica as correções revisadas à mão em `data/correcoes.csv`;
+- quando o site do Wikidata é suspeito (fora do `.gov.br`, da câmara municipal, portal genérico), não existe no DNS ou nem foi cadastrado, procura o padrão oficial `<nome>.<uf>.gov.br` (e variações com `www.`, `pm` e `prefeitura`) e usa o que existir. Só órgão público registra `.gov.br`;
+- tudo que foi trocado fica em `data/dominios_corrigidos.csv`, com o motivo.
+
+Na varredura, mais algumas checagens:
 
 | Aviso | O que acontece |
 |---|---|
 | `dominio_alternativo` | O domínio cadastrado não existe, mas a versão com/sem `www.` existe. Avaliamos a que funciona. |
 | `nao_resolve` | Nenhuma das duas versões existe no DNS. Fica sem nota. |
-| `fora_do_gov_br` | O domínio não termina em `.gov.br`. É avaliado, mas fica **fora do ranking** até alguém confirmar que é mesmo o site da prefeitura (já apareceu site de associação de municípios cadastrado como site de prefeitura). |
+| `fora_do_gov_br` | O domínio não termina em `.gov.br` e não está em `data/correcoes.csv`. É avaliado, mas fica **fora do ranking** até alguém confirmar que é mesmo o site da prefeitura (já apareceu site de associação de municípios cadastrado como site de prefeitura). |
 | `dominio_compartilhado` | O mesmo domínio aparece para mais de um município. Também fica fora do ranking. |
 | `verificacao_incompleta` | Faltou verificar itens demais (ver acima). Sem nota nesta semana. |
 
@@ -114,7 +120,7 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 
 ## Limitações conhecidas
 
-- A lista de domínios depende do Wikidata. Município sem site cadastrado lá não entra.
+- A lista de domínios parte do Wikidata. Município sem site lá só entra se o padrão `<nome>.<uf>.gov.br` existir; quem usa outro endereço precisa de uma linha em `data/correcoes.csv`.
 - Alguns servidores bloqueiam IPs de datacenter (como os do GitHub Actions), o que pode gerar `error` em vez do resultado real.
 - O DMARC é lido só no próprio domínio. Ainda não consideramos a política herdada do domínio organizacional ([RFC 7489, seção 6.6.3](https://www.rfc-editor.org/rfc/rfc7489#section-6.6.3)).
 - Conteúdo misto e cookies olham só a página inicial, não o site inteiro.

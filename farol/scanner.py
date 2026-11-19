@@ -87,7 +87,8 @@ def preparar(entidade, resolver):
         else:
             avisos.append(NAO_RESOLVE)
 
-    if fora_do_gov_br(host):
+    # dominio fora do .gov.br conferido a mao (data/correcoes.csv) e da prefeitura sim
+    if fora_do_gov_br(host) and getattr(entidade, "origem", "") != "manual":
         avisos.append(FORA_GOV_BR)
 
     email = dominio_email(host)

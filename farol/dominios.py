@@ -18,7 +18,7 @@ IGNORAR = (
     "wikipedia.org", "blogspot.com", "wordpress.com", "google.com",
 )
 
-CAMPOS = ["ibge", "municipio", "uf", "dominio", "lat", "lon", "populacao"]
+CAMPOS = ["ibge", "municipio", "uf", "dominio", "lat", "lon", "populacao", "origem"]
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,8 @@ class Entidade:
     lon: str = ""
     # so serve de ultimo desempate no podio da semana
     populacao: str = ""
+    # de onde veio o dominio: "" (wikidata), "inferido" (padrao .gov.br achado no dns) ou "manual"
+    origem: str = ""
 
 
 def uf_do_ibge(codigo):

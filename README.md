@@ -98,7 +98,12 @@ A ficha de cada cidade na página já mostra o código pronto para copiar.
 
 ## De onde vêm os domínios
 
-A lista de municípios e seus sites oficiais vem do [Wikidata](https://www.wikidata.org/) (propriedade P856, ligada ao código IBGE). Se o site da sua cidade estiver errado ou faltando, o melhor jeito de corrigir é editar o Wikidata, assim a correção vale para todo mundo. Também dá para abrir uma issue aqui.
+A lista de municípios e seus sites oficiais vem do [Wikidata](https://www.wikidata.org/) (propriedade P856, ligada ao código IBGE). O Wikidata erra com frequência: aponta site de turismo, da câmara municipal, portal de notícias ou domínio que já não existe. Por isso a coleta faz uma conferência:
+
+1. Aplica as correções revisadas à mão em [`data/correcoes.csv`](data/correcoes.csv).
+2. Quando o site do Wikidata é suspeito (fora do `.gov.br`, da câmara, portal genérico), não existe no DNS ou nem foi cadastrado, procura o padrão oficial `<nome>.<uf>.gov.br` e variações (`www.`, `pm`, `prefeitura`). Só órgão público registra `.gov.br`, então o que existir ali é da prefeitura.
+
+Tudo que foi trocado fica em [`data/dominios_corrigidos.csv`](data/dominios_corrigidos.csv), com o motivo. Se o site da sua cidade estiver errado, o melhor é corrigir no Wikidata, porque assim vale para todo mundo. Também dá para abrir uma issue ou mandar um PR em `data/correcoes.csv`.
 
 ## Roadmap
 

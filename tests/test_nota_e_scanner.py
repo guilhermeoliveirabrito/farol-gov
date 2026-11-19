@@ -430,3 +430,14 @@ def test_criterios_de_excelencia():
     # so conta com o item cumprido
     checks["dmarc"]["status"] = "warn"
     assert "dmarc_reject" not in criterios_de_excelencia(checks)
+
+
+def test_dominio_corrigido_a_mao_fora_do_gov_br_continua_no_ranking():
+    from dataclasses import replace
+
+    from farol.scanner import FORA_GOV_BR, preparar
+
+    ent = Entidade("3304557", "Rio de Janeiro", "RJ", "prefeitura.rio")
+    resolver = FakeResolver(enderecos={"prefeitura.rio": (True, False)})
+    assert FORA_GOV_BR in preparar(ent, resolver).avisos
+    assert FORA_GOV_BR not in preparar(replace(ent, origem="manual"), resolver).avisos

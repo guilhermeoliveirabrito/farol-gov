@@ -47,3 +47,48 @@ def test_populacao_fica_com_o_maior_valor():
     ]
     com_site, _ = coleta.montar_lista(linhas)
     assert com_site[0].populacao == "1537704"
+
+
+def test_slug_e_candidatos():
+    assert coleta.slug("Alta Floresta d'Oeste") == "altaflorestadoeste"
+    assert coleta.candidatos("Niterói", "RJ")[:2] == ["niteroi.rj.gov.br", "www.niteroi.rj.gov.br"]
+
+
+def test_sites_suspeitos():
+    assert coleta.motivo_suspeito("www.guarulhos.sp.leg.br", "Guarulhos") == "site da câmara municipal (.leg.br)"
+    assert coleta.motivo_suspeito("www.camaracg.com.br", "Campina Grande") == "site da câmara municipal"
+    # cidade que tem camara no nome nao e confundida
+    assert coleta.motivo_suspeito("joaocamara.rn.gov.br", "João Câmara") is None
+    assert coleta.motivo_suspeito("www.ceara.com.br", "Varjota") == "portal genérico, não é da prefeitura"
+    assert coleta.motivo_suspeito("riotur.rio", "Rio de Janeiro") == "fora do .gov.br"
+    assert coleta.motivo_suspeito("www.recife.pe.gov.br", "Recife") is None
+
+
+def _ent(ibge, nome, uf, dominio=""):
+    from farol.dominios import Entidade
+
+    return Entidade(ibge, nome, uf, dominio)
+
+
+def test_corrigir_troca_suspeito_acha_quem_nao_tinha_e_respeita_o_manual():
+    existentes = {"niteroi.rj.gov.br", "www.abadiadegoias.go.gov.br", "www.recife.pe.gov.br"}
+    com = [
+        _ent("3303302", "Niterói", "RJ", "www.prefeituradeniteroi.org"),
+        _ent("2611606", "Recife", "PE", "www.recife.pe.gov.br"),
+        _ent("3304557", "Rio de Janeiro", "RJ", "riotur.rio"),
+        _ent("1100304", "Vilhena", "RO", "pmvilhena.com.br"),  # suspeito e sem candidato: fica como esta
+    ]
+    sem = [_ent("5200050", "Abadia de Goiás", "GO"), _ent("5200100", "Abadiânia", "GO")]
+    correcoes = {"3304557": {"ibge": "3304557", "dominio": "prefeitura.rio", "motivo": "turismo"}}
+    com2, sem2, relatorio = coleta.corrigir(com, sem, lambda h: h in existentes, correcoes, workers=2)
+
+    dominio = {e.ibge: e.dominio for e in com2}
+    assert dominio["3303302"] == "niteroi.rj.gov.br"
+    assert dominio["2611606"] == "www.recife.pe.gov.br"
+    assert dominio["3304557"] == "prefeitura.rio"
+    assert dominio["1100304"] == "pmvilhena.com.br"
+    assert dominio["5200050"] == "www.abadiadegoias.go.gov.br"
+    assert [e.ibge for e in sem2] == ["5200100"]
+    origem = {e.ibge: e.origem for e in com2}
+    assert origem["3304557"] == "manual" and origem["3303302"] == "inferido" and origem["2611606"] == ""
+    assert {r["ibge"] for r in relatorio} == {"3303302", "3304557", "5200050"}

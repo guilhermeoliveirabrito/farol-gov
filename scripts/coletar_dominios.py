@@ -151,7 +151,7 @@ def ler_correcoes(caminho):
         return {linha["ibge"].strip(): linha for linha in csv.DictReader(f) if linha.get("ibge")}
 
 
-def corrigir(com_site, sem_site, existe, correcoes=None, workers=16):
+def corrigir(com_site, sem_site, existe, correcoes=None, workers=32):
     """Devolve (com_site, sem_site, relatorio). `existe(host)` diz se o host tem endereco no DNS."""
     correcoes = correcoes or {}
     todos = [(e, True) for e in com_site] + [(e, False) for e in sem_site]

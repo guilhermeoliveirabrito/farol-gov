@@ -232,7 +232,10 @@ def _rodar(entidades, resolver_factory, cliente, workers, por_ip, progresso=None
 
     # dnspython nao garante ser thread-safe, entao cada consulta cria o seu resolver.
     # mesmas 32 threads: com 64 os resolvers publicos comecaram a deixar consulta sem resposta
-    pool_dns = ThreadPoolExecutor(max_workers=workers)
+    # dns fica em no maximo 32 threads: mais que isso os resolvers publicos comecam a
+    # deixar consulta sem resposta. as visitas podem ter mais, porque cada servidor ja
+    # tem o seu limite (por_ip) e quase todo o tempo e espera de rede
+    pool_dns = ThreadPoolExecutor(max_workers=min(workers, 32))
     pool_web = ThreadPoolExecutor(max_workers=workers)
     pendentes = {pool_dns.submit(preparar, e, resolver_factory()): ("dns", e) for e in entidades}
 
@@ -329,7 +332,7 @@ def _repescar_dns(entidades, resultados, resolver_factory, workers, prazo):
     return melhoraram
 
 
-def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3, prazo=75 * 60, prazo_repescagem=600, sondagem=None):
+def varrer(entidades, resolver_factory, cliente, workers=32, progresso=None, cliente_lento=None, por_ip=3, prazo=90 * 60, prazo_repescagem=600, sondagem=None):
     """Roda avaliar() em paralelo, com uma repescagem no fim pra quem deu timeout.
 
     resolver_factory cria um resolver por tarefa. cliente_lento (timeout maior) e usado

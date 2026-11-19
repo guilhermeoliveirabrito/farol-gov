@@ -55,7 +55,9 @@ def cmd_scan(args):
         if i % 100 == 0 or i == total:
             print(f"  {i}/{total}", file=sys.stderr)
 
-    cliente = ClienteHTTP(timeout=args.timeout)
+    # uma tentativa so na primeira passada: quem der timeout vai pra repescagem, que tenta
+    # de novo com mais calma. com duas, cada site lento segurava uma thread por 1 minuto
+    cliente = ClienteHTTP(timeout=args.timeout, tentativas=1)
     # repescagem com mais paciencia, mas uma tentativa so: com duas, um site fora do ar
     # gastava mais de 2 minutos e quase nenhum voltava (2 de 36 na amostra de 17/11)
     lento = ClienteHTTP(timeout=args.timeout * 1.5, tentativas=1)
@@ -134,10 +136,10 @@ def main(argv=None):
     p = sub.add_parser("scan", help="verifica todos os dominios de um csv")
     p.add_argument("csv")
     p.add_argument("-o", "--saida", default="data/resultados/latest.json")
-    p.add_argument("-w", "--workers", type=int, default=32)
+    p.add_argument("-w", "--workers", type=int, default=64)
     p.add_argument("--timeout", type=float, default=10.0)
     p.add_argument("--por-ip", type=int, default=3, help="verificacoes simultaneas no mesmo servidor")
-    p.add_argument("--prazo", type=float, default=75, help="minutos; quem nao for visitado ate la fica sem nota nesta rodada")
+    p.add_argument("--prazo", type=float, default=90, help="minutos; quem nao for visitado ate la fica sem nota nesta rodada")
     p.add_argument("--limite", type=int, help="so os N primeiros (pra testar)")
     p.add_argument("--amostra", type=int, help="N dominios aleatorios (pra testar)")
     p.add_argument("--semente", type=int, default=42, help="semente da amostra")

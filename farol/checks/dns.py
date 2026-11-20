@@ -1,4 +1,5 @@
 """Checks de DNS: DNSSEC, CAA, SPF e DMARC."""
+import re
 import time
 
 from . import ERROR, FAIL, PASS, WARN, Resultado
@@ -309,7 +310,9 @@ def checar_caa(dominio, resolver, zona_responde=False):
                 origem = "" if i == 0 else f" (herdado de {nome})"
                 # iodef: pra onde a autoridade avisa quando alguem pede certificado que a politica nao deixa
                 iodef = " com iodef" if any(" iodef " in f" {r} " for r in todos) else ""
-                return Resultado("caa", PASS, f"{len(registros)} registro(s) CAA{iodef}{origem}")
+                # issuewild ";" = ninguem emite certificado curinga (*.dominio), que e o mais perigoso se vazar
+                curinga = ", sem curinga" if any(re.search(r'\bissuewild\s+";?\s*"', r) for r in todos) else ""
+                return Resultado("caa", PASS, f"{len(registros)} registro(s) CAA{iodef}{curinga}{origem}")
     except ErroDNS as e:
         if zona_responde:
             return Resultado("caa", FAIL, f"o DNS de {nome} nao responde a consultas CAA")

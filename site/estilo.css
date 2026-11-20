@@ -400,6 +400,7 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .placar-detalhes { display: block; margin-top: 2px; font-weight: 600; color: var(--suave); }
 .linha .nota .det { display: block; font-size: .7rem; font-weight: 600; color: var(--suave); line-height: 1; }
 .excelencia li.feito .marca { color: var(--cA); }
+.excelencia li.parte .marca { color: var(--cC); }
 
 .medalhas-cidade { padding: 14px 0; border-bottom: 1px solid var(--linha); }
 .medalhas-cidade h3 { font-size: 1.05rem; margin: 0 0 8px; }

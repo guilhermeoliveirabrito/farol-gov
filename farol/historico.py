@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .checks import Resultado
 from .dominios import uf_do_ibge
-from .nota import calcular_nota, conceito, grau, pontos_de_detalhe
+from .nota import PESOS, calcular_nota, conceito, grau, pontos_de_detalhe
 
 CODIGO = {"pass": "p", "warn": "w", "fail": "f", "error": "e"}
 # grau de cada item em passos de 0,05: "a" = 0, "u" = 1
@@ -168,7 +168,8 @@ def avaliar_snapshot(snap, populacao=None):
         if nota is not None and flags & ELEGIVEL:
             k = chave(nota, status, detalhes, (populacao or {}).get(ibge))
             geral[ibge] = k
-            if "e" not in status:
+            # item de peso 0 (so detalhe) sem resposta nao tira do oficial: nao mexe na nota
+            if not any(st == "e" and PESOS.get(c, 0) for c, st in zip(checks, status)):
                 oficial[ibge] = k
     for ibge, pos in posicoes(oficial).items():
         saida[ibge][2] = pos

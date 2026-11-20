@@ -31,8 +31,9 @@ Em 2019 um levantamento da DigiCert apontou que [47% dos domínios .gov do Brasi
 | `spf` | Registro SPF que não aceita qualquer remetente | Primeira barreira contra e-mail falso |
 | `dmarc` | Política DMARC `quarantine` ou `reject` | Sem isso, qualquer um manda e-mail "da prefeitura" |
 | `email_tls` | MTA-STS (e TLS-RPT) publicados no DNS | Obriga o e-mail enviado à prefeitura a viajar com criptografia ([RFC 8461](https://www.rfc-editor.org/rfc/rfc8461)) |
+| `privacidade` | Página inicial sem rastreador de terceiros, com link de privacidade e o encarregado de dados | LGPD: o que o cidadão faz no site da prefeitura não deveria ir parar no Google ou no Facebook |
 
-A nota base (0 a 100) mede o essencial. Por cima dela somam pontos pequenos de **detalhe** (de 0,1 a 1): TLS 1.3, DMARC `reject`, CSP, nenhum script de fora, IPv6, servidores DNS em dois provedores e outros. Eles não tiram ponto de ninguém e servem para separar quem fez o essencial igual. `versao_exposta` e `email_tls` contam só como detalhe.
+A nota base (0 a 100) mede o essencial. Por cima dela somam pontos pequenos de **detalhe** (de 0,1 a 1): TLS 1.3, DMARC `reject`, CSP, poucos scripts de fora, nenhum rastreador, jQuery atualizado, IPv6, servidores DNS em dois provedores e outros. Alguns são graduais (cada script de fora tira um pouco; HSTS mais longo vale mais). Eles não tiram ponto de ninguém e servem para separar quem fez o essencial igual. `versao_exposta`, `email_tls` e `privacidade` contam só como detalhe.
 
 Os pesos de cada item e o cálculo da nota estão em [docs/metodologia.md](docs/metodologia.md). Se você administra algum desses sites, o [guia de correção](docs/como-corrigir.md) mostra o que fazer em cada item.
 

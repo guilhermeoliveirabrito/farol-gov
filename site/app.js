@@ -26,6 +26,7 @@ const ITENS = {
   spf: ["SPF", "Lista quais servidores podem mandar e-mail em nome da prefeitura."],
   dmarc: ["DMARC", "Manda os provedores recusarem e-mail falso com o nome da prefeitura."],
   email_tls: ["E-mail com TLS obrigatório", "Exige que o e-mail enviado para a prefeitura viaje com criptografia (MTA-STS)."],
+  privacidade: ["Privacidade (LGPD)", "A página inicial não manda dados de quem visita para rastreadores de fora e mostra a política de privacidade e o encarregado de dados."],
 };
 
 const STATUS = { pass: "cumpre", warn: "parcial", fail: "não cumpre", error: "não verificado", na: "novo, ainda não verificado" };
@@ -887,31 +888,35 @@ function blocoMedalhas(r) {
   );
 }
 
-// lista de detalhes vem do build (farol/nota.py DETALHES): [chave, texto, pontos]
+// lista de detalhes vem do build (farol/nota.py DETALHES): [chave, texto, pontos maximos]
 let DETALHES = [];
 
-// pontos pequenos que somam por cima da nota e decidem quem fica na frente quando a nota empata
-function blocoDetalhes(r, feitos) {
-  if (r.nota == null || !Array.isArray(feitos) || !DETALHES.length) return null;
-  const tem = new Set(feitos);
+// pontos pequenos que somam por cima da nota e decidem quem fica na frente quando a nota empata.
+// obtidos: {chave: pontos}; alguns detalhes sao graduais e dao so parte dos pontos
+function blocoDetalhes(r, obtidos) {
+  if (r.nota == null || !obtidos || typeof obtidos !== "object" || !DETALHES.length) return null;
+  // build antigo mandava so a lista de chaves cumpridas
+  const ganhos = Array.isArray(obtidos) ? Object.fromEntries(obtidos.map((c) => [c, DETALHES.find(([k]) => k === c)?.[2] ?? 0])) : obtidos;
   const total = DETALHES.reduce((a, [, , p]) => a + p, 0);
   return el(
     "details",
     { class: "excelencia" },
     el("summary", {}, el("b", { text: "Detalhes" }), ` +${fmtPontos(r.detalhes ?? 0)} de ${fmtPontos(total)} possíveis`),
-    el("p", { text: "Cada detalhe é um passo além do essencial e vale pouco: de 0,1 a 1 ponto, somado à nota no ranking. Servem para separar quem fez o essencial igual." }),
+    el("p", { text: "Cada detalhe é um passo além do essencial e vale pouco: de 0,1 a 1 ponto, somado à nota no ranking. Alguns dão parte dos pontos, conforme o quanto a cidade chegou perto. Servem para separar quem fez o essencial igual." }),
     el(
       "ul",
       {},
-      ...DETALHES.map(([c, texto, pontos]) =>
-        el(
+      ...DETALHES.map(([c, texto, pontos]) => {
+        const ganho = Number(ganhos[c]) || 0;
+        const estado = ganho >= pontos ? "feito" : ganho > 0 ? "parte" : "falta";
+        return el(
           "li",
-          { class: tem.has(c) ? "feito" : "falta" },
-          el("span", { class: "marca", "aria-label": tem.has(c) ? "tem" : "não tem", text: tem.has(c) ? "✓" : "–" }),
+          { class: estado },
+          el("span", { class: "marca", "aria-label": { feito: "tem", parte: "tem em parte", falta: "não tem" }[estado], text: { feito: "✓", parte: "◐", falta: "–" }[estado] }),
           el("span", { class: "texto-detalhe", text: texto }),
-          el("span", { class: "pontos-detalhe", text: `+${fmtPontos(pontos)}` }),
-        ),
-      ),
+          el("span", { class: "pontos-detalhe", text: estado === "parte" ? `+${fmtPontos(ganho)} de ${fmtPontos(pontos)}` : `+${fmtPontos(pontos)}` }),
+        );
+      }),
     ),
   );
 }

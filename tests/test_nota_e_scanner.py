@@ -417,36 +417,48 @@ def test_repescagem_do_dns_nao_refaz_a_visita():
 
 
 def test_detalhes():
-    from farol.nota import DETALHES, detalhes_feitos, pontos_de_detalhe
+    from farol.nota import DETALHES, detalhes_feitos, detalhes_obtidos, pontos_de_detalhe
 
     checks = {
         "tls": {"status": "pass", "detalhe": "TLSv1.3"},
+        "redirect": {"status": "pass", "detalhe": "redireciona para https://x/ (permanente, 301)"},
         "hsts": {"status": "pass", "detalhe": "max-age=63072000; includeSubDomains; preload"},
-        "headers": {"status": "pass", "detalhe": "nosniff e anti-clickjacking, com CSP, CSP estrita, Referrer-Policy, Permissions-Policy, COOP"},
+        "headers": {"status": "pass", "detalhe": "nosniff e anti-clickjacking, com CSP, CSP estrita, Referrer-Policy, Permissions-Policy, COOP, CORP, COEP"},
         "conteudo_misto": {"status": "pass", "detalhe": "nenhum recurso carregado sem criptografia; nenhum script de fora"},
-        "https": {"status": "pass", "detalhe": "certificado valido por mais 60 dias; certificado de 90 dias"},
+        "https": {"status": "pass", "detalhe": "certificado valido por mais 60 dias; certificado de 90 dias; vale com e sem www"},
         "dnssec": {"status": "fail", "detalhe": "dominio sem DNSSEC; IPv6; 4 servidores DNS em 2 provedor(es)"},
         "dmarc": {"status": "pass", "detalhe": "p=reject; com relatorios; alinhamento estrito"},
         "spf": {"status": "pass", "detalhe": "via _spf.x: -all"},
-        "caa": {"status": "pass", "detalhe": "2 registro(s) CAA com iodef"},
+        "caa": {"status": "pass", "detalhe": "2 registro(s) CAA com iodef, sem curinga"},
         "cookies": {"status": "pass", "detalhe": "a pagina inicial nao define cookies"},
         "security_txt": {"status": "pass", "detalhe": "arquivo com Contact e Expires"},
         "versao_exposta": {"status": "pass", "detalhe": "nao mostra o software"},
         "email_tls": {"status": "pass", "detalhe": "MTA-STS e TLS-RPT"},
+        "privacidade": {"status": "pass", "detalhe": "sem rastreadores; com link de privacidade; encarregado indicado"},
     }
-    # tudo menos os dois que so existem quando ha script de fora
-    esperado = [c for c, _, _ in DETALHES if c not in ("poucos_scripts_de_fora", "sri")]
+    # tudo menos SRI, que so existe quando ha script de fora
+    esperado = [c for c, _, _ in DETALHES if c != "sri"]
     assert detalhes_feitos(checks) == esperado
     assert pontos_de_detalhe(checks) == round(sum(p for c, _, p in DETALHES if c in esperado), 2)
-    com_scripts = {"conteudo_misto": {"status": "pass", "detalhe": "nenhum recurso carregado sem criptografia; scripts de 2 site(s) de fora, todos com SRI"}}
-    assert detalhes_feitos(com_scripts) == ["poucos_scripts_de_fora", "sri"]
+    # graduais: 2 sites de fora tiram 0,30; HSTS de 1 ano vale metade
+    com_scripts = {
+        "conteudo_misto": {"status": "pass", "detalhe": "nenhum recurso carregado sem criptografia; scripts de 2 site(s) de fora, todos com SRI; jQuery 1.12.4"},
+        "hsts": {"status": "pass", "detalhe": "max-age=31536000"},
+    }
+    assert detalhes_obtidos(com_scripts) == {"scripts_de_fora": 0.45, "sri": 0.25, "hsts_idade": 0.12}
+    assert "scripts_de_fora" not in detalhes_obtidos({"conteudo_misto": {"status": "pass", "detalhe": "x; scripts de 6 site(s) de fora"}})
+    assert "jquery_atual" in detalhes_obtidos({"conteudo_misto": {"status": "pass", "detalhe": "x; nenhum script de fora; jQuery 3.7.1"}})
+    assert "jquery_atual" not in detalhes_obtidos({"conteudo_misto": {"status": "pass", "detalhe": "x; nenhum script de fora; jQuery sem versao"}})
     # item que nao cumpre nao da detalhe, e dmarc com pct nao conta como reject
     checks["tls"]["status"] = "fail"
     checks["dmarc"]["detalhe"] = "p=reject; pct=50"
+    checks["redirect"]["detalhe"] = "redireciona para https://x/ (temporario, 302)"
     feitos = detalhes_feitos(checks)
-    assert "tls13" not in feitos and "dmarc_reject" not in feitos
+    assert "tls13" not in feitos and "dmarc_reject" not in feitos and "redirect_permanente" not in feitos
     # so TLS-RPT (parcial) ainda vale o detalhe dele
     assert detalhes_feitos({"email_tls": {"status": "warn", "detalhe": "so TLS-RPT"}}) == ["tls_rpt"]
+    priv = {"privacidade": {"status": "fail", "detalhe": "rastreadores: Google Analytics; sem link de privacidade; encarregado indicado"}}
+    assert detalhes_feitos(priv) == ["encarregado"]
 
 
 def test_dominio_corrigido_a_mao_fora_do_gov_br_continua_no_ranking():

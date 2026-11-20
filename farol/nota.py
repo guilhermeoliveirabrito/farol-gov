@@ -26,6 +26,8 @@ PESOS = {
     "spf": 1,
     "dmarc": 3,
     "email_tls": 0,
+    # LGPD na pagina inicial (rastreador, politica de privacidade, encarregado): so detalhe
+    "privacidade": 0,
 }
 
 VALORES = {PASS: 1.0, WARN: 0.5}
@@ -82,12 +84,17 @@ def conceito(nota):
 # A nota base mede o essencial e vale muito mais (cada item essencial vale 5 pontos ou
 # mais); os detalhes sao o passo alem do minimo e servem pra separar quem fez o
 # essencial igual. (chave, texto, pontos)
+# (chave, texto, pontos maximos). A maioria e tudo ou nada; os marcados como graduais
+# (scripts_de_fora, hsts_idade) dao parte dos pontos conforme o quanto a cidade chegou perto.
 DETALHES = (
     ("tls13", "TLS 1.3", 1.0),
     ("csp", "Content-Security-Policy na página", 1.0),
     ("dmarc_reject", "DMARC com p=reject: o e-mail falso é recusado, não vai para o spam", 1.0),
     ("versao_oculta", "Não mostra a versão do servidor nem do sistema do site", 1.0),
     ("mta_sts", "MTA-STS: exige criptografia no e-mail enviado para a prefeitura", 1.0),
+    ("scripts_de_fora", "Poucos scripts de outros sites: cada site de fora tira 0,15", 0.75),
+    ("sem_rastreadores", "Nenhum rastreador de terceiros (Google Analytics, pixel do Facebook...) na página inicial", 0.5),
+    ("politica_privacidade", "Link para a política de privacidade / LGPD na página inicial", 0.5),
     ("hsts_subdominios", "HSTS cobrindo os subdomínios", 0.5),
     ("hsts_preload", "HSTS pronto para a lista de preload dos navegadores", 0.5),
     ("referrer_policy", "Referrer-Policy: não vaza o endereço da página para outros sites", 0.5),
@@ -96,103 +103,145 @@ DETALHES = (
     ("spf_hardfail", "SPF terminando em -all: recusa quem não está na lista", 0.5),
     ("caa_proprio", "CAA no próprio domínio, sem depender do registro do estado", 0.5),
     ("tls_rpt", "TLS-RPT: recebe relatório quando o e-mail chega sem criptografia", 0.5),
-    ("sem_scripts_de_fora", "Nenhum script carregado de outro site na página inicial", 0.5),
-    ("poucos_scripts_de_fora", "Scripts de no máximo 3 sites de fora", 0.25),
+    ("encarregado", "Encarregado de dados (LGPD) indicado na página inicial", 0.25),
+    ("jquery_atual", "Sem jQuery antigo (anterior ao 3.5, com XSS conhecido)", 0.25),
+    ("hsts_idade", "HSTS longo: proporcional ao max-age, cheio a partir de 2 anos", 0.25),
     ("sri", "Scripts de fora com SRI: o navegador recusa se alguém trocar o arquivo", 0.25),
     ("csp_estrita", "CSP sem unsafe-inline nem unsafe-eval", 0.25),
     ("cert_automatico", "Certificado de até 100 dias (renovação automática)", 0.25),
     ("ipv6", "Site com IPv6", 0.25),
     ("dns_dois_provedores", "Servidores DNS em pelo menos dois provedores", 0.25),
-    ("hsts_2_anos", "HSTS valendo por 2 anos ou mais", 0.25),
     ("coop", "Cross-Origin-Opener-Policy: isola a página de janelas abertas por outros sites", 0.25),
     ("cookies_samesite", "Cookies com SameSite (ou nenhum cookie na página inicial)", 0.25),
     ("security_txt_expires", "security.txt com validade (Expires)", 0.25),
     ("nome_oculto", "Não mostra nem o nome do software do servidor", 0.25),
+    ("redirect_permanente", "Redirecionamento para HTTPS permanente (301/308): o navegador nem tenta mais o HTTP", 0.1),
+    ("cert_com_e_sem_www", "Certificado vale com e sem www", 0.1),
+    ("corp", "Cross-Origin-Resource-Policy: outro site não embute os arquivos da prefeitura", 0.1),
+    ("coep", "Cross-Origin-Embedder-Policy", 0.1),
+    ("caa_sem_curinga", "CAA proíbe certificado curinga (*.dominio)", 0.1),
     ("dmarc_estrito", "DMARC com alinhamento estrito (adkim=s ou aspf=s)", 0.1),
     ("caa_iodef", "CAA com iodef: avisa a prefeitura se alguém pedir certificado indevido", 0.1),
 )
 PONTOS_DETALHE = {chave: pontos for chave, _, pontos in DETALHES}
+DOIS_ANOS = 2 * 365 * 86400
 
 
-def detalhes_feitos(checks):
-    """checks: {nome: {"status", "detalhe"}} como no json da varredura. Devolve as chaves cumpridas."""
+def detalhes_obtidos(checks):
+    """checks: {nome: {"status", "detalhe"}} como no json da varredura.
+
+    Devolve {chave: pontos} so dos detalhes que deram algum ponto, na ordem de DETALHES."""
 
     def cumpre(nome, *status):
         c = checks.get(nome) or {}
         return str(c.get("detalhe", "")) if c.get("status") in (status or ("pass",)) else None
 
-    feitos = set()
+    obtido = {}
+
+    def ganha(chave, fracao=1.0):
+        if fracao > 0:
+            obtido[chave] = round(PONTOS_DETALHE[chave] * min(fracao, 1.0), 2)
+
     tls, hsts, headers = cumpre("tls"), cumpre("hsts"), cumpre("headers")
     dmarc, spf, caa = cumpre("dmarc"), cumpre("spf"), cumpre("caa")
     cookies, sec, versao, email = cumpre("cookies"), cumpre("security_txt"), cumpre("versao_exposta"), cumpre("email_tls")
     if tls == "TLSv1.3":
-        feitos.add("tls13")
+        ganha("tls13")
     if hsts is not None:
         h = hsts.lower()
         if "includesubdomains" in h:
-            feitos.add("hsts_subdominios")
+            ganha("hsts_subdominios")
         if "preload" in h:
-            feitos.add("hsts_preload")
+            ganha("hsts_preload")
         idade = re.match(r"max-age=(\d+)", h)
-        if idade and int(idade.group(1)) >= 2 * 365 * 86400:
-            feitos.add("hsts_2_anos")
+        if idade:
+            ganha("hsts_idade", int(idade.group(1)) / DOIS_ANOS)
     if headers is not None:
         for chave, texto in (
             ("csp", "CSP"), ("csp_estrita", "CSP estrita"), ("referrer_policy", "Referrer-Policy"),
-            ("permissions_policy", "Permissions-Policy"), ("coop", "COOP"),
+            ("permissions_policy", "Permissions-Policy"), ("coop", "COOP"), ("corp", "CORP"), ("coep", "COEP"),
         ):
-            if texto in headers:
-                feitos.add(chave)
+            if re.search(rf"(?:com |, ){re.escape(texto)}(?:,|$)", headers):
+                ganha(chave)
     misto = cumpre("conteudo_misto", "pass", "warn")
     if misto is not None:
         if "nenhum script de fora" in misto:
-            feitos.add("sem_scripts_de_fora")
+            ganha("scripts_de_fora")
         m = re.search(r"scripts de (\d+) site", misto)
-        if m and int(m.group(1)) <= 3:
-            feitos.add("poucos_scripts_de_fora")
+        if m:
+            # cada site de fora tira 0,15 dos 0,75
+            ganha("scripts_de_fora", 1 - int(m.group(1)) / 5)
         if "todos com SRI" in misto:
-            feitos.add("sri")
+            ganha("sri")
+        jq = re.search(r"jQuery ([\d.]+|sem versao)", misto)
+        if jq is None:
+            ganha("jquery_atual")  # nem carrega jquery
+        elif jq.group(1) != "sem versao":
+            versao_jq = tuple(int(x) for x in jq.group(1).split(".") if x)
+            if versao_jq >= (3, 5):
+                ganha("jquery_atual")
     https = cumpre("https", "pass", "warn")
     if https is not None:
         m = re.search(r"certificado de (\d+) dias", https)
         if m and int(m.group(1)) <= 100:
-            feitos.add("cert_automatico")
+            ganha("cert_automatico")
+        if "vale com e sem www" in https:
+            ganha("cert_com_e_sem_www")
+    redirect = cumpre("redirect")
+    if redirect is not None and "(permanente" in redirect:
+        ganha("redirect_permanente")
     dns = str((checks.get("dnssec") or {}).get("detalhe", ""))
     if "IPv6" in dns:
-        feitos.add("ipv6")
+        ganha("ipv6")
     m = re.search(r"em (\d+) provedor", dns)
     if m and int(m.group(1)) >= 2:
-        feitos.add("dns_dois_provedores")
+        ganha("dns_dois_provedores")
     if dmarc is not None:
         if dmarc.startswith("p=reject") and "pct=" not in dmarc:
-            feitos.add("dmarc_reject")
+            ganha("dmarc_reject")
         if "com relatorios" in dmarc:
-            feitos.add("dmarc_relatorios")
+            ganha("dmarc_relatorios")
         if "alinhamento estrito" in dmarc:
-            feitos.add("dmarc_estrito")
+            ganha("dmarc_estrito")
     if spf is not None and spf.endswith("-all"):
-        feitos.add("spf_hardfail")
+        ganha("spf_hardfail")
     if caa is not None:
         if "herdado" not in caa:
-            feitos.add("caa_proprio")
+            ganha("caa_proprio")
         if "iodef" in caa:
-            feitos.add("caa_iodef")
+            ganha("caa_iodef")
+        if "sem curinga" in caa:
+            ganha("caa_sem_curinga")
     if cookies is not None and "sem SameSite" not in cookies:
-        feitos.add("cookies_samesite")
+        ganha("cookies_samesite")
     if sec is not None and "e Expires" in sec:
-        feitos.add("security_txt_expires")
+        ganha("security_txt_expires")
     if versao is not None:
-        feitos.add("versao_oculta")
+        ganha("versao_oculta")
         if versao == "nao mostra o software":
-            feitos.add("nome_oculto")
+            ganha("nome_oculto")
     if email is not None:
-        feitos.add("mta_sts")
+        ganha("mta_sts")
         if "e TLS-RPT" in email:
-            feitos.add("tls_rpt")
+            ganha("tls_rpt")
     elif (checks.get("email_tls") or {}).get("status") == "warn":
-        feitos.add("tls_rpt")
-    return [chave for chave, _, _ in DETALHES if chave in feitos]
+        ganha("tls_rpt")
+    priv = (checks.get("privacidade") or {})
+    if priv.get("status") in ("pass", "warn", "fail"):
+        d = str(priv.get("detalhe", ""))
+        if "sem rastreadores" in d:
+            ganha("sem_rastreadores")
+        if "com link de privacidade" in d:
+            ganha("politica_privacidade")
+        if "encarregado indicado" in d:
+            ganha("encarregado")
+    return {chave: obtido[chave] for chave, _, _ in DETALHES if chave in obtido}
+
+
+def detalhes_feitos(checks):
+    """So as chaves dos detalhes que deram algum ponto."""
+    return list(detalhes_obtidos(checks))
 
 
 def pontos_de_detalhe(checks):
-    return round(sum(PONTOS_DETALHE[c] for c in detalhes_feitos(checks)), 2)
+    return round(sum(detalhes_obtidos(checks).values()), 2)

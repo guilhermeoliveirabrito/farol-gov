@@ -20,6 +20,7 @@ NOMES = {
     "spf": "SPF",
     "dmarc": "DMARC bloqueando e-mail falso",
     "email_tls": "E-mail com TLS obrigatório (MTA-STS)",
+    "privacidade": "Privacidade (LGPD) na página inicial",
 }
 
 

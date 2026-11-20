@@ -96,6 +96,11 @@ def test_caa_herdado_do_estado():
     assert r.detalhe.startswith("1 registro")
 
 
+def test_caa_sem_curinga():
+    resolver = FakeResolver(caa={"cidade.sp.gov.br": ['0 issue "letsencrypt.org"', '0 issuewild ";"']})
+    assert checar_caa("cidade.sp.gov.br", resolver).detalhe == "2 registro(s) CAA, sem curinga"
+
+
 def test_caa_ausente_e_nao_olha_o_tld():
     resolver = FakeResolver(caa={"br": ['0 issue "x"']})
     assert checar_caa("cidade.sp.gov.br", resolver).status == FAIL

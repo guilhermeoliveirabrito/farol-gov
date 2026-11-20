@@ -37,6 +37,8 @@ class Resposta:
     expira: float | None = None
     # quando o certificado foi emitido (epoch): certificado curto = renovacao automatica
     emitido: float | None = None
+    # nomes do certificado (subjectAltName), pra ver se cobre com e sem www
+    nomes: tuple = ()
 
 
 class ErroConexao(Exception):
@@ -103,12 +105,14 @@ class ClienteHTTP:
             # pega versao e certificado antes do getresponse, porque com Connection: close o sock some
             tls = conn.sock.version() if partes.scheme == "https" else None
             expira = emitido = None
+            nomes = ()
             if partes.scheme == "https" and verificar:
                 cert = conn.sock.getpeercert() or {}
                 if cert.get("notAfter"):
                     expira = ssl.cert_time_to_seconds(cert["notAfter"])
                 if cert.get("notBefore"):
                     emitido = ssl.cert_time_to_seconds(cert["notBefore"])
+                nomes = tuple(v.lower() for t, v in cert.get("subjectAltName", ()) if t == "DNS")
             conn.request("GET", caminho, headers={
                 "User-Agent": USER_AGENT,
                 "Accept": "text/html,*/*;q=0.8",
@@ -123,7 +127,7 @@ class ClienteHTTP:
                     cookies.append(v)
                 headers[k] = f"{headers[k]}, {v}" if k in headers else v
             corpo = _ler_com_prazo(resp, ler, time.monotonic() + self.timeout * 2) if ler else b""
-            return Resposta(url=url, status=resp.status, headers=headers, corpo=corpo, tls=tls, cookies=cookies, expira=expira, emitido=emitido)
+            return Resposta(url=url, status=resp.status, headers=headers, corpo=corpo, tls=tls, cookies=cookies, expira=expira, emitido=emitido, nomes=nomes)
         except ssl.SSLCertVerificationError as e:
             raise ErroConexao("certificado", e.verify_message or str(e)) from e
         except ssl.SSLError as e:
@@ -222,6 +226,8 @@ def avaliar_headers(headers):
                 ("Referrer-Policy", "referrer-policy" in headers),
                 ("Permissions-Policy", "permissions-policy" in headers),
                 ("COOP", "cross-origin-opener-policy" in headers),
+                ("CORP", "cross-origin-resource-policy" in headers),
+                ("COEP", "cross-origin-embedder-policy" in headers),
             )
             if tem
         ]
@@ -263,11 +269,37 @@ def scripts_de_fora(html, url):
     return hosts, sem_sri == 0
 
 
+SRC_SCRIPT = re.compile(r"<script\b[^>]*?\ssrc\s*=\s*[\"']?([^\"'>\s]+)", re.I)
+ARQUIVO_JQUERY = re.compile(r"jquery(?:-(\d+(?:\.\d+)+))?(?:\.slim)?(?:\.min)?\.js", re.I)
+VERSAO_NA_URL = re.compile(r"(?:[?&]ver(?:sion)?=|/jquery/|jquery@)v?(\d+\.\d+(?:\.\d+)?)", re.I)
+JQUERY_SEGURO = (3, 5)  # antes do 3.5 tem XSS conhecido (CVE-2020-11022 e 11023)
+
+
+def versao_jquery(html):
+    """Versao do jQuery que a pagina carrega: None se nao carrega, "" se nao da pra saber.
+    Com mais de um, fica a mais velha (e ela que abre a porta)."""
+    versoes, achou = [], False
+    for src in SRC_SCRIPT.findall(html):
+        arquivo = urlsplit(src).path.rsplit("/", 1)[-1]
+        m = ARQUIVO_JQUERY.fullmatch(arquivo)
+        if not m:
+            continue  # jquery-ui, jquery-migrate, plugins... nao sao o jquery
+        achou = True
+        v = m.group(1) or (VERSAO_NA_URL.search(src) or [None, None])[1]
+        if v:
+            versoes.append(tuple(int(x) for x in v.split(".")))
+    if not achou:
+        return None
+    return ".".join(map(str, min(versoes))) if versoes else ""
+
+
 def _sobre_scripts(html, url):
     hosts, com_sri = scripts_de_fora(html, url)
+    jq = versao_jquery(html)
+    jquery = "" if jq is None else f"; jQuery {jq or 'sem versao'}"
     if not hosts:
-        return "; nenhum script de fora"
-    return f"; scripts de {len(hosts)} site(s) de fora" + (", todos com SRI" if com_sri else "")
+        return "; nenhum script de fora" + jquery
+    return f"; scripts de {len(hosts)} site(s) de fora" + (", todos com SRI" if com_sri else "") + jquery
 
 
 def avaliar_conteudo_misto(resp):
@@ -326,6 +358,17 @@ def avaliar_validade(expira, agora=None, emitido=None):
     return Resultado("https", PASS, f"certificado valido por mais {dias} dias{duracao}")
 
 
+def cobre_com_e_sem_www(nomes, host):
+    """O certificado vale pro endereco com e sem www? Quem digita o outro nao toma erro."""
+    host = host.lower()
+    outro = host.removeprefix("www.") if host.startswith("www.") else "www." + host
+
+    def cobre(nome):
+        return any(n == nome or (n.startswith("*.") and nome.split(".", 1)[-1] == n[2:]) for n in nomes)
+
+    return bool(nomes) and cobre(host) and cobre(outro)
+
+
 def avaliar_security_txt(resp):
     tipo = resp.headers.get("content-type", "").lower()
     if resp.status != 200:
@@ -347,6 +390,46 @@ def avaliar_security_txt(resp):
 COM_VERSAO = re.compile(r"[a-z][\w.!-]*[/ ]v?\d+(?:\.\d+)+", re.I)
 GERADOR = re.compile(r"<meta[^>]+name\s*=\s*[\"']generator[\"'][^>]*content\s*=\s*[\"']([^\"']+)", re.I)
 GERADOR_INVERTIDO = re.compile(r"<meta[^>]+content\s*=\s*[\"']([^\"']+)[\"'][^>]*name\s*=\s*[\"']generator", re.I)
+
+
+# quem coleta dado de navegacao do cidadao pra fora (LGPD): analytics, pixel de anuncio, gravacao de sessao
+RASTREADORES = {
+    "google-analytics.com": "Google Analytics",
+    "googletagmanager.com": "Google Tag Manager",
+    "doubleclick.net": "DoubleClick",
+    "connect.facebook.net": "Facebook",
+    "facebook.com/tr": "Facebook",
+    "hotjar.com": "Hotjar",
+    "clarity.ms": "Microsoft Clarity",
+    "analytics.tiktok.com": "TikTok",
+    "snap.licdn.com": "LinkedIn",
+    "mc.yandex.ru": "Yandex",
+    "static.ads-twitter.com": "Twitter",
+}
+LINK = re.compile(r"<a\b([^>]*)>(.*?)</a>", re.I | re.S)
+PRIVACIDADE = re.compile(r"privacidade|lgpd|prote[cç][aã]o\s+de\s+dados|protecao-de-dados|protecao_de_dados", re.I)
+ENCARREGADO = re.compile(r"encarregad[oa]|\bDPO\b|data protection officer", re.I)
+
+
+def avaliar_privacidade(resp):
+    """LGPD na pagina inicial: rastreador de terceiro, link pra politica de privacidade e
+    o encarregado (art. 41: identidade e contato tem que estar publicos, de preferencia no site).
+    Peso 0 na nota base, so conta como detalhe."""
+    html = resp.corpo.decode("utf-8", "replace")
+    if "<" not in html:
+        return Resultado("privacidade", ERROR, "pagina sem HTML pra analisar")
+    baixo = html.lower()
+    rastreadores = sorted({nome for chave, nome in RASTREADORES.items() if chave in baixo})
+    politica = any(PRIVACIDADE.search(attrs + " " + texto) for attrs, texto in LINK.findall(html))
+    encarregado = bool(ENCARREGADO.search(html))
+    partes = [
+        "rastreadores: " + ", ".join(rastreadores) if rastreadores else "sem rastreadores",
+        "com link de privacidade" if politica else "sem link de privacidade",
+        "encarregado indicado" if encarregado else "sem encarregado na pagina",
+    ]
+    falhas = bool(rastreadores) + (not politica)
+    status = PASS if not falhas else WARN if falhas == 1 else FAIL
+    return Resultado("privacidade", status, "; ".join(partes))
 
 
 def avaliar_versao_exposta(resp):
@@ -376,13 +459,17 @@ def _checar_redirect(host, cliente, tem_https):
     url = f"http://{host}/"
     try:
         resp = cliente.get(url, verificar=False)
+        codigos = []
         for _ in range(5):
             local = resp.headers.get("location")
             if resp.status not in REDIRECTS or not local:
                 break
+            codigos.append(resp.status)
             url = urljoin(url, local)
             if url.startswith("https://"):
-                return Resultado("redirect", PASS, f"redireciona para {url}"), True
+                # 301/308 o navegador guarda e nem tenta mais o http; 302/307 pergunta toda vez
+                tipo = "permanente" if all(c in (301, 308) for c in codigos) else "temporario"
+                return Resultado("redirect", PASS, f"redireciona para {url} ({tipo}, {'/'.join(map(str, codigos))})"), True
             resp = cliente.get(url, verificar=False)
     except ErroConexao as e:
         # porta 80 fechada/filtrada nao e problema se o HTTPS funciona
@@ -408,7 +495,10 @@ def checar_web(host, cliente):
     try:
         resp_https = cliente.get(f"https://{host}/", verificar=True, ler=CORPO_MAXIMO)
         cert_ok = True
-        resultados.append(avaliar_validade(resp_https.expira, emitido=resp_https.emitido))
+        validade = avaliar_validade(resp_https.expira, emitido=resp_https.emitido)
+        if cobre_com_e_sem_www(resp_https.nomes, host):
+            validade = Resultado("https", validade.status, validade.detalhe + "; vale com e sem www")
+        resultados.append(validade)
     except ErroConexao as e:
         erro_https = e
         if e.tipo == "certificado":
@@ -476,8 +566,9 @@ def checar_web(host, cliente):
         cookies = (resp_https.cookies if resp_https is not None else []) + (final.cookies if final is not resp_https else [])
         resultados.append(avaliar_cookies(cookies))
         resultados.append(avaliar_versao_exposta(final))
+        resultados.append(avaliar_privacidade(final))
     except ErroConexao as e:
-        for nome in ("headers", "conteudo_misto", "cookies", "versao_exposta"):
+        for nome in ("headers", "conteudo_misto", "cookies", "versao_exposta", "privacidade"):
             resultados.append(Resultado(nome, ERROR, str(e)))
 
     if resp_https is not None:

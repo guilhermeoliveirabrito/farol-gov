@@ -220,3 +220,11 @@ No farol-gov, `p=none` conta como parcial: é um bom começo, mas ainda não pro
 4. Depois de algumas semanas sem falhas nos relatórios, troque `mode: testing` por `mode: enforce`.
 
 Quem usa Google Workspace ou Microsoft 365 encontra o passo a passo na documentação do provedor.
+
+## privacidade
+
+Não entra na nota base, mas soma pontos de detalhe. São três coisas na página inicial:
+
+1. **Sem rastreador de terceiros.** Google Analytics, Tag Manager, pixel do Facebook, Hotjar, Clarity e afins mandam para fora o que o cidadão faz no site. Se a prefeitura precisa de estatística de acesso, dá para usar uma ferramenta instalada no próprio servidor (Matomo, por exemplo) ou só o log do servidor.
+2. **Link para a política de privacidade.** Um link no rodapé com "Política de privacidade" ou "LGPD", levando para a página que explica que dados o site coleta e para quê (LGPD, art. 9º).
+3. **Encarregado de dados.** A LGPD (art. 41, §1º) manda divulgar a identidade e o contato do encarregado, de preferência no site. Basta o nome e um e-mail no rodapé ou na página de privacidade, com a palavra "Encarregado" ou "DPO" visível na página inicial.

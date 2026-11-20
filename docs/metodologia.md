@@ -50,14 +50,15 @@ Todos os casos de cadastro vão para `data/revisar_wikidata.csv`, que serve de l
 | `conteudo_misto` | 1 | A página inicial (em HTTPS) não carrega nada por `http://` | Só imagens/mídia por `http://` |
 | `cookies` | 1 | Todos os cookies da página inicial têm `Secure` e `HttpOnly` (ou ela não define cookies) | Todos com `Secure`, algum sem `HttpOnly` |
 | `security_txt` | 1 | `/.well-known/security.txt` responde 200 e tem campo `Contact:` | - |
-| `versao_exposta` | 1 | Nem os headers `Server`/`X-Powered-By`/`X-AspNet-Version` nem o `<meta name="generator">` da página mostram número de versão (ex.: `Apache/2.4.29`, `PHP/7.4.3`, `WordPress 6.4.3`) | - |
+| `versao_exposta` | 0 | Nem os headers `Server`/`X-Powered-By`/`X-AspNet-Version` nem o `<meta name="generator">` da página mostram número de versão (ex.: `Apache/2.4.29`, `PHP/7.4.3`, `WordPress 6.4.3`) | - |
 | `dnssec` | 2 | Resolver validador marca a resposta com o bit AD | - |
 | `caa` | 1 | Existe registro CAA `issue`/`issuewild` no domínio ou em um domínio acima (ex.: `sp.gov.br`) | - |
 | `spf` | 1 | Registro `v=spf1` terminando em `-all` ou `~all` | `?all` ou sem mecanismo `all` |
 | `dmarc` | 3 | `_dmarc` com `p=reject` ou `p=quarantine` | `p=none` |
-| `email_tls` | 1 | `_mta-sts` com `v=STSv1` (MTA-STS: quem manda e-mail para a prefeitura tem que usar TLS válido) | Só TLS-RPT (`_smtp._tls`), que manda relatório mas não exige TLS |
+| `email_tls` | 0 | `_mta-sts` com `v=STSv1` (MTA-STS: quem manda e-mail para a prefeitura tem que usar TLS válido) | Só TLS-RPT (`_smtp._tls`), que manda relatório mas não exige TLS |
+| `privacidade` | 0 | A página inicial não carrega rastreador de terceiros (Google Analytics, Tag Manager, pixel do Facebook, Hotjar, Clarity...) **e** tem link para a política de privacidade / LGPD. Também anota se o encarregado de dados aparece na página | Só um dos dois |
 
-Total: 22 pontos. `versao_exposta` e `email_tls` entraram na semana de 16/11 (metodologia 4).
+Total: 20 pontos. `versao_exposta` e `email_tls` entraram na semana de 16/11 (metodologia 4) e `privacidade` na de 23/11; os três têm peso 0 e contam só como detalhe.
 
 DMARC e HTTPS têm peso maior porque são os que mais afetam o cidadão diretamente: um protege contra golpe por e-mail em nome do órgão, o outro protege o que é digitado no site.
 
@@ -84,6 +85,9 @@ Item cumprido vale 1, parcial vale 0,5 e não cumprido vale 0. Cada ponto de pes
 | DMARC com p=reject: o e-mail falso é recusado, não vai para o spam | +1 |
 | Não mostra a versão do servidor nem do sistema do site | +1 |
 | MTA-STS: exige criptografia no e-mail enviado para a prefeitura | +1 |
+| Poucos scripts de outros sites: cada site de fora tira 0,15 | +0,75 |
+| Nenhum rastreador de terceiros (Google Analytics, pixel do Facebook...) na página inicial | +0,5 |
+| Link para a política de privacidade / LGPD na página inicial | +0,5 |
 | HSTS cobrindo os subdomínios | +0,5 |
 | HSTS pronto para a lista de preload dos navegadores | +0,5 |
 | Referrer-Policy: não vaza o endereço da página para outros sites | +0,5 |
@@ -92,22 +96,34 @@ Item cumprido vale 1, parcial vale 0,5 e não cumprido vale 0. Cada ponto de pes
 | SPF terminando em -all: recusa quem não está na lista | +0,5 |
 | CAA no próprio domínio, sem depender do registro do estado | +0,5 |
 | TLS-RPT: recebe relatório quando o e-mail chega sem criptografia | +0,5 |
-| Nenhum script carregado de outro site na página inicial | +0,5 |
-| Scripts de no máximo 3 sites de fora | +0,25 |
+| Encarregado de dados (LGPD) indicado na página inicial | +0,25 |
+| Sem jQuery antigo (anterior ao 3.5, com XSS conhecido) | +0,25 |
+| HSTS longo: proporcional ao max-age, cheio a partir de 2 anos | +0,25 |
 | Scripts de fora com SRI: o navegador recusa se alguém trocar o arquivo | +0,25 |
 | CSP sem unsafe-inline nem unsafe-eval | +0,25 |
 | Certificado de até 100 dias (renovação automática) | +0,25 |
 | Site com IPv6 | +0,25 |
 | Servidores DNS em pelo menos dois provedores | +0,25 |
-| HSTS valendo por 2 anos ou mais | +0,25 |
 | Cross-Origin-Opener-Policy: isola a página de janelas abertas por outros sites | +0,25 |
 | Cookies com SameSite (ou nenhum cookie na página inicial) | +0,25 |
 | security.txt com validade (Expires) | +0,25 |
 | Não mostra nem o nome do software do servidor | +0,25 |
+| Redirecionamento para HTTPS permanente (301/308): o navegador nem tenta mais o HTTP | +0,1 |
+| Certificado vale com e sem www | +0,1 |
+| Cross-Origin-Resource-Policy: outro site não embute os arquivos da prefeitura | +0,1 |
+| Cross-Origin-Embedder-Policy | +0,1 |
+| CAA proíbe certificado curinga (*.dominio) | +0,1 |
 | DMARC com alinhamento estrito (adkim=s ou aspf=s) | +0,1 |
 | CAA com iodef: avisa a prefeitura se alguém pedir certificado indevido | +0,1 |
 
-`versao_exposta` e `email_tls` são verificados e aparecem na página, mas têm peso 0 na nota base: contam só como detalhe.
+Dois detalhes são graduais e dão parte dos pontos:
+
+- **Scripts de outros sites**: 0,75 sem nenhum; cada site de fora de onde a página inicial puxa script tira 0,15 (1 site: 0,6; 3 sites: 0,3; 5 ou mais: 0). Cada um é mais alguém que, se for invadido, roda código na página da prefeitura.
+- **HSTS longo**: proporcional ao `max-age`, até 0,25 com 2 anos ou mais (1 ano dá 0,12).
+
+O jQuery é procurado no nome do arquivo (`jquery-1.12.4.min.js`), no `?ver=` do WordPress e no caminho de CDN (`/jquery/3.4.1/`). Quem carrega jQuery sem versão aparente não ganha o detalhe, porque não dá para saber se é antigo.
+
+`versao_exposta`, `email_tls` e `privacidade` são verificados e aparecem na página, mas têm peso 0 na nota base: contam só como detalhe. Um deles sem resposta também não tira a cidade do ranking oficial, porque não mexe na nota.
 
 Nas metodologias 3 e 4 (semana de 16/11), os detalhes descontavam da nota base. Isso derrubou as notas e foi desfeito na metodologia 5: a nota base voltou a ser a de antes e os detalhes passaram a somar. As semanas antigas não guardaram os detalhes, então nelas vale só a nota base.
 

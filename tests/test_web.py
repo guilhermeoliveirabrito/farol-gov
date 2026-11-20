@@ -58,8 +58,10 @@ def test_site_bem_configurado():
     r = _por_check(resultados)
 
     assert acessivel
-    assert all(x.status == PASS for x in resultados), resultados
+    # privacidade e so detalhe e a pagina de teste nao tem link de privacidade
+    assert all(x.status == PASS for x in resultados if x.check != "privacidade"), resultados
     assert r["tls"].detalhe == "TLSv1.3"
+    assert r["redirect"].detalhe.endswith("(permanente, 301)")
 
 
 def test_certificado_invalido():
@@ -301,3 +303,38 @@ def test_csp_estrita_e_duracao_do_certificado():
     assert "CSP estrita" not in avaliar_headers(h).detalhe
     r = avaliar_validade(1000 * 86400, agora=940 * 86400, emitido=910 * 86400)
     assert r.detalhe == "certificado valido por mais 60 dias; certificado de 90 dias"
+
+
+def test_privacidade():
+    from farol.checks.web import avaliar_privacidade
+
+    limpo = b'<html><footer><a href="/lgpd">LGPD</a> Encarregado: Fulano</footer></html>'
+    r = avaliar_privacidade(resp(HTTPS, corpo=limpo))
+    assert r.status == PASS
+    assert r.detalhe == "sem rastreadores; com link de privacidade; encarregado indicado"
+    sujo = b"<html><script async src='https://www.googletagmanager.com/gtag/js?id=G-1'></script><a href='/x'>Inicio</a></html>"
+    r = avaliar_privacidade(resp(HTTPS, corpo=sujo))
+    assert r.status == FAIL
+    assert r.detalhe.startswith("rastreadores: Google Tag Manager; sem link de privacidade")
+
+
+def test_versao_jquery():
+    from farol.checks.web import versao_jquery
+
+    assert versao_jquery("<script src='/a.js'></script>") is None
+    assert versao_jquery("<script src='/js/jquery-1.12.4.min.js'></script>") == "1.12.4"
+    wp = "<script src='/wp-includes/js/jquery/jquery.min.js?ver=3.7.1'></script><script src='/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1'></script>"
+    assert versao_jquery(wp) == "3.7.1"
+    assert versao_jquery("<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js'></script>") == "3.4.1"
+    assert versao_jquery("<script src='/js/jquery.js'></script>") == ""
+    # dois jquery: vale o mais velho
+    assert versao_jquery("<script src='/jquery-3.6.0.js'></script><script src='/jquery-1.8.3.min.js'></script>") == "1.8.3"
+
+
+def test_certificado_com_e_sem_www():
+    from farol.checks.web import cobre_com_e_sem_www
+
+    assert cobre_com_e_sem_www(("cidade.sp.gov.br", "www.cidade.sp.gov.br"), "www.cidade.sp.gov.br")
+    assert cobre_com_e_sem_www(("cidade.sp.gov.br", "*.cidade.sp.gov.br"), "cidade.sp.gov.br")
+    assert not cobre_com_e_sem_www(("www.cidade.sp.gov.br",), "www.cidade.sp.gov.br")
+    assert not cobre_com_e_sem_www((), "cidade.sp.gov.br")

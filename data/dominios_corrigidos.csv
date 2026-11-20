@@ -995,7 +995,6 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2517100,Várzea,PB,,www.varzea.pb.gov.br,sem site no Wikidata
 2517209,Vieirópolis,PB,,www.vieiropolis.pb.gov.br,sem site no Wikidata
 2517407,Zabelê,PB,,www.zabele.pb.gov.br,sem site no Wikidata
-2603454,Camaragibe,PE,www.camaragibe.pe.gov.br,camaragibe.pe.gov.br,domínio do Wikidata não existe no DNS
 2604155,Casinhas,PE,www.prefeituracasinhas.pe.gov.br,www.casinhas.pe.gov.br,domínio do Wikidata não existe no DNS
 2605152,Dormentes,PE,www.dormentes.pe.gov.br,dormentes.pe.gov.br,domínio do Wikidata não existe no DNS
 2609006,Macaparana,PE,www.bb.com.br,www.macaparana.pe.gov.br,"portal genérico, não é da prefeitura"
@@ -1059,7 +1058,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2708956,Senador Rui Palmeira,AL,,www.senadorruipalmeira.al.gov.br,sem site no Wikidata
 2709004,Tanque d'Arca,AL,,www.tanquedarca.al.gov.br,sem site no Wikidata
 2709103,Taquarana,AL,,www.taquarana.al.gov.br,sem site no Wikidata
-2709152,Teotônio Vilela,AL,www.prefeiturateotonio.com.br,teotoniovilela.al.gov.br,fora do .gov.br
+2709152,Teotônio Vilela,AL,www.prefeiturateotonio.com.br,www.teotoniovilela.al.gov.br,fora do .gov.br
 2709400,Viçosa,AL,,www.vicosa.al.gov.br,sem site no Wikidata
 2800209,Aquidabã,SE,,www.aquidaba.se.gov.br,sem site no Wikidata
 2800407,Arauá,SE,,www.araua.se.gov.br,sem site no Wikidata
@@ -1131,7 +1130,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2905156,Caetanos,BA,www.caetanos.ba.io.org.br,www.caetanos.ba.gov.br,fora do .gov.br
 2905305,Cafarnaum,BA,,www.cafarnaum.ba.gov.br,sem site no Wikidata
 2905404,Cairu,BA,cairu.ba.io.org.br,www.cairu.ba.gov.br,fora do .gov.br
-2906006,Campo Formoso,BA,www.portalcampoformoso.com.br,www.campoformoso.ba.gov.br,fora do .gov.br
+2906006,Campo Formoso,BA,www.portalcampoformoso.com.br,campoformoso.ba.gov.br,fora do .gov.br
 2906105,Canápolis,BA,,www.canapolis.ba.gov.br,sem site no Wikidata
 2906204,Canarana,BA,,www.canarana.ba.gov.br,sem site no Wikidata
 2906501,Candeias,BA,www.candeias.ba.io.org.br,www.candeias.ba.gov.br,fora do .gov.br
@@ -1173,7 +1172,6 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2911907,Iaçu,BA,,www.iacu.ba.gov.br,sem site no Wikidata
 2912004,Ibiassucê,BA,,www.ibiassuce.ba.gov.br,sem site no Wikidata
 2912400,Ibipeba,BA,,www.ibipeba.ba.gov.br,sem site no Wikidata
-2913002,Ibitiara,BA,,www.ibitiara.ba.gov.br,sem site no Wikidata
 2913101,Ibititá,BA,,www.ibitita.ba.gov.br,sem site no Wikidata
 2913200,Ibotirama,BA,www.ibotirama.ba.io.org.br,www.ibotirama.ba.gov.br,fora do .gov.br
 2913309,Ichu,BA,,www.ichu.ba.gov.br,sem site no Wikidata
@@ -1184,7 +1182,6 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2913903,Ipiaú,BA,www.ipiauhoje.com.br,www.ipiau.ba.gov.br,fora do .gov.br
 2914208,Irajuba,BA,,www.irajuba.ba.gov.br,sem site no Wikidata
 2914307,Iramaia,BA,www.iramaia.ba.io.org.br,www.iramaia.ba.gov.br,fora do .gov.br
-2914406,Iraquara,BA,,www.iraquara.ba.gov.br,sem site no Wikidata
 2914703,Itaberaba,BA,,www.itaberaba.ba.gov.br,sem site no Wikidata
 2915106,Itagi,BA,,www.itagi.ba.gov.br,sem site no Wikidata
 2915205,Itagibá,BA,,www.itagiba.ba.gov.br,sem site no Wikidata

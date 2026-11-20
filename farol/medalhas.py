@@ -16,7 +16,7 @@ antes de domingo, o podio dela pode mudar.
 
 from datetime import date, timedelta
 
-from .historico import CRITERIOS, chave, posicoes
+from .historico import chave, criterio_do_desempate, detalhes_do_snapshot, posicoes
 
 TIPOS = ("ouro", "prata", "bronze")
 PONTOS = {"ouro": 10, "prata": 5, "bronze": 2.5}
@@ -45,8 +45,7 @@ def _chaves(snap, aval, ranking="oficial", populacao=None):
         status = str(m[1]) if len(m) > 1 else ""
         if ranking == "oficial" and "e" in status:
             continue
-        extra = m[2] if len(m) > 2 and isinstance(m[2], (int, float)) else 0
-        chaves[ibge] = chave(linha[0], status, extra, (populacao or {}).get(ibge))
+        chaves[ibge] = chave(linha[0], status, detalhes_do_snapshot(snap or {}, m), (populacao or {}).get(ibge))
     return chaves
 
 
@@ -79,8 +78,9 @@ def podios(tempo, ranking="oficial", populacao=None):
                 continue
             a = chaves[podio[tipo][0]]
             b = chaves[next(x for x in ordem if pos[x] == niveis[n + 1])]
-            if a[0] == b[0]:
-                podio["desempate"][tipo] = next(CRITERIOS[k] for k in range(1, len(a)) if a[k] != b[k])
+            criterio = criterio_do_desempate(a, b)
+            if criterio:
+                podio["desempate"][tipo] = criterio
         semanas.append(podio)
     return semanas
 

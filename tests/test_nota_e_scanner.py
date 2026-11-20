@@ -18,28 +18,6 @@ def test_warn_vale_metade():
     assert calcular_nota(resultados) == round(100 * 1.0 / sum(PESOS.values()), 1)
 
 
-def test_parcial_fraco_vale_menos():
-    # DMARC p=none so monitora: 30% do item, nao metade
-    resultados = [Resultado(c, FAIL) for c in PESOS if c != "dmarc"] + [Resultado("dmarc", WARN)]
-    assert calcular_nota(resultados) == round(100 * 0.9 / sum(PESOS.values()), 1)
-
-
-def test_grau_do_item_cumprido():
-    from farol.nota import grau
-
-    assert grau("tls", PASS, "TLSv1.3") == 1.0
-    assert grau("tls", PASS, "TLSv1.2") == 0.8
-    assert grau("hsts", PASS, "max-age=63072000; includeSubDomains; preload") == 1.0
-    assert grau("hsts", PASS, "max-age=31536000") == 0.6
-    assert grau("dmarc", PASS, "p=reject; com relatorios") == 1.0
-    assert grau("dmarc", PASS, "p=quarantine") == 0.75
-    assert grau("spf", PASS, "via _spf.x: ~all") == 0.8
-    assert grau("caa", PASS, "3 registro(s) CAA (herdado de sp.gov.br)") == 0.8
-    assert grau("headers", PASS, "nosniff e anti-clickjacking, com CSP") == 0.8
-    # sem detalhe vale o cheio
-    assert grau("tls", PASS) == 1.0
-
-
 def test_conceitos():
     assert conceito(100) == "A"
     assert conceito(90) == "A"
@@ -438,21 +416,37 @@ def test_repescagem_do_dns_nao_refaz_a_visita():
     assert cliente.chamadas.count((f"https://{ent.dominio}/", True)) == 1
 
 
-def test_criterios_de_excelencia():
-    from farol.nota import EXCELENCIA, criterios_de_excelencia
+def test_detalhes():
+    from farol.nota import DETALHES, detalhes_feitos, pontos_de_detalhe
 
     checks = {
-        "dmarc": {"status": "pass", "detalhe": "p=reject; com relatorios"},
-        "spf": {"status": "pass", "detalhe": "via _spf.x: -all"},
         "tls": {"status": "pass", "detalhe": "TLSv1.3"},
         "hsts": {"status": "pass", "detalhe": "max-age=63072000; includeSubDomains; preload"},
-        "headers": {"status": "pass", "detalhe": "nosniff e anti-clickjacking, com CSP, Referrer-Policy, Permissions-Policy"},
-        "caa": {"status": "pass", "detalhe": "2 registro(s) CAA"},
+        "headers": {"status": "pass", "detalhe": "nosniff e anti-clickjacking, com CSP, CSP estrita, Referrer-Policy, Permissions-Policy, COOP"},
+        "conteudo_misto": {"status": "pass", "detalhe": "nenhum recurso carregado sem criptografia; nenhum script de fora"},
+        "https": {"status": "pass", "detalhe": "certificado valido por mais 60 dias; certificado de 90 dias"},
+        "dnssec": {"status": "fail", "detalhe": "dominio sem DNSSEC; IPv6; 4 servidores DNS em 2 provedor(es)"},
+        "dmarc": {"status": "pass", "detalhe": "p=reject; com relatorios; alinhamento estrito"},
+        "spf": {"status": "pass", "detalhe": "via _spf.x: -all"},
+        "caa": {"status": "pass", "detalhe": "2 registro(s) CAA com iodef"},
+        "cookies": {"status": "pass", "detalhe": "a pagina inicial nao define cookies"},
+        "security_txt": {"status": "pass", "detalhe": "arquivo com Contact e Expires"},
+        "versao_exposta": {"status": "pass", "detalhe": "nao mostra o software"},
+        "email_tls": {"status": "pass", "detalhe": "MTA-STS e TLS-RPT"},
     }
-    assert sorted(criterios_de_excelencia(checks)) == sorted(EXCELENCIA)
-    # so conta com o item cumprido
-    checks["dmarc"]["status"] = "warn"
-    assert "dmarc_reject" not in criterios_de_excelencia(checks)
+    # tudo menos os dois que so existem quando ha script de fora
+    esperado = [c for c, _, _ in DETALHES if c not in ("poucos_scripts_de_fora", "sri")]
+    assert detalhes_feitos(checks) == esperado
+    assert pontos_de_detalhe(checks) == round(sum(p for c, _, p in DETALHES if c in esperado), 2)
+    com_scripts = {"conteudo_misto": {"status": "pass", "detalhe": "nenhum recurso carregado sem criptografia; scripts de 2 site(s) de fora, todos com SRI"}}
+    assert detalhes_feitos(com_scripts) == ["poucos_scripts_de_fora", "sri"]
+    # item que nao cumpre nao da detalhe, e dmarc com pct nao conta como reject
+    checks["tls"]["status"] = "fail"
+    checks["dmarc"]["detalhe"] = "p=reject; pct=50"
+    feitos = detalhes_feitos(checks)
+    assert "tls13" not in feitos and "dmarc_reject" not in feitos
+    # so TLS-RPT (parcial) ainda vale o detalhe dele
+    assert detalhes_feitos({"email_tls": {"status": "warn", "detalhe": "so TLS-RPT"}}) == ["tls_rpt"]
 
 
 def test_dominio_corrigido_a_mao_fora_do_gov_br_continua_no_ranking():
@@ -481,16 +475,3 @@ def test_site_so_no_www_e_visitado_no_www():
     r = avaliar(ent, resolver, SoWww({}))
     assert r["acessivel"] and r["dominio"] == "www.guarulhos.sp.gov.br"
     assert ALTERNATIVO in r["avisos"]
-
-
-def test_graus_novos():
-    from farol.nota import grau
-
-    assert grau("cookies", WARN, "1 de 4 cookie(s) sem HttpOnly") == 0.6
-    assert grau("cookies", WARN, "4 de 4 cookie(s) sem HttpOnly") == 0.3
-    assert grau("conteudo_misto", WARN, "1 imagem(ns) ou midia(s) por http://") == 0.7
-    assert grau("conteudo_misto", WARN, "12 imagem(ns) ou midia(s) por http://") == 0.3
-    assert grau("security_txt", PASS, "arquivo com Contact, sem Expires") == 0.8
-    assert grau("dmarc", PASS, "p=reject; com relatorios; pct=50") == 0.9
-    assert grau("versao_exposta", PASS, "mostra so o nome: nginx") == 0.9
-    assert grau("email_tls", PASS, "MTA-STS, sem TLS-RPT") == 0.8

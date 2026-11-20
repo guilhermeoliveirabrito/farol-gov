@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from farol import historico, medalhas  # noqa: E402
 from farol.dominios import ler_csv  # noqa: E402
-from farol.nota import PESOS, criterios_de_excelencia  # noqa: E402
+from farol.nota import DETALHES, PESOS, detalhes_feitos  # noqa: E402
 
 CHECKS = list(PESOS)
 CODIGO = historico.CODIGO
@@ -126,23 +126,23 @@ def resumir(dados, snapshots=(), populacao=None):
         checks = r.get("checks", {})
         # "-" = item que ainda nao existia quando essa varredura rodou
         status = "".join(CODIGO.get(checks[c].get("status"), "e") if c in checks else "-" for c in CHECKS)
-        nota, conceito, pos, pos_geral = agora.get(r["ibge"], [None, None, None, None])
-        pos_antes = antes.get(r["ibge"], [None, None, None, None])[2]
+        nota, conceito, pos, pos_geral, detalhes = (agora.get(r["ibge"]) or [None] * 5)[:5]
+        pos_antes = (antes.get(r["ibge"]) or [None] * 5)[2]
         # positivo = subiu no ranking oficial
         variacao = pos_antes - pos if (pos is not None and pos_antes is not None) else None
         flags = (ACESSIVEL if r.get("acessivel") else 0) | (RANKING if pos_geral is not None else 0) | (OFICIAL if pos is not None else 0)
         linhas.append([
             r["ibge"], r["municipio"], r["uf"], r["dominio"],
             r.get("lat"), r.get("lon"), nota, conceito,
-            flags, status, pos, variacao, ordem_desempate.get(r["ibge"]),
+            flags, status, pos, variacao, ordem_desempate.get(r["ibge"]), detalhes,
         ])
         semanas = [[data, aval[r["ibge"]][0], aval[r["ibge"]][2]] for data, _, aval in semanal if r["ibge"] in aval]
         por_uf[r["uf"] or "XX"][r["ibge"]] = {
             "d": [checks.get(c, {}).get("detalhe", "") for c in CHECKS],
             "a": r.get("avisos", []),
             "h": semanas[-SEMANAS_POR_CIDADE:],
-            # pontos de excelencia (desempate do podio) que a cidade ja tem
-            "x": criterios_de_excelencia(checks) if r.get("acessivel") else [],
+            # detalhes (pontos pequenos por cima da nota) que a cidade ja tem
+            "x": detalhes_feitos(checks) if r.get("acessivel") else [],
         }
 
     resumo = {
@@ -151,11 +151,16 @@ def resumir(dados, snapshots=(), populacao=None):
         "amostra": dados.get("amostra"),
         "anterior": semanal[-2][0] if len(semanal) > 1 else None,
         # itens que a varredura anterior ainda nao verificava: explicam parte das setas
-        "itens_novos": len(set(semanal[-1][1]["checks"]) - set(semanal[-2][1]["checks"])) if len(semanal) > 1 else 0,
+        # (os de peso 0 so contam como detalhe, nao mexem na nota)
+        "itens_novos": len({c for c in set(semanal[-1][1]["checks"]) - set(semanal[-2][1]["checks"]) if PESOS.get(c)}) if len(semanal) > 1 else 0,
+        # a semana anterior ainda nao tinha os pontos de detalhe: parte do movimento vem deles
+        "detalhes_novos": bool(len(semanal) > 1 and semanal[-1][1].get("detalhes") and not semanal[-2][1].get("detalhes")),
         "ranqueados": sum(1 for v in agora.values() if v[3] is not None),
         "oficiais": sum(1 for v in agora.values() if v[2] is not None),
         "checks": CHECKS,
-        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var", "ord"],
+        # lista dos detalhes (chave, texto, pontos): a pagina usa pra montar a ficha
+        "detalhes": [list(d) for d in DETALHES],
+        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var", "ord", "det"],
         "municipios": linhas,
         "premios": premios(tempo, populacao),
     }

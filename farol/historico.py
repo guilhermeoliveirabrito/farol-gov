@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .checks import Resultado
 from .dominios import uf_do_ibge
-from .nota import PESOS, calcular_nota, conceito, excelencia, grau
+from .nota import calcular_nota, conceito, grau, pontos_de_detalhe
 
 CODIGO = {"pass": "p", "warn": "w", "fail": "f", "error": "e"}
 # grau de cada item em passos de 0,05: "a" = 0, "u" = 1
@@ -63,10 +63,13 @@ def compactar(dados):
             for c in checks
         )
         # 4o: grau de cada item (metodologia 3). 5o: ip, pra saber quem divide servidor
-        municipios[r["ibge"]] = [flags, status, excelencia(r.get("checks", {})), graus, r.get("ip") or ""]
+        # 3o: pontos de detalhe (metodologia 5; antes era a contagem de excelencia)
+        municipios[r["ibge"]] = [flags, status, pontos_de_detalhe(r.get("checks", {})), graus, r.get("ip") or ""]
     return {
         "data": dia_da_varredura(dados["gerado_em"]),
         "metodologia": dados.get("metodologia", 1),
+        # o 3o campo de cada cidade sao pontos de detalhe (antes era contagem de excelencia)
+        "detalhes": 1,
         "checks": checks,
         "m": municipios,
     }
@@ -90,10 +93,10 @@ def carregar(pasta):
 
 
 def nota_do_status(checks, status, graus=""):
+    """Nota base a partir do status de cada item. Os graus guardados pelas metodologias 3
+    e 4 ficam no arquivo, mas a nota base voltou a ser so cumpre/parcial/nao cumpre."""
     resultados = [Resultado(c, STATUS[s]) for c, s in zip(checks, status) if s in STATUS]
-    # historico antigo nao tem os graus: item cumprido vale o cheio, como era antes
-    valores = {c: GRAUS.index(g) / 20 for c, g in zip(checks, graus or "") if g in GRAUS and c in PESOS}
-    return calcular_nota(resultados, valores if graus else None)
+    return calcular_nota(resultados)
 
 
 def posicoes(notas):
@@ -107,26 +110,49 @@ def posicoes(notas):
     return {ibge: primeira[n] for ibge, n in notas.items()}
 
 
-# o que separa duas cidades com a mesma nota, nessa ordem (o 1o elemento da chave e a nota)
+# o que separa duas cidades, nessa ordem: a 1a posicao da chave e a nota base, a 2a os
+# pontos de detalhe (que sao somados a nota pra ordenar: chave[0] e o total)
 CRITERIOS = (
     "nota",
+    "mais pontos de detalhe",
     "mais itens cumpridos por inteiro",
-    "mais pontos de excelência",
     "maior população (mais gente protegida)",
 )
 
 
-def chave(nota, status, excelencia_, populacao):
-    """Chave do ranking. Com 13 itens, mesmo com graus, muita cidade fica com a mesma nota
-    (24 de SE no mesmo servidor do estado, com o site montado igual). Em vez de deixar
-    todas empatadas, desempata por: itens cumpridos por inteiro, pontos de excelencia
-    e, por ultimo, populacao: entre configuracoes identicas, fica na frente quem protege
-    mais gente. Empate total so sobra sem populacao (testes, dado faltando)."""
-    return (nota, str(status).count("p"), excelencia_ or 0, populacao or 0)
+def detalhes_do_snapshot(snap, linha):
+    """Pontos de detalhe guardados no historico (so a partir da metodologia 5)."""
+    if not snap.get("detalhes") or len(linha) < 3 or not isinstance(linha[2], (int, float)):
+        return 0.0
+    return float(linha[2])
+
+
+def chave(nota, status, detalhes, populacao):
+    """Chave do ranking: (nota + detalhes, nota, itens inteiros, populacao).
+
+    A nota base mede o essencial; os detalhes somam poucos pontos por cima e separam
+    quem fez o essencial igual. Se ainda assim empatar (24 prefeituras de SE no mesmo
+    servidor do estado, com o site montado igual), fica na frente quem tem mais itens
+    cumpridos por inteiro e, por ultimo, quem protege mais gente."""
+    detalhes = detalhes or 0.0
+    return (round(nota + detalhes, 2), nota, str(status).count("p"), populacao or 0)
+
+
+def criterio_do_desempate(a, b):
+    """Qual criterio separou a chave a da b (None se nao foi desempate de nota igual)."""
+    if a[1] != b[1]:
+        return None  # nota base diferente: nao foi desempate
+    if a[0] != b[0]:
+        return CRITERIOS[1]
+    if a[2] != b[2]:
+        return CRITERIOS[2]
+    if a[3] != b[3]:
+        return CRITERIOS[3]
+    return None
 
 
 def avaliar_snapshot(snap, populacao=None):
-    """Devolve {ibge: [nota, conceito, posicao oficial, posicao geral]} com as regras atuais.
+    """Devolve {ibge: [nota, conceito, posicao oficial, posicao geral, pontos de detalhe]} com as regras atuais.
 
     Ranking oficial: so quem teve todos os itens daquela varredura verificados. Item nao
     verificado sai da conta da nota, entao quem teve item sem resposta pode ficar com
@@ -137,10 +163,10 @@ def avaliar_snapshot(snap, populacao=None):
     for ibge, (flags, status, *resto) in snap["m"].items():
         graus = resto[1] if len(resto) > 1 else ""
         nota = nota_do_status(checks, status, graus) if flags & ACESSIVEL else None
-        saida[ibge] = [nota, conceito(nota) if nota is not None else None, None, None]
+        detalhes = detalhes_do_snapshot(snap, [flags, status, *resto]) if nota is not None else None
+        saida[ibge] = [nota, conceito(nota) if nota is not None else None, None, None, detalhes]
         if nota is not None and flags & ELEGIVEL:
-            extra = resto[0] if resto and isinstance(resto[0], (int, float)) else 0
-            k = chave(nota, status, extra, (populacao or {}).get(ibge))
+            k = chave(nota, status, detalhes, (populacao or {}).get(ibge))
             geral[ibge] = k
             if "e" not in status:
                 oficial[ibge] = k

@@ -88,6 +88,8 @@ const conceitoSeguro = (c) => (CONCEITOS.includes(c) ? c : null);
 const pct = (parte, total) => (total ? (100 * parte) / total : 0);
 const fmtPct = (v) => v.toLocaleString("pt-BR", { maximumFractionDigits: v < 10 ? 1 : 0 }) + "%";
 const fmtNota = (v) => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+// detalhe vale 0,1, 0,25...: precisa de ate duas casas
+const fmtPontos = (v) => v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const semAcento = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const conta = (lista, check, st = "pass") => lista.filter((r) => r.st[check] === st).length;
 
@@ -199,6 +201,7 @@ function medalhasDe(premios, ibge) {
 function decodificar(resumo) {
   const idx = Object.fromEntries(resumo.campos.map((c, i) => [c, i]));
   semanasPremio = Array.isArray(resumo.premios?.semanas) ? resumo.premios.semanas : [];
+  DETALHES = Array.isArray(resumo.detalhes) ? resumo.detalhes : [];
   return resumo.municipios.map((l) => {
     const st = {};
     resumo.checks.forEach((c, i) => (st[c] = CODIGOS[l[idx.status][i]] || "error"));
@@ -218,6 +221,7 @@ function decodificar(resumo) {
       oficial: Boolean(l[idx.flags] & 4),
       posBr: typeof l[idx.pos] === "number" ? l[idx.pos] : null,
       ordem: typeof l[idx.ord] === "number" ? l[idx.ord] : null,
+      detalhes: typeof l[idx.det] === "number" ? l[idx.det] : null,
       variacao: typeof l[idx.var] === "number" ? l[idx.var] : null,
       st,
       medalhas: medalhasDe(resumo.premios, String(l[idx.ibge])),
@@ -883,35 +887,31 @@ function blocoMedalhas(r) {
   );
 }
 
-// mesmas chaves e ordem de farol/nota.py EXCELENCIA
-const EXCELENCIA = {
-  dmarc_reject: "DMARC com p=reject: o e-mail falso é recusado, não vai para o spam",
-  dmarc_relatorios: "DMARC mandando relatórios (rua=): a prefeitura fica sabendo de quem tenta se passar por ela",
-  spf_hardfail: "SPF terminando em -all: recusa quem não está na lista",
-  tls13: "TLS 1.3",
-  hsts_subdominios: "HSTS cobrindo os subdomínios",
-  hsts_preload: "HSTS pronto para a lista de preload dos navegadores",
-  hsts_2_anos: "HSTS valendo por 2 anos ou mais",
-  csp: "Content-Security-Policy na página",
-  referrer_policy: "Referrer-Policy: não vaza o endereço da página para outros sites",
-  permissions_policy: "Permissions-Policy: desliga câmera, microfone e afins que o site não usa",
-  caa_proprio: "CAA no próprio domínio",
-};
+// lista de detalhes vem do build (farol/nota.py DETALHES): [chave, texto, pontos]
+let DETALHES = [];
 
-// o que desempata o podio quando a nota empata; nao muda a nota
-function blocoExcelencia(r, feitos) {
-  if (r.nota == null || !Array.isArray(feitos)) return null;
+// pontos pequenos que somam por cima da nota e decidem quem fica na frente quando a nota empata
+function blocoDetalhes(r, feitos) {
+  if (r.nota == null || !Array.isArray(feitos) || !DETALHES.length) return null;
   const tem = new Set(feitos);
-  const chaves = Object.keys(EXCELENCIA);
+  const total = DETALHES.reduce((a, [, , p]) => a + p, 0);
   return el(
     "details",
     { class: "excelencia" },
-    el("summary", {}, el("b", { text: "Pontos de excelência" }), ` ${tem.size} de ${chaves.length}`),
-    el("p", { text: "Não mudam a nota. Servem para desempatar o pódio da semana quando duas cidades ficam com a mesma nota." }),
+    el("summary", {}, el("b", { text: "Detalhes" }), ` +${fmtPontos(r.detalhes ?? 0)} de ${fmtPontos(total)} possíveis`),
+    el("p", { text: "Cada detalhe é um passo além do essencial e vale pouco: de 0,1 a 1 ponto, somado à nota no ranking. Servem para separar quem fez o essencial igual." }),
     el(
       "ul",
       {},
-      ...chaves.map((c) => el("li", { class: tem.has(c) ? "feito" : "falta" }, el("span", { class: "marca", "aria-label": tem.has(c) ? "tem" : "não tem", text: tem.has(c) ? "✓" : "–" }), EXCELENCIA[c])),
+      ...DETALHES.map(([c, texto, pontos]) =>
+        el(
+          "li",
+          { class: tem.has(c) ? "feito" : "falta" },
+          el("span", { class: "marca", "aria-label": tem.has(c) ? "tem" : "não tem", text: tem.has(c) ? "✓" : "–" }),
+          el("span", { class: "texto-detalhe", text: texto }),
+          el("span", { class: "pontos-detalhe", text: `+${fmtPontos(pontos)}` }),
+        ),
+      ),
     ),
   );
 }
@@ -948,7 +948,13 @@ function abrirFicha(r) {
     { class: "placar" },
     selo(r),
     r.nota != null
-      ? el("div", {}, el("strong", { text: fmtNota(r.nota) }), el("span", { text: r.ranking ? "de 100 pontos" : "fora do ranking" }))
+      ? el(
+          "div",
+          {},
+          el("strong", { text: fmtNota(r.nota) }),
+          el("span", { text: r.ranking ? "de 100 pontos" : "fora do ranking" }),
+          r.detalhes ? el("span", { class: "placar-detalhes", text: `+${fmtPontos(r.detalhes)} em detalhes` }) : null,
+        )
       : el("div", {}, el("strong", { text: "Sem nota" }), el("span", { text: r.acessivel ? "verificação incompleta ou domínio em revisão" : "o site não respondeu à verificação" })),
   );
 
@@ -1006,7 +1012,7 @@ function abrirFicha(r) {
       avisos.replaceChildren(...(extra.a || []).filter((a) => AVISOS[a]).map((a) => el("p", { class: "avisos", text: AVISOS[a] })));
       const hist = blocoHistorico(extra.h);
       if (hist) historicoCaixa.replaceChildren(hist);
-      const ex = blocoExcelencia(r, extra.x);
+      const ex = blocoDetalhes(r, extra.x);
       if (ex) excelenciaCaixa.replaceChildren(ex);
     })
     .catch(() => {
@@ -1269,7 +1275,11 @@ function linhaCidade(r) {
     ),
     el("span", { class: "uf", text: r.uf }),
     ...(r.nota != null
-      ? [luzes, el("span", { class: "nota", text: fmtNota(r.nota) }), el("span", { class: "mov" }, seta(r))]
+      ? [
+          luzes,
+          el("span", { class: "nota" }, fmtNota(r.nota), r.detalhes ? el("small", { class: "det", title: "pontos de detalhe somados no ranking", text: `+${fmtPontos(r.detalhes)}` }) : null),
+          el("span", { class: "mov" }, seta(r)),
+        ]
       : [el("span", { class: "situacao", text: r.acessivel ? "fora do ranking" : "não respondeu" })]),
     selo(r),
   );

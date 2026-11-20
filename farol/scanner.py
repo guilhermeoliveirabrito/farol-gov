@@ -103,6 +103,10 @@ def preparar(entidade, resolver):
         avisos.append(FORA_GOV_BR)
 
     email = dominio_email(host)
+    if existe and ips:
+        infra = checks_dns.infra_dns(host, email, resolver)
+        if infra:
+            dnssec = Resultado("dnssec", dnssec.status, f"{dnssec.detalhe}; {infra}")
     if existe and not ips and dnssec.status == ERROR and dnssec.detalhe.startswith(ERROS_TRANSITORIOS):
         # o DNS do dominio nem respondeu o endereco; as outras consultas vao pro mesmo
         # servidor e so iam gastar mais 1 minuto de timeouts. a repescagem tenta de novo

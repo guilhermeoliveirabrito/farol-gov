@@ -15,12 +15,13 @@ def test_compactar_e_recalcular():
     ]}
     snap = historico.compactar(dados)
     assert snap["data"] == "2026-11-16"
-    assert snap["m"]["1"][:4] == [historico.ACESSIVEL | historico.ELEGIVEL, "p" * len(PESOS), 0, "u" * len(PESOS)]
+    assert snap["m"]["1"][:2] == [historico.ACESSIVEL | historico.ELEGIVEL, "p" * len(PESOS)]
+    assert snap["detalhes"] == 1 and isinstance(snap["m"]["1"][2], float)
 
     aval = historico.avaliar_snapshot(snap)
-    assert aval["1"] == [100.0, "A", 1, 1]
+    assert aval["1"][:4] == [100.0, "A", 1, 1]
     assert aval["2"][2] == 2
-    assert aval["3"] == [None, None, None, None]
+    assert aval["3"] == [None, None, None, None, None]
     # tem nota, mas fica fora do ranking
     assert aval["4"][0] == 100.0 and aval["4"][2] is None
 
@@ -89,14 +90,18 @@ def test_item_nao_verificado_tira_do_ranking_oficial_mas_nao_do_geral():
     assert aval["2"][2] == 1 and aval["2"][3] == 2  # a 2 e a primeira do oficial
 
 
-def test_nota_do_historico_igual_a_da_varredura():
-    # o grau de cada item vai pro historico, entao recalcular da a mesma nota da hora
-    dados = {"gerado_em": "2026-11-19T09:00:00+00:00", "resultados": [_r("1", "pass")]}
-    dados["resultados"][0]["checks"]["tls"]["detalhe"] = "TLSv1.2"
-    dados["resultados"][0]["checks"]["dmarc"]["detalhe"] = "p=quarantine"
-    from farol.checks import Resultado
-    from farol.nota import calcular_nota
-
-    na_hora = calcular_nota([Resultado(c, v["status"], v["detalhe"]) for c, v in dados["resultados"][0]["checks"].items()])
+def test_detalhes_somam_por_cima_e_desempatam():
+    # mesma nota base; a 1 tem TLS 1.3 e DMARC reject, a 2 nao
+    dados = {"gerado_em": "2026-11-20T09:00:00+00:00", "resultados": [_r("1", "pass"), _r("2", "pass")]}
+    c1, c2 = dados["resultados"][0]["checks"], dados["resultados"][1]["checks"]
+    c1["tls"]["detalhe"], c1["dmarc"]["detalhe"] = "TLSv1.3", "p=reject"
+    c2["tls"]["detalhe"], c2["dmarc"]["detalhe"] = "TLSv1.2", "p=quarantine"
     aval = historico.avaliar_snapshot(historico.compactar(dados))
-    assert aval["1"][0] == na_hora < 100
+    assert aval["1"][0] == aval["2"][0] == 100.0  # a nota base nao cai por causa dos detalhes
+    assert aval["1"][4] == aval["2"][4] + 2.0
+    assert (aval["1"][2], aval["2"][2]) == (1, 2)
+
+
+def test_snapshot_antigo_nao_tem_pontos_de_detalhe():
+    snap = {"data": "2026-11-13", "checks": ["https"], "m": {"1": [3, "p", 5]}}  # 5 era contagem de excelencia
+    assert historico.avaliar_snapshot(snap)["1"][4] == 0.0

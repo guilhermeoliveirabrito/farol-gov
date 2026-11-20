@@ -76,13 +76,13 @@ def test_cidade_com_item_nao_verificado_nao_concorre():
     assert (s["ouro"], s["prata"], s["bronze"]) == (["b"], ["c"], ["d"])
 
 
-def test_desempate_por_itens_inteiros_e_excelencia():
+def test_desempate_por_detalhes_e_itens_inteiros():
     aval = {"a": [90.0, "A", 1], "b": [90.0, "A", 1], "c": [90.0, "A", 1]}
-    # a e b tem 3 itens inteiros; c compensou com parciais. entre a e b decide a excelencia
-    snap = _snap({"a": ("pppf", 1), "b": ("pppf", 3), "c": ("ppww", 5)})
+    # b tem mais pontos de detalhe; a e c empatam nos detalhes e a tem mais itens inteiros
+    snap = {"detalhes": 1, "m": {"a": [3, "pppf", 1.0], "b": [3, "pppf", 3.5], "c": [3, "ppww", 1.0]}}
     s = podios([("2026-11-17", snap, aval)])[0]
     assert (s["ouro"], s["prata"], s["bronze"]) == (["b"], ["a"], ["c"])
-    assert s["desempate"] == {"ouro": "mais pontos de excelência", "prata": "mais itens cumpridos por inteiro"}
+    assert s["desempate"] == {"ouro": "mais pontos de detalhe", "prata": "mais itens cumpridos por inteiro"}
 
 
 def test_mesmo_servidor_desempata_pela_populacao_e_nao_pula_ninguem():

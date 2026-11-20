@@ -395,6 +395,10 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .excelencia li { display: flex; align-items: baseline; gap: 8px; }
 .excelencia li.falta { color: var(--suave); }
 .excelencia .marca { width: 1em; flex: none; font-weight: 700; }
+.excelencia .texto-detalhe { flex: 1; }
+.excelencia .pontos-detalhe { flex: none; font-variant-numeric: tabular-nums; color: var(--suave); }
+.placar-detalhes { display: block; margin-top: 2px; font-weight: 600; color: var(--suave); }
+.linha .nota .det { display: block; font-size: .7rem; font-weight: 600; color: var(--suave); line-height: 1; }
 .excelencia li.feito .marca { color: var(--cA); }
 
 .medalhas-cidade { padding: 14px 0; border-bottom: 1px solid var(--linha); }

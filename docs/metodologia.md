@@ -65,31 +65,51 @@ DMARC e HTTPS têm peso maior porque são os que mais afetam o cidadão diretame
 
 ## Nota
 
+A nota tem duas partes.
+
+**Nota base (0 a 100)**: o essencial. É a conta de sempre, com os pesos da tabela acima:
+
 ```
-nota = 100 * soma(peso * grau) / soma(pesos dos itens verificados)
+nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 ```
 
-O **grau** vai de 0 a 1, em passos de 0,05. Item não cumprido vale 0. Item parcial (`warn`) vale 0,5, menos três casos em que o parcial é fraco e vale 0,3: DMARC com `p=none` (só monitora), SPF com `?all` ou sem `all` (não bloqueia nada) e só um dos dois headers básicos.
+Item cumprido vale 1, parcial vale 0,5 e não cumprido vale 0. Cada ponto de peso vale 5 da nota base (são 20 pontos de peso ao todo). É ela que define o conceito.
 
-Item cumprido vale 1, menos quando para no mínimo:
+**Detalhes**: passos além do essencial, que valem pouco (de 0,1 a 1 ponto cada) e somam por cima da nota base no ranking. Não derrubam ninguém: quem não tem o detalhe só não ganha o ponto extra. Servem para separar quem fez o essencial igual.
 
-| Item | Desconto |
+| Detalhe | Pontos |
 |---|---|
-| `tls` | TLS 1.2 em vez de 1.3: −0,2 |
-| `hsts` | sem `includeSubDomains`: −0,2; sem `preload`: −0,1; `max-age` menor que 2 anos: −0,1 |
-| `headers` | sem Content-Security-Policy: −0,2; sem Referrer-Policy: −0,1; sem Permissions-Policy: −0,1 |
-| `dmarc` | `p=quarantine` em vez de `p=reject`: −0,15; sem relatórios (`rua=`): −0,1 |
-| `spf` | `~all` em vez de `-all`: −0,2 |
-| `caa` | registro herdado do domínio do estado, não do próprio: −0,2 |
-| `cookies` | algum cookie sem `SameSite`: −0,1 |
-| `security_txt` | sem o campo `Expires`, obrigatório pela RFC 9116: −0,2 |
-| `versao_exposta` | mostra o nome do software, mesmo sem a versão: −0,1 |
-| `email_tls` | MTA-STS sem TLS-RPT: −0,2 |
-| `dmarc` (de novo) | `pct=` menor que 100, a política só vale para parte dos e-mails: −0,1 |
+| TLS 1.3 | +1 |
+| Content-Security-Policy na página | +1 |
+| DMARC com p=reject: o e-mail falso é recusado, não vai para o spam | +1 |
+| Não mostra a versão do servidor nem do sistema do site | +1 |
+| MTA-STS: exige criptografia no e-mail enviado para a prefeitura | +1 |
+| HSTS cobrindo os subdomínios | +0,5 |
+| HSTS pronto para a lista de preload dos navegadores | +0,5 |
+| Referrer-Policy: não vaza o endereço da página para outros sites | +0,5 |
+| Permissions-Policy: desliga câmera, microfone e afins que o site não usa | +0,5 |
+| DMARC mandando relatórios (rua=) | +0,5 |
+| SPF terminando em -all: recusa quem não está na lista | +0,5 |
+| CAA no próprio domínio, sem depender do registro do estado | +0,5 |
+| TLS-RPT: recebe relatório quando o e-mail chega sem criptografia | +0,5 |
+| Nenhum script carregado de outro site na página inicial | +0,5 |
+| Scripts de no máximo 3 sites de fora | +0,25 |
+| Scripts de fora com SRI: o navegador recusa se alguém trocar o arquivo | +0,25 |
+| CSP sem unsafe-inline nem unsafe-eval | +0,25 |
+| Certificado de até 100 dias (renovação automática) | +0,25 |
+| Site com IPv6 | +0,25 |
+| Servidores DNS em pelo menos dois provedores | +0,25 |
+| HSTS valendo por 2 anos ou mais | +0,25 |
+| Cross-Origin-Opener-Policy: isola a página de janelas abertas por outros sites | +0,25 |
+| Cookies com SameSite (ou nenhum cookie na página inicial) | +0,25 |
+| security.txt com validade (Expires) | +0,25 |
+| Não mostra nem o nome do software do servidor | +0,25 |
+| DMARC com alinhamento estrito (adkim=s ou aspf=s) | +0,1 |
+| CAA com iodef: avisa a prefeitura se alguém pedir certificado indevido | +0,1 |
 
-Os parciais também têm graus: `cookies` vale de 0,3 a 0,7 conforme a proporção de cookies sem `HttpOnly`, e `conteudo_misto` vale 0,7 com uma imagem por `http://`, 0,5 com até três e 0,3 com mais.
+`versao_exposta` e `email_tls` são verificados e aparecem na página, mas têm peso 0 na nota base: contam só como detalhe.
 
-Até a metodologia 2, todo item cumprido valia o cheio. Com 13 itens a nota tinha umas 30 combinações possíveis: na varredura de 19/11 eram 565 cidades com a mesma nota e 29 empatadas no topo. Com os graus passam de 200 notas diferentes. As semanas antigas guardaram só o status de cada item, então nelas o item cumprido continua valendo 1.
+Nas metodologias 3 e 4 (semana de 16/11), os detalhes descontavam da nota base. Isso derrubou as notas e foi desfeito na metodologia 5: a nota base voltou a ser a de antes e os detalhes passaram a somar. As semanas antigas não guardaram os detalhes, então nelas vale só a nota base.
 
 | Conceito | Nota |
 |---|---|
@@ -107,10 +127,9 @@ Até a metodologia 2, todo item cumprido valia o cheio. Com 13 itens a nota tinh
 
 ## Posição e histórico
 
-- **Posição no Brasil**: ordem das notas entre as cidades que estão no ranking. Nota igual desempata, nesta ordem, por:
+- **Posição no Brasil**: ordem de nota base + detalhes entre as cidades que estão no ranking. Se ainda empatar, desempata por:
   1. mais itens cumpridos por inteiro (dois parciais somam o mesmo que um inteiro na nota, mas aqui valem menos);
-  2. mais pontos de excelência: DMARC com `p=reject`, DMARC mandando relatórios (`rua=`), SPF com `-all`, TLS 1.3, HSTS com `includeSubDomains`, HSTS com `preload`, HSTS de 2 anos ou mais, Content-Security-Policy, Referrer-Policy, Permissions-Policy e CAA no próprio domínio;
-  3. maior população, ou seja, mais gente protegida. Esse critério existe porque várias prefeituras ficam no mesmo servidor, com o site montado igual (24 de SE no servidor do governo do estado), e nenhum critério técnico consegue separá-las.
+  2. maior população, ou seja, mais gente protegida. Esse critério existe porque várias prefeituras ficam no mesmo servidor, com o site montado igual (24 de SE no servidor do governo do estado), e nenhum critério técnico consegue separá-las.
   Só cidades sem população conhecida e com tudo igual dividem a posição.
 - **Variação**: diferença de posição em relação à semana anterior (a última varredura daquela semana). Se a varredura rodar de novo na mesma semana, a seta não compara as duas rodadas, porque a diferença entre elas não tem a ver com os sites. Quando entram itens novos entre uma semana e outra, a página avisa que parte do movimento vem deles. Como as notas têm poucos valores possíveis, muitas cidades empatam, e uma mudança pequena de nota ainda pode mover uma cidade muitas posições.
 - **Histórico**: cada varredura completa é guardada em `data/historico/AAAA-MM-DD.json` (vale a última do dia), só com o status de cada item. O gráfico da página e o histórico de cada cidade mostram uma varredura por semana. **As notas das semanas antigas são recalculadas com as regras atuais**, para que a comparação faça sentido. Um item novo só entra na conta a partir da semana em que começou a ser verificado. No gráfico da página, a semana em que a metodologia mudou aparece marcada.
@@ -119,7 +138,7 @@ Até a metodologia 2, todo item cumprido valia o cheio. Com 13 itens a nota tinh
 
 - **Semana** vai de segunda a domingo, no horário de Brasília. Se houver mais de uma varredura na semana, vale só a última, do mesmo jeito que no histórico vale só a última varredura de cada dia.
 - **Quem concorre:** só quem teve todos os itens verificados naquela varredura.
-- **Pódio:** ouro, prata e bronze vão para o 1º, o 2º e o 3º do ranking, com o mesmo desempate da posição (itens inteiros, pontos de excelência, população). Quando o desempate decide uma medalha, o pódio mostra qual critério decidiu. Se duas cidades empatarem em tudo, dividem a medalha e a seguinte leva a próxima.
+- **Pódio:** ouro, prata e bronze vão para o 1º, o 2º e o 3º do ranking, com a mesma ordem da posição (nota base + detalhes, itens inteiros, população). Quando o desempate decide uma medalha, o pódio mostra qual critério decidiu. Se duas cidades empatarem em tudo, dividem a medalha e a seguinte leva a próxima.
 - **Semana em andamento:** o pódio da semana atual aparece como parcial até domingo, porque uma nova varredura ainda pode mudá-lo.
 - **Hall da fama:** ouro vale 10 pontos, prata 5 e bronze 2,5. Em empate de pontos, fica na frente quem tem mais ouros e depois quem tem mais pratas. Se tudo empatar, as cidades dividem a posição.
 - As notas de semanas antigas são recalculadas com as regras atuais, então as medalhas de semanas passadas também seguem a metodologia de hoje.

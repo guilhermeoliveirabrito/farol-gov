@@ -251,18 +251,24 @@ def _atributos_cookie(cookie):
 def avaliar_cookies(cookies):
     if not cookies:
         return Resultado("cookies", PASS, "a pagina inicial nao define cookies")
-    sem_secure, sem_httponly = [], []
+    sem_secure, sem_httponly, sem_samesite = [], [], []
     for c in cookies:
         nome, attrs = _atributos_cookie(c)
         if "secure" not in attrs:
             sem_secure.append(nome)
         if "httponly" not in attrs:
             sem_httponly.append(nome)
+        if "samesite" not in attrs:
+            sem_samesite.append(nome)
     if sem_secure:
         return Resultado("cookies", FAIL, f"{len(sem_secure)} de {len(cookies)} cookie(s) sem Secure: {', '.join(sem_secure[:3])}")
     if sem_httponly:
         return Resultado("cookies", WARN, f"{len(sem_httponly)} de {len(cookies)} cookie(s) sem HttpOnly")
-    return Resultado("cookies", PASS, f"{len(cookies)} cookie(s) com Secure e HttpOnly")
+    detalhe = f"{len(cookies)} cookie(s) com Secure e HttpOnly"
+    # SameSite protege contra outro site disparar acao em nome de quem esta logado (CSRF)
+    if sem_samesite:
+        detalhe += f"; {len(sem_samesite)} sem SameSite"
+    return Resultado("cookies", PASS, detalhe)
 
 
 def avaliar_validade(expira, agora=None):
@@ -283,9 +289,42 @@ def avaliar_security_txt(resp):
         # muito site devolve a home com 200 pra qualquer caminho
         return Resultado("security_txt", FAIL, "caminho devolve uma pagina HTML")
     texto = resp.corpo.decode("utf-8", "replace").lower()
-    if any(linha.strip().startswith("contact:") for linha in texto.splitlines()):
-        return Resultado("security_txt", PASS, "arquivo com Contact")
+    linhas = [linha.strip() for linha in texto.splitlines()]
+    if any(linha.startswith("contact:") for linha in linhas):
+        # a RFC 9116 exige Expires, pra ninguem confiar num contato abandonado
+        if any(linha.startswith("expires:") for linha in linhas):
+            return Resultado("security_txt", PASS, "arquivo com Contact e Expires")
+        return Resultado("security_txt", PASS, "arquivo com Contact, sem Expires")
     return Resultado("security_txt", FAIL, "arquivo sem campo Contact")
+
+
+# "Apache/2.4.29", "PHP/7.4.3", "nginx/1.18.0", "Microsoft-IIS/10.0"
+COM_VERSAO = re.compile(r"[a-z][\w.!-]*[/ ]v?\d+(?:\.\d+)+", re.I)
+GERADOR = re.compile(r"<meta[^>]+name\s*=\s*[\"']generator[\"'][^>]*content\s*=\s*[\"']([^\"']+)", re.I)
+GERADOR_INVERTIDO = re.compile(r"<meta[^>]+content\s*=\s*[\"']([^\"']+)[\"'][^>]*name\s*=\s*[\"']generator", re.I)
+
+
+def avaliar_versao_exposta(resp):
+    """Mostrar a versao exata do servidor ou do sistema do site entrega pro atacante a
+    lista de falhas conhecidas daquela versao. O nome sozinho ("nginx") e bem menos grave."""
+    html = resp.corpo.decode("utf-8", "replace") if resp.corpo else ""
+    fontes = [resp.headers.get(h, "") for h in ("server", "x-powered-by", "x-aspnet-version", "x-aspnetmvc-version")]
+    gerador = GERADOR.search(html) or GERADOR_INVERTIDO.search(html)
+    if gerador:
+        fontes.append(gerador.group(1))
+    if resp.headers.get("x-aspnet-version"):
+        fontes.append("ASP.NET/" + resp.headers["x-aspnet-version"])
+    versoes = []
+    for f in fontes:
+        for m in COM_VERSAO.finditer(f):
+            if m.group(0) not in versoes:
+                versoes.append(m.group(0))
+    if versoes:
+        return Resultado("versao_exposta", FAIL, "mostra a versao: " + ", ".join(versoes[:3]))
+    nomes = [f.split("/")[0].strip() for f in fontes if f.strip()]
+    if nomes:
+        return Resultado("versao_exposta", PASS, "mostra so o nome: " + ", ".join(dict.fromkeys(nomes[:3])))
+    return Resultado("versao_exposta", PASS, "nao mostra o software")
 
 
 def _checar_redirect(host, cliente, tem_https):
@@ -391,8 +430,9 @@ def checar_web(host, cliente):
         resultados.append(avaliar_conteudo_misto(final))
         cookies = (resp_https.cookies if resp_https is not None else []) + (final.cookies if final is not resp_https else [])
         resultados.append(avaliar_cookies(cookies))
+        resultados.append(avaliar_versao_exposta(final))
     except ErroConexao as e:
-        for nome in ("headers", "conteudo_misto", "cookies"):
+        for nome in ("headers", "conteudo_misto", "cookies", "versao_exposta"):
             resultados.append(Resultado(nome, ERROR, str(e)))
 
     if resp_https is not None:

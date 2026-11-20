@@ -26,7 +26,7 @@ INCOMPLETA = "verificacao_incompleta"
 # com esses avisos o municipio fica fora do ranking ate alguem confirmar o dominio
 TIRA_DO_RANKING = {FORA_GOV_BR, COMPARTILHADO}
 
-CHECKS_DNS = ("dnssec", "caa", "spf", "dmarc")
+CHECKS_DNS = ("dnssec", "caa", "spf", "dmarc", "email_tls")
 
 # erros que valem uma segunda tentativa, com mais calma (timeout, servidor sobrecarregado)
 ERROS_TRANSITORIOS = ("timeout", "outro", "LifetimeTimeout", "NoNameservers")
@@ -106,13 +106,14 @@ def preparar(entidade, resolver):
     if existe and not ips and dnssec.status == ERROR and dnssec.detalhe.startswith(ERROS_TRANSITORIOS):
         # o DNS do dominio nem respondeu o endereco; as outras consultas vao pro mesmo
         # servidor e so iam gastar mais 1 minuto de timeouts. a repescagem tenta de novo
-        dns = [dnssec, *(Resultado(nome, ERROR, dnssec.detalhe) for nome in ("caa", "spf", "dmarc"))]
+        dns = [dnssec, *(Resultado(nome, ERROR, dnssec.detalhe) for nome in CHECKS_DNS if nome != "dnssec")]
     else:
         dns = [
             dnssec,
             checks_dns.checar_caa(email, resolver, zona_responde=existe and bool(ips)),
             checks_dns.checar_spf(email, resolver),
             checks_dns.checar_dmarc(email, resolver),
+            checks_dns.checar_email_tls(email, resolver),
         ]
     return Preparo(entidade, host, existe, list(ips or []), avisos, dns, reserva)
 

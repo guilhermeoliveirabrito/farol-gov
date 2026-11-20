@@ -481,3 +481,16 @@ def test_site_so_no_www_e_visitado_no_www():
     r = avaliar(ent, resolver, SoWww({}))
     assert r["acessivel"] and r["dominio"] == "www.guarulhos.sp.gov.br"
     assert ALTERNATIVO in r["avisos"]
+
+
+def test_graus_novos():
+    from farol.nota import grau
+
+    assert grau("cookies", WARN, "1 de 4 cookie(s) sem HttpOnly") == 0.6
+    assert grau("cookies", WARN, "4 de 4 cookie(s) sem HttpOnly") == 0.3
+    assert grau("conteudo_misto", WARN, "1 imagem(ns) ou midia(s) por http://") == 0.7
+    assert grau("conteudo_misto", WARN, "12 imagem(ns) ou midia(s) por http://") == 0.3
+    assert grau("security_txt", PASS, "arquivo com Contact, sem Expires") == 0.8
+    assert grau("dmarc", PASS, "p=reject; com relatorios; pct=50") == 0.9
+    assert grau("versao_exposta", PASS, "mostra so o nome: nginx") == 0.9
+    assert grau("email_tls", PASS, "MTA-STS, sem TLS-RPT") == 0.8

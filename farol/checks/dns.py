@@ -159,7 +159,12 @@ def avaliar_dmarc(registros):
     politica = tags.get("p")
     if politica in ("reject", "quarantine"):
         # rua = pra onde vao os relatorios: sem isso ninguem fica sabendo de quem tenta se passar pela prefeitura
-        return Resultado("dmarc", PASS, f"p={politica}" + ("; com relatorios" if tags.get("rua") else ""))
+        detalhe = f"p={politica}" + ("; com relatorios" if tags.get("rua") else "")
+        # pct < 100 aplica a politica so numa parte dos e-mails
+        pct = tags.get("pct", "100").strip()
+        if pct.isdigit() and int(pct) < 100:
+            detalhe += f"; pct={int(pct)}"
+        return Resultado("dmarc", PASS, detalhe)
     if politica == "none":
         return Resultado("dmarc", WARN, "p=none so monitora, nao bloqueia")
     return Resultado("dmarc", FAIL, "registro sem politica p= valida")
@@ -197,6 +202,26 @@ def checar_dmarc(dominio, resolver):
         return avaliar_dmarc(resolver.txt(f"_dmarc.{dominio}"))
     except ErroDNS as e:
         return Resultado("dmarc", ERROR, str(e))
+
+
+def avaliar_email_tls(mta_sts, tls_rpt):
+    """MTA-STS obriga os outros servidores a entregar e-mail pra prefeitura so com TLS
+    valido (sem ele, quem esta no meio do caminho consegue ler ou desviar a mensagem).
+    TLS-RPT manda relatorio quando a entrega com TLS falha."""
+    tem_sts = any(r.replace(" ", "").lower().startswith("v=stsv1") for r in mta_sts)
+    tem_rpt = any(r.replace(" ", "").lower().startswith("v=tlsrptv1") for r in tls_rpt)
+    if tem_sts:
+        return Resultado("email_tls", PASS, "MTA-STS" + (" e TLS-RPT" if tem_rpt else ", sem TLS-RPT"))
+    if tem_rpt:
+        return Resultado("email_tls", WARN, "so TLS-RPT: recebe relatorio, mas nao exige TLS")
+    return Resultado("email_tls", FAIL, "sem MTA-STS")
+
+
+def checar_email_tls(dominio, resolver):
+    try:
+        return avaliar_email_tls(resolver.txt(f"_mta-sts.{dominio}"), resolver.txt(f"_smtp._tls.{dominio}"))
+    except ErroDNS as e:
+        return Resultado("email_tls", ERROR, str(e))
 
 
 def checar_dnssec(host, resolver):

@@ -249,3 +249,29 @@ def test_site_fora_do_ar_nao_tenta_a_home_tres_vezes():
     assert not acessivel
     assert len(cliente.chamadas) == 2  # uma no https, uma no http
     assert {r.check for r in resultados} >= {"headers", "conteudo_misto", "cookies"}
+
+
+def test_versao_exposta():
+    from farol.checks.web import avaliar_versao_exposta
+
+    r = avaliar_versao_exposta(resp("https://x/", headers={"server": "Apache/2.4.29 (Ubuntu)", "x-powered-by": "PHP/7.4.3"}))
+    assert r.status == FAIL and "Apache/2.4.29" in r.detalhe and "PHP/7.4.3" in r.detalhe
+    html = b'<html><head><meta name="generator" content="WordPress 6.4.3"></head></html>'
+    assert avaliar_versao_exposta(resp("https://x/", corpo=html)).status == FAIL
+    r = avaliar_versao_exposta(resp("https://x/", headers={"server": "nginx"}))
+    assert r.status == PASS and r.detalhe == "mostra so o nome: nginx"
+    assert avaliar_versao_exposta(resp("https://x/")).detalhe == "nao mostra o software"
+    # "cloudflare" ou cabecalho com data nao conta como versao
+    assert avaliar_versao_exposta(resp("https://x/", headers={"server": "cloudflare"})).status == PASS
+
+
+def test_cookies_sem_samesite_e_security_txt_sem_expires():
+    from farol.checks.web import avaliar_cookies
+
+    r = avaliar_cookies(["a=1; Secure; HttpOnly", "b=2; Secure; HttpOnly; SameSite=Lax"])
+    assert r.status == PASS and r.detalhe.endswith("1 sem SameSite")
+    r = avaliar_security_txt(resp("https://x/.well-known/security.txt", headers={"content-type": "text/plain"}, corpo=b"Contact: mailto:a@b"))
+    assert r.status == PASS and r.detalhe == "arquivo com Contact, sem Expires"
+    corpo = b"Contact: mailto:a@b\nExpires: 2027-01-01T00:00:00Z"
+    r = avaliar_security_txt(resp("https://x/.well-known/security.txt", headers={"content-type": "text/plain"}, corpo=corpo))
+    assert r.detalhe == "arquivo com Contact e Expires"

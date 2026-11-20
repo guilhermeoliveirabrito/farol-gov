@@ -4,7 +4,8 @@ from .checks import ERROR, PASS, WARN
 
 # versao da metodologia; muda quando entra/sai item ou peso, pra nao comparar nota de regras diferentes
 # 3: item cumprido deixou de valer sempre 100% (ver grau)
-METODOLOGIA = 3
+# 4: versao_exposta e email_tls, e graus em cookies, conteudo misto, security.txt e dmarc
+METODOLOGIA = 4
 
 # ver docs/metodologia.md antes de mexer nisso. A ordem aqui e a ordem que aparece na pagina.
 PESOS = {
@@ -17,10 +18,12 @@ PESOS = {
     "conteudo_misto": 1,
     "cookies": 1,
     "security_txt": 1,
+    "versao_exposta": 1,
     "dnssec": 2,
     "caa": 1,
     "spf": 1,
     "dmarc": 3,
+    "email_tls": 1,
 }
 
 VALORES = {PASS: 1.0, WARN: 0.5}
@@ -38,11 +41,21 @@ def grau(check, status, detalhe=""):
     quarantine em vez de reject, SPF ~all em vez de -all, CAA herdado do estado...).
     Sem detalhe (testes, historico antigo) vale o cheio.
     """
+    d = detalhe or ""
     if status == WARN:
+        if check == "cookies":
+            # "1 de 4 cookie(s) sem HttpOnly": quanto mais cookie exposto, menos vale
+            m = re.match(r"(\d+) de (\d+)", d)
+            if m and int(m.group(2)):
+                return round(round((0.7 - 0.4 * int(m.group(1)) / int(m.group(2))) * 20) / 20, 2)
+        if check == "conteudo_misto":
+            m = re.match(r"(\d+) ", d)
+            if m:
+                n = int(m.group(1))
+                return 0.7 if n == 1 else 0.5 if n <= 3 else 0.3
         return PARCIAL_FRACO.get(check, VALORES[WARN])
     if status != PASS:
         return 0.0
-    d = detalhe or ""
     g = 1.0
     if check == "tls" and d.startswith("TLSv1.2"):
         g -= 0.2
@@ -59,8 +72,16 @@ def grau(check, status, detalhe=""):
     elif check == "dmarc" and d.startswith("p="):
         g -= 0.15 if d.startswith("p=quarantine") else 0.0
         g -= 0.0 if "com relatorios" in d else 0.1
-    elif check == "spf" and d.endswith("~all") or check == "caa" and "herdado" in d:
+        g -= 0.1 if "pct=" in d else 0.0
+    elif (
+        (check == "spf" and d.endswith("~all"))
+        or (check == "caa" and "herdado" in d)
+        or (check == "security_txt" and "sem Expires" in d)
+        or (check == "email_tls" and "sem TLS-RPT" in d)
+    ):
         g -= 0.2
+    elif (check == "cookies" and "sem SameSite" in d) or (check == "versao_exposta" and d.startswith("mostra so o nome")):
+        g -= 0.1
     return round(round(g * 20) / 20, 2)
 
 FAIXAS = [(90, "A"), (75, "B"), (55, "C"), (35, "D")]

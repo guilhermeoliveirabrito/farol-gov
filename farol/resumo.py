@@ -14,10 +14,12 @@ NOMES = {
     "conteudo_misto": "Sem conteúdo misto",
     "cookies": "Cookies com Secure e HttpOnly",
     "security_txt": "security.txt",
+    "versao_exposta": "Não mostra a versão do software",
     "dnssec": "DNSSEC",
     "caa": "CAA (quem pode emitir certificado)",
     "spf": "SPF",
     "dmarc": "DMARC bloqueando e-mail falso",
+    "email_tls": "E-mail com TLS obrigatório (MTA-STS)",
 }
 
 

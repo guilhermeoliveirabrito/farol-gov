@@ -128,6 +128,20 @@ Preferred-Languages: pt, en
 
 O campo `Expires` é obrigatório. Lembre de atualizar a data antes de vencer.
 
+## versao_exposta
+
+**O problema:** o servidor anuncia em cada resposta qual software e qual versão usa (`Server: Apache/2.4.29 (Ubuntu)`, `X-Powered-By: PHP/7.4.3`) ou o site traz `<meta name="generator" content="WordPress 6.4.3">`. Quem procura alvos cruza a versão com a lista de falhas conhecidas e já sabe o que testar.
+
+**Como resolver:**
+
+- Apache: `ServerTokens Prod` e `ServerSignature Off`.
+- nginx: `server_tokens off;`.
+- PHP: `expose_php = Off` no `php.ini`.
+- IIS/ASP.NET: `<httpRuntime enableVersionHeader="false" />` e remover o header `X-Powered-By` nas configurações de resposta.
+- WordPress: remover o gerador com `remove_action('wp_head', 'wp_generator');` (vários plugins de segurança fazem isso).
+
+Esconder a versão não substitui atualizar o software, mas tira o atalho de quem varre a internet atrás de versões antigas.
+
 ## dnssec
 
 **O problema:** sem DNSSEC, respostas de DNS podem ser falsificadas e o cidadão pode ser levado a um servidor falso.
@@ -181,3 +195,28 @@ prefeitura.uf.gov.br.  TXT  "v=spf1 include:_spf.google.com include:spf.protecti
 4. Quando estiver tranquilo, `p=reject`.
 
 No farol-gov, `p=none` conta como parcial: é um bom começo, mas ainda não protege ninguém.
+
+## email_tls
+
+**O problema:** sem MTA-STS, um e-mail enviado para a prefeitura pode ser entregue sem criptografia se alguém no caminho atrapalhar a negociação do TLS. Quem está no meio lê ou desvia a mensagem, e nenhum dos lados percebe.
+
+**Como resolver** ([RFC 8461](https://www.rfc-editor.org/rfc/rfc8461)):
+
+1. Publique a política em `https://mta-sts.prefeitura.uf.gov.br/.well-known/mta-sts.txt`:
+   ```
+   version: STSv1
+   mode: testing
+   mx: mail.prefeitura.uf.gov.br
+   max_age: 86400
+   ```
+2. Avise no DNS que a política existe (troque o `id` sempre que mudar o arquivo):
+   ```
+   _mta-sts.prefeitura.uf.gov.br.  TXT  "v=STSv1; id=20261120"
+   ```
+3. Peça os relatórios de falha (TLS-RPT):
+   ```
+   _smtp._tls.prefeitura.uf.gov.br.  TXT  "v=TLSRPTv1; rua=mailto:tls@prefeitura.uf.gov.br"
+   ```
+4. Depois de algumas semanas sem falhas nos relatórios, troque `mode: testing` por `mode: enforce`.
+
+Quem usa Google Workspace ou Microsoft 365 encontra o passo a passo na documentação do provedor.

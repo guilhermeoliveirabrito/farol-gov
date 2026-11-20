@@ -182,3 +182,17 @@ def test_caa_sem_resposta_com_a_zona_funcionando_conta_como_sem_caa():
     r = _resolver(_Fora(), _Fora())
     assert checar_caa("cidade.sp.gov.br", r, zona_responde=True).status == "fail"
     assert checar_caa("cidade.sp.gov.br", r).status == "error"
+
+
+def test_email_tls():
+    from farol.checks.dns import avaliar_email_tls
+
+    assert avaliar_email_tls(["v=STSv1; id=2024"], ["v=TLSRPTv1; rua=mailto:x"]).detalhe == "MTA-STS e TLS-RPT"
+    assert avaliar_email_tls(["v=STSv1; id=2024"], []).detalhe == "MTA-STS, sem TLS-RPT"
+    assert avaliar_email_tls([], ["v=TLSRPTv1; rua=mailto:x"]).status == WARN
+    assert avaliar_email_tls([], []).status == FAIL
+
+
+def test_dmarc_com_pct_menor_que_100():
+    r = avaliar_dmarc(["v=DMARC1; p=reject; pct=50; rua=mailto:x@y"])
+    assert r.status == PASS and r.detalhe == "p=reject; com relatorios; pct=50"

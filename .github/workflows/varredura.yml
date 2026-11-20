@@ -39,7 +39,12 @@ jobs:
       - run: pip install -e .
 
       - name: Atualizar lista de dominios
-        run: python scripts/coletar_dominios.py -o data/dominios.csv
+        # wikidata fora do ar nao pode travar a varredura: segue com a lista que ja esta no repositorio
+        run: |
+          python scripts/coletar_dominios.py -o data/dominios.csv || {
+            echo "::warning::wikidata nao respondeu, usando a lista de dominios do repositorio"
+            git checkout -- data/dominios.csv data/dominios_corrigidos.csv
+          }
 
       - name: Varredura
         env:

@@ -22,7 +22,9 @@ import csv
 import json
 import re
 import sys
+import time
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -59,9 +61,17 @@ def buscar_wikidata():
         f"{SPARQL_URL}?{params}",
         headers={"User-Agent": USER_AGENT, "Accept": "application/sparql-results+json"},
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        dados = json.load(resp)
-    return dados["results"]["bindings"]
+    # o servico de consulta do wikidata da 504 de vez em quando; espera um pouco e tenta de novo
+    for tentativa in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                dados = json.load(resp)
+            return dados["results"]["bindings"]
+        except (urllib.error.URLError, TimeoutError) as e:
+            if tentativa == 2:
+                raise
+            print(f"wikidata falhou ({e}), tentando de novo em {30 * (tentativa + 1)}s")
+            time.sleep(30 * (tentativa + 1))
 
 
 def escolher_site(sites):

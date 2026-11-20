@@ -1,8 +1,8 @@
 # Resultados
 
-Varredura de 2026-11-19. 5444 domínios verificados, 5059 acessíveis (385 não responderam e ficaram fora da nota).
+Varredura de 2026-11-20. 5444 domínios verificados, 5046 acessíveis (398 não responderam e ficaram fora da nota).
 
-42 municípios acessíveis ficaram fora do ranking porque o domínio cadastrado precisa de revisão (fora do `.gov.br` ou repetido em mais de um município). Lista em [data/revisar_wikidata.csv](data/revisar_wikidata.csv).
+31 municípios acessíveis ficaram fora do ranking porque o domínio cadastrado precisa de revisão (fora do `.gov.br` ou repetido em mais de um município). Lista em [data/revisar_wikidata.csv](data/revisar_wikidata.csv).
 
 Metodologia: [docs/metodologia.md](docs/metodologia.md). Dados completos: [data/resultados/latest.json](data/resultados/latest.json).
 
@@ -10,132 +10,136 @@ Metodologia: [docs/metodologia.md](docs/metodologia.md). Dados completos: [data/
 
 | Conceito | Municípios | % |
 |---|---|---|
-| A | 29 | 0.6% |
-| B | 332 | 6.6% |
-| C | 3248 | 64.7% |
-| D | 1303 | 26.0% |
-| F | 105 | 2.1% |
+| A | 0 | 0.0% |
+| B | 52 | 1.0% |
+| C | 2180 | 43.5% |
+| D | 2636 | 52.6% |
+| F | 147 | 2.9% |
 
 ## Adoção de cada item
 
 | Item | Atende | Parcial |
 |---|---|---|
-| HTTPS com certificado válido | 96.1% | 0.8% |
-| HTTP redireciona para HTTPS | 66.7% | 0.0% |
-| TLS 1.2 ou superior | 99.3% | 0.0% |
-| Recusa TLS 1.0 e 1.1 | 68.0% | 0.0% |
-| HSTS (1 ano ou mais) | 24.5% | 2.2% |
-| Headers de segurança | 28.7% | 19.1% |
-| Sem conteúdo misto | 90.9% | 3.6% |
-| Cookies com Secure e HttpOnly | 66.9% | 4.4% |
+| HTTPS com certificado válido | 96.3% | 0.7% |
+| HTTP redireciona para HTTPS | 66.8% | 0.0% |
+| TLS 1.2 ou superior | 99.4% | 0.0% |
+| Recusa TLS 1.0 e 1.1 | 68.3% | 0.0% |
+| HSTS (1 ano ou mais) | 27.3% | 2.2% |
+| Headers de segurança | 31.4% | 19.2% |
+| Sem conteúdo misto | 92.0% | 3.6% |
+| Cookies com Secure e HttpOnly | 66.7% | 4.7% |
 | security.txt | 0.4% | 0.0% |
+| Não mostra a versão do software | 65.1% | 0.0% |
 | DNSSEC | 1.9% | 0.0% |
 | CAA (quem pode emitir certificado) | 25.4% | 0.0% |
-| SPF | 87.7% | 8.0% |
-| DMARC bloqueando e-mail falso | 29.1% | 36.6% |
+| SPF | 87.8% | 8.0% |
+| DMARC bloqueando e-mail falso | 29.0% | 36.8% |
+| E-mail com TLS obrigatório (MTA-STS) | 0.3% | 0.2% |
 
 ## Ranking por estado
 
 | # | UF | Nota média | Municípios avaliados |
 |---|---|---|---|
-| 1 | SE | 79.2 | 73 |
-| 2 | AC | 70.3 | 22 |
-| 3 | CE | 67.4 | 181 |
-| 4 | RR | 66.0 | 13 |
-| 5 | GO | 65.2 | 232 |
-| 6 | AP | 64.1 | 14 |
-| 7 | PR | 63.8 | 298 |
-| 8 | RO | 63.1 | 42 |
-| 9 | BA | 60.9 | 411 |
-| 10 | PA | 60.7 | 126 |
-| 11 | RN | 60.5 | 164 |
-| 12 | AM | 59.9 | 55 |
-| 13 | ES | 59.7 | 69 |
-| 14 | RJ | 59.5 | 87 |
-| 15 | MA | 59.4 | 200 |
-| 16 | PE | 59.1 | 181 |
-| 17 | TO | 57.8 | 121 |
-| 18 | AL | 57.4 | 99 |
-| 19 | SP | 57.3 | 630 |
-| 20 | MS | 57.1 | 76 |
-| 21 | MT | 56.6 | 140 |
-| 22 | RS | 56.6 | 431 |
-| 23 | MG | 56.4 | 845 |
-| 24 | SC | 54.7 | 104 |
-| 25 | PI | 53.3 | 186 |
-| 26 | PB | 53.1 | 217 |
+| 1 | SE | 74.6 | 73 |
+| 2 | AC | 63.5 | 22 |
+| 3 | CE | 61.4 | 181 |
+| 4 | PA | 60.1 | 126 |
+| 5 | AP | 59.5 | 14 |
+| 6 | RR | 59.0 | 13 |
+| 7 | PR | 57.4 | 298 |
+| 8 | GO | 56.4 | 232 |
+| 9 | RO | 55.4 | 42 |
+| 10 | RN | 54.6 | 165 |
+| 11 | ES | 54.5 | 69 |
+| 12 | MA | 54.2 | 200 |
+| 13 | AM | 54.0 | 55 |
+| 14 | BA | 53.7 | 410 |
+| 15 | RJ | 53.3 | 89 |
+| 16 | MT | 53.1 | 141 |
+| 17 | TO | 52.6 | 122 |
+| 18 | AL | 52.4 | 100 |
+| 19 | MS | 52.3 | 76 |
+| 20 | PE | 52.0 | 181 |
+| 21 | RS | 51.7 | 435 |
+| 22 | MG | 51.6 | 842 |
+| 23 | SP | 51.5 | 630 |
+| 24 | PI | 49.9 | 181 |
+| 25 | SC | 49.6 | 101 |
+| 26 | PB | 48.1 | 217 |
 
 ## Top 20 municípios
 
 | Município | UF | Domínio | Nota |
 |---|---|---|---|
-| Amparo do São Francisco | SE | `amparodosaofrancisco.se.gov.br` | 90.0 (A) |
-| Aquidabã | SE | `www.aquidaba.se.gov.br` | 90.0 (A) |
-| Barra dos Coqueiros | SE | `www.barradoscoqueiros.se.gov.br` | 90.0 (A) |
-| Campo do Brito | SE | `www.campodobrito.se.gov.br` | 90.0 (A) |
-| Canhoba | SE | `www.canhoba.se.gov.br` | 90.0 (A) |
-| Capela | SE | `www.capela.se.gov.br` | 90.0 (A) |
-| Divina Pastora | SE | `www.divinapastora.se.gov.br` | 90.0 (A) |
-| Flexeiras | AL | `www.flexeiras.al.gov.br` | 90.0 (A) |
-| Frei Paulo | SE | `www.freipaulo.se.gov.br` | 90.0 (A) |
-| Itabaianinha | SE | `www.itabaianinha.se.gov.br` | 90.0 (A) |
-| Lagarto | SE | `www.lagarto.se.gov.br` | 90.0 (A) |
-| Macambira | SE | `www.macambira.se.gov.br` | 90.0 (A) |
-| Maruim | SE | `www.maruim.se.gov.br` | 90.0 (A) |
-| Muribeca | SE | `www.muribeca.se.gov.br` | 90.0 (A) |
-| Nossa Senhora das Dores | SE | `www.nossasenhoradasdores.se.gov.br` | 90.0 (A) |
-| Pacatuba | SE | `www.pacatuba.se.gov.br` | 90.0 (A) |
-| Pedrinhas | SE | `www.pedrinhas.se.gov.br` | 90.0 (A) |
-| Poço Verde | SE | `www.pocoverde.se.gov.br` | 90.0 (A) |
-| Propriá | SE | `www.propria.se.gov.br` | 90.0 (A) |
-| Rio Formoso | PE | `www.rioformoso.pe.gov.br` | 90.0 (A) |
+| Amparo do São Francisco | SE | `amparodosaofrancisco.se.gov.br` | 84.5 (B) |
+| Aquidabã | SE | `www.aquidaba.se.gov.br` | 84.5 (B) |
+| Barra dos Coqueiros | SE | `www.barradoscoqueiros.se.gov.br` | 84.5 (B) |
+| Campo do Brito | SE | `www.campodobrito.se.gov.br` | 84.5 (B) |
+| Canhoba | SE | `www.canhoba.se.gov.br` | 84.5 (B) |
+| Frei Paulo | SE | `www.freipaulo.se.gov.br` | 84.5 (B) |
+| Itabaianinha | SE | `www.itabaianinha.se.gov.br` | 84.5 (B) |
+| Lagarto | SE | `www.lagarto.se.gov.br` | 84.5 (B) |
+| Macambira | SE | `www.macambira.se.gov.br` | 84.5 (B) |
+| Maruim | SE | `www.maruim.se.gov.br` | 84.5 (B) |
+| Muribeca | SE | `www.muribeca.se.gov.br` | 84.5 (B) |
+| Neópolis | SE | `www.neopolis.se.gov.br` | 84.5 (B) |
+| Nossa Senhora das Dores | SE | `www.nossasenhoradasdores.se.gov.br` | 84.5 (B) |
+| Pacatuba | SE | `www.pacatuba.se.gov.br` | 84.5 (B) |
+| Pedrinhas | SE | `www.pedrinhas.se.gov.br` | 84.5 (B) |
+| Poço Verde | SE | `www.pocoverde.se.gov.br` | 84.5 (B) |
+| Propriá | SE | `www.propria.se.gov.br` | 84.5 (B) |
+| Rosário do Catete | SE | `www.rosariodocatete.se.gov.br` | 84.5 (B) |
+| Simão Dias | SE | `www.simaodias.se.gov.br` | 84.5 (B) |
+| Siriri | SE | `www.siriri.se.gov.br` | 84.5 (B) |
 
 ## Qualidade da coleta
 
 | Item | Erros | Motivo mais comum |
 |---|---|---|
 | https | 416 | timeout |
-| redirect | 379 | timeout |
+| redirect | 391 | timeout |
 | tls | 416 | timeout |
-| tls_antigo | 416 | timeout |
-| hsts | 14 | dominio nao resolve |
-| headers | 417 | timeout |
-| conteudo_misto | 507 | timeout |
-| cookies | 417 | timeout |
-| security_txt | 33 | timeout |
-| dnssec | 21 | dominio nao resolve |
-| caa | 7 | NoNameservers |
-| spf | 7 | NoNameservers |
-| dmarc | 7 | NoNameservers |
+| tls_antigo | 417 | timeout |
+| hsts | 15 | dominio nao resolve |
+| headers | 418 | timeout |
+| conteudo_misto | 453 | timeout |
+| cookies | 418 | timeout |
+| security_txt | 30 | dominio nao resolve |
+| versao_exposta | 418 | timeout |
+| dnssec | 23 | dominio nao resolve |
+| caa | 8 | NoNameservers |
+| spf | 8 | NoNameservers |
+| dmarc | 8 | NoNameservers |
+| email_tls | 8 | NoNameservers |
 
-Comparação com a varredura de 2026-11-17: 3023 cidades mudaram de posição.
+Comparação com a varredura de 2026-11-19: 4855 cidades mudaram de posição.
 
 ## Quem mais subiu
 
 | Município | UF | Posição | Variação |
 |---|---|---|---|
-| Estrela do Sul | MG | 2232º → 49º | ↑ 2183 |
-| Jequiá da Praia | AL | 3103º → 1677º | ↑ 1426 |
-| Bela Vista de Minas | MG | 2499º → 1251º | ↑ 1248 |
-| Arantina | MG | 2232º → 1251º | ↑ 981 |
-| Lavras do Sul | RS | 2975º → 2185º | ↑ 790 |
-| Sabará | MG | 1890º → 1251º | ↑ 639 |
-| Hulha Negra | RS | 2755º → 2185º | ↑ 570 |
-| Ouro Branco | MG | 723º → 362º | ↑ 361 |
-| Paraopeba | MG | 723º → 362º | ↑ 361 |
-| Moreno | PE | 2499º → 2185º | ↑ 314 |
+| Mata Grande | AL | 4774º → 611º | ↑ 4163 |
+| Aimorés | MG | 3969º → 239º | ↑ 3730 |
+| Araras | SP | 4852º → 1406º | ↑ 3446 |
+| Belo Oriente | MG | 4651º → 1395º | ↑ 3256 |
+| Biquinhas | MG | 4651º → 1395º | ↑ 3256 |
+| Aquidauana | MS | 4849º → 2384º | ↑ 2465 |
+| Castanhal | PA | 4874º → 2720º | ↑ 2154 |
+| Timon | MA | 1940º → 85º | ↑ 1855 |
+| Manicoré | AM | 2911º → 1060º | ↑ 1851 |
+| Rio Preto da Eva | AM | 2911º → 1060º | ↑ 1851 |
 
 ## Quem mais caiu
 
 | Município | UF | Posição | Variação |
 |---|---|---|---|
-| Castanhal | PA | 979º → 4871º | ↓ 3892 |
-| Araras | SP | 979º → 4850º | ↓ 3871 |
-| Fernandópolis | SP | 1547º → 4571º | ↓ 3024 |
-| Igaratinga | MG | 1890º → 4571º | ↓ 2681 |
-| Canudos | BA | 1890º → 4336º | ↓ 2446 |
-| Aquidauana | MS | 2499º → 4850º | ↓ 2351 |
-| São José do Jacuri | MG | 723º → 3019º | ↓ 2296 |
-| Camacan | BA | 1890º → 3994º | ↓ 2104 |
-| Cipó | BA | 1890º → 3994º | ↓ 2104 |
-| Seabra | BA | 1890º → 3994º | ↓ 2104 |
+| Sabará | MG | 1420º → 4186º | ↓ 2766 |
+| Moreno | PE | 1976º → 4498º | ↓ 2522 |
+| Mesquita | RJ | 2161º → 4306º | ↓ 2145 |
+| Capão Bonito | SP | 2161º → 4306º | ↓ 2145 |
+| Abreu e Lima | PE | 1952º → 3993º | ↓ 2041 |
+| Santa Cecília | PB | 1976º → 3783º | ↓ 1807 |
+| Santa Cruz | PE | 1976º → 3783º | ↓ 1807 |
+| Guaporema | PR | 1962º → 3754º | ↓ 1792 |
+| Varzelândia | MG | 2161º → 3909º | ↓ 1748 |
+| Boa Vista do Ramos | AM | 2828º → 4564º | ↓ 1736 |

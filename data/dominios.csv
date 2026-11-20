@@ -462,7 +462,7 @@ ibge,municipio,uf,dominio,lat,lon,populacao,origem
 2603207,Caetés,PE,caetes.pe.gov.br,-8.7728,-36.6228,28827,
 2603306,Calçado,PE,www.calcado.pe.gov.br,-8.7419,-36.3339,11093,
 2603405,Calumbi,PE,www.calumbi.pe.gov.br,-7.9408,-38.15,5228,
-2603454,Camaragibe,PE,www.camaragibe.pe.gov.br,-8.0219,-34.9808,155054,
+2603454,Camaragibe,PE,camaragibe.pe.gov.br,-8.0219,-34.9808,155054,inferido
 2603504,Camocim de São Félix,PE,www.camocimdesaofelix.pe.gov.br,-8.3589,-35.7619,17419,
 2603603,Camutanga,PE,www.camutanga.pe.gov.br,-7.4069,-35.2739,7750,
 2603702,Canhotinho,PE,www.canhotinho.pe.gov.br,-8.8819,-36.1908,24329,
@@ -651,7 +651,7 @@ ibge,municipio,uf,dominio,lat,lon,populacao,origem
 2708501,São Luís do Quitunde,AL,www.saoluisdoquitunde.al.gov.br,-9.3178,-35.5608,30873,inferido
 2708600,São Miguel dos Campos,AL,www.saomigueldoscampos.al.gov.br,-9.7808,-36.0939,51990,
 2708808,São Sebastião,AL,www.saosebastiao.al.gov.br,-9.9339,-36.5539,31786,
-2709152,Teotônio Vilela,AL,www.teotoniovilela.al.gov.br,-9.9061,-36.3522,38053,inferido
+2709152,Teotônio Vilela,AL,teotoniovilela.al.gov.br,-9.9061,-36.3522,38053,inferido
 2709202,Traipu,AL,www.traipu.al.gov.br,-9.9708,-37.0028,23565,
 2709301,União dos Palmares,AL,www.uniaodospalmares.al.gov.br,-9.1628,-36.0319,59280,
 2800100,Amparo do São Francisco,SE,amparodosaofrancisco.se.gov.br,-10.1339,-36.93,2170,
@@ -739,7 +739,7 @@ ibge,municipio,uf,dominio,lat,lon,populacao,origem
 2905701,Camaçari,BA,www.camacari.ba.gov.br,-12.6978,-38.3239,321636,
 2905800,Camamu,BA,camamu.ba.gov.br,-13.945,-39.1039,37207,
 2905909,Campo Alegre de Lourdes,BA,www.campoalegredelourdes.ba.gov.br,-9.5158,-43.0108,30671,
-2906006,Campo Formoso,BA,campoformoso.ba.gov.br,-10.5089,-40.3208,71377,inferido
+2906006,Campo Formoso,BA,www.campoformoso.ba.gov.br,-10.5089,-40.3208,71377,inferido
 2906303,Canavieiras,BA,www.canavieiras.ba.gov.br,-15.675,-38.9469,32683,
 2906402,Candeal,BA,candeal.ba.gov.br,-11.8078,-39.1189,7772,
 2906501,Candeias,BA,www.candeias.ba.gov.br,-12.6678,-38.5508,72382,inferido
@@ -2150,7 +2150,7 @@ ibge,municipio,uf,dominio,lat,lon,populacao,origem
 3534104,Oriente,SP,www.oriente.sp.gov.br,-22.1539,-50.0938,6085,
 3534203,Orindiúva,SP,www.orindiuva.sp.gov.br,-20.1819,-49.3508,6024,
 3534302,Orlândia,SP,www.orlandia.sp.gov.br,-20.7203,-47.8867,42678,
-3534401,Osasco,SP,www.osasco.sp.gov.br,-23.5328,-46.7919,759524,
+3534401,Osasco,SP,www.osasco.sp.gov.br,-23.5328,-46.7919,759524,manual
 3534500,Oscar Bressane,SP,www.oscarbressane.sp.gov.br,-22.3183,-50.2814,4197,
 3534609,Osvaldo Cruz,SP,www.osvaldocruz.sp.gov.br,-21.7967,-50.8786,33000,
 3534708,Ourinhos,SP,www.ourinhos.sp.gov.br,-22.9789,-49.8708,103970,

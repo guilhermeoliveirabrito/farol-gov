@@ -995,6 +995,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2517100,Várzea,PB,,www.varzea.pb.gov.br,sem site no Wikidata
 2517209,Vieirópolis,PB,,www.vieiropolis.pb.gov.br,sem site no Wikidata
 2517407,Zabelê,PB,,www.zabele.pb.gov.br,sem site no Wikidata
+2603454,Camaragibe,PE,www.camaragibe.pe.gov.br,camaragibe.pe.gov.br,domínio do Wikidata não existe no DNS
 2604155,Casinhas,PE,www.prefeituracasinhas.pe.gov.br,www.casinhas.pe.gov.br,domínio do Wikidata não existe no DNS
 2605152,Dormentes,PE,www.dormentes.pe.gov.br,dormentes.pe.gov.br,domínio do Wikidata não existe no DNS
 2609006,Macaparana,PE,www.bb.com.br,www.macaparana.pe.gov.br,"portal genérico, não é da prefeitura"
@@ -1058,7 +1059,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2708956,Senador Rui Palmeira,AL,,www.senadorruipalmeira.al.gov.br,sem site no Wikidata
 2709004,Tanque d'Arca,AL,,www.tanquedarca.al.gov.br,sem site no Wikidata
 2709103,Taquarana,AL,,www.taquarana.al.gov.br,sem site no Wikidata
-2709152,Teotônio Vilela,AL,www.prefeiturateotonio.com.br,www.teotoniovilela.al.gov.br,fora do .gov.br
+2709152,Teotônio Vilela,AL,www.prefeiturateotonio.com.br,teotoniovilela.al.gov.br,fora do .gov.br
 2709400,Viçosa,AL,,www.vicosa.al.gov.br,sem site no Wikidata
 2800209,Aquidabã,SE,,www.aquidaba.se.gov.br,sem site no Wikidata
 2800407,Arauá,SE,,www.araua.se.gov.br,sem site no Wikidata
@@ -1130,7 +1131,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 2905156,Caetanos,BA,www.caetanos.ba.io.org.br,www.caetanos.ba.gov.br,fora do .gov.br
 2905305,Cafarnaum,BA,,www.cafarnaum.ba.gov.br,sem site no Wikidata
 2905404,Cairu,BA,cairu.ba.io.org.br,www.cairu.ba.gov.br,fora do .gov.br
-2906006,Campo Formoso,BA,www.portalcampoformoso.com.br,campoformoso.ba.gov.br,fora do .gov.br
+2906006,Campo Formoso,BA,www.portalcampoformoso.com.br,www.campoformoso.ba.gov.br,fora do .gov.br
 2906105,Canápolis,BA,,www.canapolis.ba.gov.br,sem site no Wikidata
 2906204,Canarana,BA,,www.canarana.ba.gov.br,sem site no Wikidata
 2906501,Candeias,BA,www.candeias.ba.io.org.br,www.candeias.ba.gov.br,fora do .gov.br
@@ -1524,6 +1525,7 @@ ibge,municipio,uf,dominio_wikidata,dominio_usado,motivo
 3518800,Guarulhos,SP,www.guarulhos.sp.leg.br,www.guarulhos.sp.gov.br,site da câmara municipal (.leg.br)
 3520905,Ipaussu,SP,,www.ipaussu.sp.gov.br,sem site no Wikidata
 3533403,Nova Odessa,SP,camaranovaodessa.sp.gov.br,www.novaodessa.sp.gov.br,site da câmara municipal
+3534401,Osasco,SP,www.osasco.sp.gov.br,www.osasco.sp.gov.br,correção manual: o Wikidata estava sem o nome em portugues
 3542503,Reginópolis,SP,www.camarareginopolis.sp.gov.br,www.reginopolis.sp.gov.br,site da câmara municipal
 3554706,Torrinha,SP,,www.torrinha.sp.gov.br,sem site no Wikidata
 4100202,Adrianópolis,PR,,www.adrianopolis.pr.gov.br,sem site no Wikidata

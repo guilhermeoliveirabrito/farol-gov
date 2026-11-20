@@ -73,6 +73,8 @@ def premios(tempo, populacao=None):
         saida["semanas"] = [{"s": s["semana"], "d": s["data"], "parcial": s["parcial"]} for s in semanas]
         saida[ranking] = {
             "x": [s["desempate"] for s in semanas],
+            # quantas prefeituras com a mesma configuracao (mesmo servidor e nota) ficaram sem a medalha
+            "g": [s["mesmo_servidor"] for s in semanas],
             "cidades": dict(por_cidade),
             "hall": medalhas.hall_da_fama(semanas)[:HALL_MAXIMO],
         }

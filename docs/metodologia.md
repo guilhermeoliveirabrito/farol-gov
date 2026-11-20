@@ -64,8 +64,23 @@ DMARC e HTTPS têm peso maior porque são os que mais afetam o cidadão diretame
 ## Nota
 
 ```
-nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
+nota = 100 * soma(peso * grau) / soma(pesos dos itens verificados)
 ```
+
+O **grau** vai de 0 a 1, em passos de 0,05. Item não cumprido vale 0. Item parcial (`warn`) vale 0,5, menos três casos em que o parcial é fraco e vale 0,3: DMARC com `p=none` (só monitora), SPF com `?all` ou sem `all` (não bloqueia nada) e só um dos dois headers básicos.
+
+Item cumprido vale 1, menos quando para no mínimo:
+
+| Item | Desconto |
+|---|---|
+| `tls` | TLS 1.2 em vez de 1.3: −0,2 |
+| `hsts` | sem `includeSubDomains`: −0,2; sem `preload`: −0,1; `max-age` menor que 2 anos: −0,1 |
+| `headers` | sem Content-Security-Policy: −0,2; sem Referrer-Policy: −0,1; sem Permissions-Policy: −0,1 |
+| `dmarc` | `p=quarantine` em vez de `p=reject`: −0,15; sem relatórios (`rua=`): −0,1 |
+| `spf` | `~all` em vez de `-all`: −0,2 |
+| `caa` | registro herdado do domínio do estado, não do próprio: −0,2 |
+
+Até a metodologia 2, todo item cumprido valia o cheio. Com 13 itens a nota tinha umas 30 combinações possíveis: na varredura de 19/11 eram 565 cidades com a mesma nota e 29 empatadas no topo. Com os graus passam de 200 notas diferentes. As semanas antigas guardaram só o status de cada item, então nelas o item cumprido continua valendo 1.
 
 | Conceito | Nota |
 |---|---|
@@ -91,6 +106,7 @@ nota = 100 * soma(peso * valor) / soma(pesos dos itens verificados)
 
 - **Semana** vai de segunda a domingo, no horário de Brasília. Se houver mais de uma varredura na semana, vale só a última, do mesmo jeito que no histórico vale só a última varredura de cada dia.
 - **Quem concorre:** só quem teve todos os itens verificados naquela varredura.
+- **Uma medalha por configuração:** prefeituras no mesmo servidor e com a mesma nota têm o site montado do mesmo jeito (na semana de 16/11 eram 24 prefeituras de SE no servidor do governo do estado). Só a primeira delas no desempate leva a medalha, e a seguinte vai para outra configuração. Assim o pódio mostra três jeitos diferentes de fazer certo, e o pódio diz quantas ficaram de fora por serem cópia da medalhista.
 - **Pódio:** ouro, prata e bronze vão para as três maiores notas. Nota igual desempata, nesta ordem, por:
   1. mais itens cumpridos por inteiro (dois parciais somam o mesmo que um inteiro, mas valem menos aqui);
   2. mais pontos de excelência, que não mudam a nota e só desempatam: DMARC com `p=reject`, DMARC mandando relatórios (`rua=`), SPF com `-all`, TLS 1.3, HSTS com `includeSubDomains`, HSTS com `preload`, HSTS de 2 anos ou mais, Content-Security-Policy, Referrer-Policy, Permissions-Policy e CAA no próprio domínio;

@@ -94,3 +94,23 @@ def test_desempate_pela_media_das_semanas_anteriores():
     s = podios(tempo)[1]
     assert s["ouro"] == ["b"] and s["prata"] == ["a"]
     assert s["desempate"]["ouro"] == "melhor média nas semanas anteriores"
+
+
+def test_uma_medalha_por_configuracao_no_mesmo_servidor():
+    # a, b e c no mesmo servidor com a mesma nota: so a primeira (maior populacao) leva;
+    # prata e bronze vao pra outras configuracoes
+    aval = {"a": [90.0, "A", 1], "b": [90.0, "A", 1], "c": [90.0, "A", 1], "d": [85.0, "B", 4], "e": [80.0, "B", 5]}
+    snap = {"m": {
+        "a": [3, "pppp", 0, "", "10.0.0.1"], "b": [3, "pppp", 0, "", "10.0.0.1"], "c": [3, "pppp", 0, "", "10.0.0.1"],
+        "d": [3, "pppw", 0, "", "10.0.0.2"], "e": [3, "ppww", 0, "", "10.0.0.3"],
+    }}
+    s = podios([("2026-11-19", snap, aval)], populacao={"a": 100, "b": 300, "c": 200})[0]
+    assert (s["ouro"], s["prata"], s["bronze"]) == (["b"], ["d"], ["e"])
+    assert s["mesmo_servidor"] == {"ouro": 2}
+
+
+def test_mesmo_servidor_com_nota_diferente_concorre_normal():
+    aval = {"a": [90.0, "A", 1], "b": [85.0, "B", 2], "c": [80.0, "B", 3]}
+    snap = {"m": {x: [3, "pppp", 0, "", "10.0.0.1"] for x in "abc"}}
+    s = podios([("2026-11-19", snap, aval)])[0]
+    assert (s["ouro"], s["prata"], s["bronze"]) == (["a"], ["b"], ["c"])

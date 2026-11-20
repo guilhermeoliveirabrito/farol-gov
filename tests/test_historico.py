@@ -15,7 +15,7 @@ def test_compactar_e_recalcular():
     ]}
     snap = historico.compactar(dados)
     assert snap["data"] == "2026-11-16"
-    assert snap["m"]["1"] == [historico.ACESSIVEL | historico.ELEGIVEL, "p" * len(PESOS), 0]
+    assert snap["m"]["1"][:4] == [historico.ACESSIVEL | historico.ELEGIVEL, "p" * len(PESOS), 0, "u" * len(PESOS)]
 
     aval = historico.avaliar_snapshot(snap)
     assert aval["1"] == [100.0, "A", 1, 1]
@@ -87,3 +87,16 @@ def test_item_nao_verificado_tira_do_ranking_oficial_mas_nao_do_geral():
     assert aval["1"][0] == 100.0
     assert aval["1"][2] is None and aval["1"][3] == 1  # fora do oficial, 1o no geral
     assert aval["2"][2] == 1 and aval["2"][3] == 2  # a 2 e a primeira do oficial
+
+
+def test_nota_do_historico_igual_a_da_varredura():
+    # o grau de cada item vai pro historico, entao recalcular da a mesma nota da hora
+    dados = {"gerado_em": "2026-11-19T09:00:00+00:00", "resultados": [_r("1", "pass")]}
+    dados["resultados"][0]["checks"]["tls"]["detalhe"] = "TLSv1.2"
+    dados["resultados"][0]["checks"]["dmarc"]["detalhe"] = "p=quarantine"
+    from farol.checks import Resultado
+    from farol.nota import calcular_nota
+
+    na_hora = calcular_nota([Resultado(c, v["status"], v["detalhe"]) for c, v in dados["resultados"][0]["checks"].items()])
+    aval = historico.avaliar_snapshot(historico.compactar(dados))
+    assert aval["1"][0] == na_hora < 100

@@ -3,7 +3,8 @@ import re
 from .checks import ERROR, PASS, WARN
 
 # versao da metodologia; muda quando entra/sai item ou peso, pra nao comparar nota de regras diferentes
-METODOLOGIA = 2
+# 3: item cumprido deixou de valer sempre 100% (ver grau)
+METODOLOGIA = 3
 
 # ver docs/metodologia.md antes de mexer nisso. A ordem aqui e a ordem que aparece na pagina.
 PESOS = {
@@ -23,6 +24,44 @@ PESOS = {
 }
 
 VALORES = {PASS: 1.0, WARN: 0.5}
+# o que vale um item parcial quando o parcial e bem fraco (p=none no DMARC so monitora,
+# ?all no SPF nao bloqueia nada, so um dos dois headers basicos)
+PARCIAL_FRACO = {"dmarc": 0.3, "spf": 0.3, "headers": 0.3}
+
+
+def grau(check, status, detalhe=""):
+    """Quanto do item a cidade cumpre, de 0 a 1, em passos de 0,05.
+
+    Ate a metodologia 2 todo item cumprido valia 100%, e com 13 itens a nota so tinha
+    umas 30 combinacoes: 565 cidades empatadas na mesma nota, 29 no topo. Agora o
+    item cumprido perde um pouco quando para no minimo (TLS 1.2 em vez de 1.3, DMARC
+    quarantine em vez de reject, SPF ~all em vez de -all, CAA herdado do estado...).
+    Sem detalhe (testes, historico antigo) vale o cheio.
+    """
+    if status == WARN:
+        return PARCIAL_FRACO.get(check, VALORES[WARN])
+    if status != PASS:
+        return 0.0
+    d = detalhe or ""
+    g = 1.0
+    if check == "tls" and d.startswith("TLSv1.2"):
+        g -= 0.2
+    elif check == "hsts" and d.startswith("max-age="):
+        dl = d.lower()
+        m = re.match(r"max-age=(\d+)", dl)
+        g -= 0.0 if "includesubdomains" in dl else 0.2
+        g -= 0.0 if "preload" in dl else 0.1
+        g -= 0.0 if (m and int(m.group(1)) >= 2 * 365 * 86400) else 0.1
+    elif check == "headers" and d.startswith("nosniff e anti-clickjacking"):
+        g -= 0.0 if "CSP" in d else 0.2
+        g -= 0.0 if "Referrer-Policy" in d else 0.1
+        g -= 0.0 if "Permissions-Policy" in d else 0.1
+    elif check == "dmarc" and d.startswith("p="):
+        g -= 0.15 if d.startswith("p=quarantine") else 0.0
+        g -= 0.0 if "com relatorios" in d else 0.1
+    elif check == "spf" and d.endswith("~all") or check == "caa" and "herdado" in d:
+        g -= 0.2
+    return round(round(g * 20) / 20, 2)
 
 FAIXAS = [(90, "A"), (75, "B"), (55, "C"), (35, "D")]
 
@@ -30,8 +69,10 @@ FAIXAS = [(90, "A"), (75, "B"), (55, "C"), (35, "D")]
 COBERTURA_MINIMA = 0.7
 
 
-def calcular_nota(resultados):
+def calcular_nota(resultados, graus=None):
     """Nota de 0 a 100 considerando so os itens que deu pra verificar.
+
+    graus: {check: 0..1} ja calculado (vem do historico); sem ele, sai de grau().
 
     Item com `error` (timeout nosso, DNS que nao respondeu) sai da conta em vez de
     valer zero: a prefeitura nao deve perder ponto por uma falha da varredura.
@@ -44,7 +85,12 @@ def calcular_nota(resultados):
     peso_verificado = sum(PESOS[r.check] for r in verificados)
     if not peso_verificado or peso_verificado < COBERTURA_MINIMA * peso_total:
         return None
-    pontos = sum(PESOS[r.check] * VALORES.get(r.status, 0.0) for r in verificados)
+    def valor(r):
+        if graus is not None and r.check in graus:
+            return graus[r.check]
+        return grau(r.check, r.status, r.detalhe)
+
+    pontos = sum(PESOS[r.check] * valor(r) for r in verificados)
     return round(100 * pontos / peso_verificado, 1)
 
 

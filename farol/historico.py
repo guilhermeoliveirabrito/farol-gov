@@ -14,9 +14,11 @@ from pathlib import Path
 
 from .checks import Resultado
 from .dominios import uf_do_ibge
-from .nota import calcular_nota, conceito, excelencia
+from .nota import PESOS, calcular_nota, conceito, excelencia, grau
 
 CODIGO = {"pass": "p", "warn": "w", "fail": "f", "error": "e"}
+# grau de cada item em passos de 0,05: "a" = 0, "u" = 1
+GRAUS = "abcdefghijklmnopqrstu"
 STATUS = {v: k for k, v in CODIGO.items()}
 
 ACESSIVEL = 1
@@ -56,7 +58,12 @@ def compactar(dados):
         if not AVISOS_FORA.intersection(r.get("avisos", [])):
             flags |= ELEGIVEL
         status = "".join(CODIGO.get(r["checks"].get(c, {}).get("status"), "-") for c in checks)
-        municipios[r["ibge"]] = [flags, status, excelencia(r.get("checks", {}))]
+        graus = "".join(
+            GRAUS[round(20 * grau(c, r["checks"][c].get("status"), r["checks"][c].get("detalhe", "")))] if c in r["checks"] else "-"
+            for c in checks
+        )
+        # 4o: grau de cada item (metodologia 3). 5o: ip, pra saber quem divide servidor
+        municipios[r["ibge"]] = [flags, status, excelencia(r.get("checks", {})), graus, r.get("ip") or ""]
     return {
         "data": dia_da_varredura(dados["gerado_em"]),
         "metodologia": dados.get("metodologia", 1),
@@ -82,9 +89,11 @@ def carregar(pasta):
     return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(pasta.glob("*.json"))]
 
 
-def nota_do_status(checks, status):
+def nota_do_status(checks, status, graus=""):
     resultados = [Resultado(c, STATUS[s]) for c, s in zip(checks, status) if s in STATUS]
-    return calcular_nota(resultados)
+    # historico antigo nao tem os graus: item cumprido vale o cheio, como era antes
+    valores = {c: GRAUS.index(g) / 20 for c, g in zip(checks, graus or "") if g in GRAUS and c in PESOS}
+    return calcular_nota(resultados, valores if graus else None)
 
 
 def posicoes(notas):
@@ -105,8 +114,9 @@ def avaliar_snapshot(snap):
     """
     checks = snap["checks"]
     geral, oficial, saida = {}, {}, {}
-    for ibge, (flags, status, *_) in snap["m"].items():
-        nota = nota_do_status(checks, status) if flags & ACESSIVEL else None
+    for ibge, (flags, status, *resto) in snap["m"].items():
+        graus = resto[1] if len(resto) > 1 else ""
+        nota = nota_do_status(checks, status, graus) if flags & ACESSIVEL else None
         saida[ibge] = [nota, conceito(nota) if nota is not None else None, None, None]
         if nota is not None and flags & ELEGIVEL:
             geral[ibge] = nota

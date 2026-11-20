@@ -13,9 +13,31 @@ def test_nota_maxima_e_minima():
 
 
 def test_warn_vale_metade():
-    # so dmarc (peso 3) em warn, o resto falhou
+    # so redirect (peso 2) em warn, o resto falhou
+    resultados = [Resultado(c, FAIL) for c in PESOS if c != "redirect"] + [Resultado("redirect", WARN)]
+    assert calcular_nota(resultados) == round(100 * 1.0 / sum(PESOS.values()), 1)
+
+
+def test_parcial_fraco_vale_menos():
+    # DMARC p=none so monitora: 30% do item, nao metade
     resultados = [Resultado(c, FAIL) for c in PESOS if c != "dmarc"] + [Resultado("dmarc", WARN)]
-    assert calcular_nota(resultados) == round(100 * 1.5 / sum(PESOS.values()), 1)
+    assert calcular_nota(resultados) == round(100 * 0.9 / sum(PESOS.values()), 1)
+
+
+def test_grau_do_item_cumprido():
+    from farol.nota import grau
+
+    assert grau("tls", PASS, "TLSv1.3") == 1.0
+    assert grau("tls", PASS, "TLSv1.2") == 0.8
+    assert grau("hsts", PASS, "max-age=63072000; includeSubDomains; preload") == 1.0
+    assert grau("hsts", PASS, "max-age=31536000") == 0.6
+    assert grau("dmarc", PASS, "p=reject; com relatorios") == 1.0
+    assert grau("dmarc", PASS, "p=quarantine") == 0.75
+    assert grau("spf", PASS, "via _spf.x: ~all") == 0.8
+    assert grau("caa", PASS, "3 registro(s) CAA (herdado de sp.gov.br)") == 0.8
+    assert grau("headers", PASS, "nosniff e anti-clickjacking, com CSP") == 0.8
+    # sem detalhe vale o cheio
+    assert grau("tls", PASS) == 1.0
 
 
 def test_conceitos():

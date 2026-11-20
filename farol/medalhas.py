@@ -66,20 +66,9 @@ def _chaves(snap, aval, anteriores, ranking="oficial", populacao=None):
     return chaves
 
 
-def _classificar(chaves):
-    """Posicao densa (1, 1, 2, 3...) pela tupla inteira de criterios.
-
-    Densa e nao olimpica: se dois empatam em tudo no ouro, o seguinte leva prata.
-    Com a olimpica (1, 1, 3) um empate no topo sumia com a prata e o bronze, e como
-    cidades no mesmo servidor tem a configuracao identica, o podio virava so ouro.
-    """
-    ordem = sorted(chaves, key=lambda i: chaves[i], reverse=True)
-    pos, anterior, saida = 0, None, {}
-    for ibge in ordem:
-        if chaves[ibge] != anterior:
-            pos, anterior = pos + 1, chaves[ibge]
-        saida[ibge] = pos
-    return saida, ordem
+def _servidor(snap, ibge):
+    linha = snap["m"].get(ibge, []) if snap else []
+    return linha[4] if len(linha) > 4 else ""
 
 
 def podios(tempo, ranking="oficial", populacao=None):
@@ -87,7 +76,14 @@ def podios(tempo, ranking="oficial", populacao=None):
 
     Devolve uma lista de semanas, da mais antiga pra mais nova:
     {"semana", "data", "parcial", "ouro": [ibge...], "prata": [...], "bronze": [...],
-     "desempate": {tipo: criterio}} (so quando a medalha foi decidida no desempate)
+     "desempate": {tipo: criterio}, "mesmo_servidor": {tipo: quantas iguais ficaram de fora},
+     "ordem": [ibge...]}
+
+    Uma medalha por configuracao: cidades no mesmo servidor e com a mesma nota tem o
+    site montado do mesmo jeito (na semana de 16/11, 24 prefeituras de SE no servidor
+    do governo do estado). So a primeira delas no desempate leva; a medalha seguinte
+    vai pra outra configuracao, entao o podio mostra tres jeitos diferentes de fazer
+    certo em vez de tres copias do mesmo.
     """
     ultima_da_semana = {}
     for data, snap, aval in tempo:
@@ -98,17 +94,48 @@ def podios(tempo, ranking="oficial", populacao=None):
     for i, semana in enumerate(ordem_semanas):
         data, snap, aval = ultima_da_semana[semana]
         chaves = _chaves(snap, aval, finais[-SEMANAS_DE_CONSTANCIA:], ranking, populacao)
-        posicoes, ordem = _classificar(chaves)
-        podio = {"semana": semana, "data": data, "parcial": i == len(ordem_semanas) - 1, "desempate": {}, "ordem": ordem}
-        for p, tipo in enumerate(TIPOS, 1):
-            podio[tipo] = sorted(ibge for ibge, pos in posicoes.items() if pos == p)
-            if podio[tipo]:
-                # quem veio logo depois: se tinha a mesma nota, conta qual criterio separou
-                seguinte = next((x for x in ordem if posicoes[x] > p), None)
-                if seguinte is not None:
-                    a, b = chaves[podio[tipo][0]], chaves[seguinte]
-                    if a[0] == b[0]:
-                        podio["desempate"][tipo] = next(CRITERIOS[k] for k in range(1, len(a)) if a[k] != b[k])
+        ordem = sorted(chaves, key=lambda x: (chaves[x], x), reverse=True)
+        podio = {"semana": semana, "data": data, "parcial": i == len(ordem_semanas) - 1, "desempate": {}, "mesmo_servidor": {}, "ordem": ordem}
+        for tipo in TIPOS:
+            podio[tipo] = []
+
+        premiadas = set()  # (servidor, nota) que ja levou medalha nesta semana
+        nivel, chave_nivel, candidatos = -1, None, []
+        for ibge in ordem:
+            servidor = _servidor(snap, ibge)
+            config = (servidor, chaves[ibge][0])
+            if servidor and config in premiadas and chaves[ibge] != chave_nivel:
+                continue
+            if chaves[ibge] != chave_nivel:
+                nivel += 1
+                chave_nivel = chaves[ibge]
+                if nivel >= len(TIPOS):
+                    break
+            podio[TIPOS[nivel]].append(ibge)
+            candidatos.append(ibge)
+            if servidor:
+                premiadas.add(config)
+        for tipo in TIPOS:
+            podio[tipo].sort()
+
+        # o que separou cada medalha da seguinte (so quando a nota empatou)
+        for n, tipo in enumerate(TIPOS):
+            if not podio[tipo]:
+                continue
+            a = chaves[podio[tipo][0]]
+            seguinte = next((x for x in candidatos if x in podio.get(TIPOS[n + 1], [])), None) if n + 1 < len(TIPOS) else None
+            if seguinte is None:
+                # depois do bronze: a primeira que nao levou e nao e copia de quem levou
+                seguinte = next((x for x in ordem if x not in candidatos and (_servidor(snap, x), chaves[x][0]) not in premiadas), None)
+            if seguinte is not None:
+                b = chaves[seguinte]
+                if a[0] == b[0] and a != b:
+                    podio["desempate"][tipo] = next(CRITERIOS[k] for k in range(1, len(a)) if a[k] != b[k])
+            servidor = _servidor(snap, podio[tipo][0])
+            if servidor:
+                iguais = sum(1 for x in ordem if _servidor(snap, x) == servidor and chaves[x][0] == a[0]) - len(podio[tipo])
+                if iguais > 0:
+                    podio["mesmo_servidor"][tipo] = iguais
         semanas.append(podio)
         finais.append(aval)
     return semanas

@@ -1478,7 +1478,15 @@ function podio(semana, porIbge, atual) {
     const cidades = semana[tipo].map((ibge) => porIbge.get(ibge)).filter(Boolean);
     const nomes = cidades.length
       ? cidades.map((r) => {
-          const b = el("button", { type: "button", class: "podio-cidade", title: titulo(tipo) }, el("b", { text: r.municipio }), el("span", { text: atual ? `${r.uf}, nota ${fmtNota(r.nota)}` : r.uf }));
+          const copias = semana.g?.[tipo];
+          const b = el(
+            "button",
+            { type: "button", class: "podio-cidade", title: titulo(tipo) },
+            el("b", { text: r.municipio }),
+            el("span", { text: atual ? `${r.uf}, nota ${fmtNota(r.nota)}` : r.uf }),
+            // a medalha vale pra configuracao; as copias no mesmo servidor nao levam outra
+            copias > 0 ? el("small", { class: "podio-copias", text: `e mais ${copias} no mesmo servidor, com a mesma configuração` }) : null,
+          );
           b.addEventListener("click", () => abrirFicha(r));
           return b;
         })
@@ -1495,7 +1503,7 @@ function medalhasSecao(resumo) {
   const porIbge = new Map(todos.map((r) => [r.ibge, r]));
 
   // monta o podio de cada semana a partir das medalhas de cada cidade
-  const semanas = semanasPremio.map((s, i) => ({ ...s, ouro: [], prata: [], bronze: [], x: (dados.x || [])[i] || s.x || {} }));
+  const semanas = semanasPremio.map((s, i) => ({ ...s, ouro: [], prata: [], bronze: [], x: (dados.x || [])[i] || s.x || {}, g: (dados.g || [])[i] || {} }));
   for (const [ibge, lista] of Object.entries(dados.cidades || {})) {
     for (const [i, t] of lista) if (semanas[i] && MEDALHAS[t]) semanas[i][MEDALHAS[t]].push(ibge);
   }

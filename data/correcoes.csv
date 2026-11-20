@@ -1,4 +1,5 @@
-ibge,dominio,motivo
-3304557,prefeitura.rio,o Wikidata aponta o site de turismo (riotur.rio)
-3106200,prefeitura.pbh.gov.br,o Wikidata aponta o portal de turismo (portalbelohorizonte.com.br)
-4314902,prefeitura.poa.br,site oficial da prefeitura fica fora do .gov.br
+ibge,municipio,dominio,motivo
+3304557,Rio de Janeiro,prefeitura.rio,o Wikidata aponta o site de turismo (riotur.rio)
+3106200,Belo Horizonte,prefeitura.pbh.gov.br,o Wikidata aponta o portal de turismo (portalbelohorizonte.com.br)
+4314902,Porto Alegre,prefeitura.poa.br,site oficial da prefeitura fica fora do .gov.br
+3534401,Osasco,www.osasco.sp.gov.br,o Wikidata estava sem o nome em portugues

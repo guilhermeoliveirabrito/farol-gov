@@ -365,6 +365,13 @@ def montar(raiz, saida):
     if resultados.exists():
         dados = json.loads(resultados.read_text(encoding="utf-8"))
         snapshots = historico.carregar(raiz / "data" / "historico")
+        # nome vazio no resultado (o wikidata ficou sem rotulo em portugues): usa o da lista atual
+        caminho = Path(raiz) / "data" / "dominios.csv"
+        if caminho.exists():
+            nomes = {e.ibge: e.municipio for e in ler_csv(caminho) if e.municipio}
+            for r in dados["resultados"]:
+                if not (r.get("municipio") or "").strip():
+                    r["municipio"] = nomes.get(r["ibge"], r.get("municipio") or "")
         resumo, por_uf, evolucao = resumir(dados, snapshots, populacoes(raiz))
         compacto(resumo, saida / "dados" / "resumo.json")
         compacto(evolucao, saida / "dados" / "historico.json")

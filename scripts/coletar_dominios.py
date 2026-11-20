@@ -45,7 +45,10 @@ SELECT ?ibge ?nome ?site ?coord ?pop WHERE {
   OPTIONAL { ?mun wdt:P1082 ?pop . }
   OPTIONAL { ?mun rdfs:label ?pt . FILTER(LANG(?pt) = "pt") }
   OPTIONAL { ?mun rdfs:label ?ptbr . FILTER(LANG(?ptbr) = "pt-br") }
-  BIND(COALESCE(?pt, ?ptbr, "") AS ?nome)
+  OPTIONAL { ?mun rdfs:label ?mul . FILTER(LANG(?mul) = "mul") }
+  OPTIONAL { ?mun rdfs:label ?en . FILTER(LANG(?en) = "en") }
+  # Osasco chegou a ficar sem rotulo em portugues e apareceu sem nome no site
+  BIND(COALESCE(?pt, ?ptbr, ?mul, ?en, "") AS ?nome)
 }
 """
 
@@ -85,6 +88,8 @@ def montar_lista(linhas):
         if len(ibge) != 7:
             continue
         item = por_ibge.setdefault(ibge, {"nome": linha["nome"]["value"], "sites": [], "coord": ("", ""), "pop": 0})
+        if not item["nome"].strip():
+            item["nome"] = linha.get("nome", {}).get("value", "")
         host = normalizar_host(linha.get("site", {}).get("value", ""))
         if host and not deve_ignorar(host):
             item["sites"].append(host)
@@ -162,7 +167,9 @@ def corrigir(com_site, sem_site, existe, correcoes=None, workers=32):
         ent, tinha_site = par
         if ent.ibge in correcoes:
             c = correcoes[ent.ibge]
-            return replace(ent, dominio=c["dominio"].strip(), origem="manual"), f"correção manual: {c.get('motivo', '').strip()}"
+            nome = (c.get("municipio") or "").strip() or ent.municipio
+            dominio = (c.get("dominio") or "").strip() or ent.dominio
+            return replace(ent, dominio=dominio, municipio=nome, origem="manual"), f"correção manual: {c.get('motivo', '').strip()}"
         motivo = None
         if not tinha_site:
             motivo = "sem site no Wikidata"

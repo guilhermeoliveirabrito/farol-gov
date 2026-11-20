@@ -238,7 +238,7 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 
 .cidades { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); }
 .linha {
-  width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 36px 190px 48px 64px 40px; gap: 16px; align-items: center;
+  width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 36px 216px 48px 64px 40px; gap: 16px; align-items: center;
   padding: 12px 8px; background: none; border: 0; border-bottom: 1px solid var(--linha); text-align: left; cursor: pointer;
   transition: background .15s;
 }
@@ -250,9 +250,10 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .linha .situacao { grid-column: span 3; text-align: right; }
 .linha .mov { font-size: .84rem; }
 
-/* as 9 luzes, uma por item verificado */
-.luzes { display: flex; gap: 4px; }
-.luzes i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--cX); opacity: .35; }
+/* as luzes, uma por item verificado. Em grade: se entrar item novo elas encolhem
+   em vez de empurrar a nota (com 16 itens a fileira de 10px ja passava da coluna) */
+.luzes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 10px); gap: 3px; min-width: 0; }
+.luzes i { width: 100%; aspect-ratio: 1; border-radius: 50%; background: var(--cX); opacity: .35; }
 .luzes i.pass { background: var(--cA); opacity: 1; }
 .luzes i.warn { background: var(--cC); opacity: 1; }
 .luzes i.fail { background: var(--cF); opacity: 1; }
@@ -284,9 +285,10 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 /* legenda das bolinhas e esqueleto enquanto o json chega */
 .legenda-luzes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0 0 12px; color: var(--suave); font-size: .84rem; }
 .legenda-luzes > span { display: inline-flex; align-items: center; gap: 6px; }
-.legenda-luzes .luzes { display: inline-flex; }
+.legenda-luzes .luzes { display: inline-flex; gap: 4px; }
+.legenda-luzes .luzes i { width: 10px; }
 
-.esqueleto { display: grid; grid-template-columns: minmax(0, 1fr) 190px 64px; gap: 16px; padding: 18px 8px; border-bottom: 1px solid var(--linha); }
+.esqueleto { display: grid; grid-template-columns: minmax(0, 1fr) 216px 64px; gap: 16px; padding: 18px 8px; border-bottom: 1px solid var(--linha); }
 .esqueleto span {
   height: 14px; border-radius: 7px;
   background: linear-gradient(90deg, var(--linha) 0 40%, var(--papel) 50%, var(--linha) 60% 100%) 0 0 / 300% 100%;

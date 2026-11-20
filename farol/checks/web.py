@@ -35,6 +35,8 @@ class Resposta:
     cookies: list = field(default_factory=list)
     # validade do certificado (epoch), so quando a conexao foi verificada
     expira: float | None = None
+    # quando o certificado foi emitido (epoch): certificado curto = renovacao automatica
+    emitido: float | None = None
 
 
 class ErroConexao(Exception):
@@ -100,11 +102,13 @@ class ClienteHTTP:
             conn.connect()
             # pega versao e certificado antes do getresponse, porque com Connection: close o sock some
             tls = conn.sock.version() if partes.scheme == "https" else None
-            expira = None
+            expira = emitido = None
             if partes.scheme == "https" and verificar:
                 cert = conn.sock.getpeercert() or {}
                 if cert.get("notAfter"):
                     expira = ssl.cert_time_to_seconds(cert["notAfter"])
+                if cert.get("notBefore"):
+                    emitido = ssl.cert_time_to_seconds(cert["notBefore"])
             conn.request("GET", caminho, headers={
                 "User-Agent": USER_AGENT,
                 "Accept": "text/html,*/*;q=0.8",
@@ -119,7 +123,7 @@ class ClienteHTTP:
                     cookies.append(v)
                 headers[k] = f"{headers[k]}, {v}" if k in headers else v
             corpo = _ler_com_prazo(resp, ler, time.monotonic() + self.timeout * 2) if ler else b""
-            return Resposta(url=url, status=resp.status, headers=headers, corpo=corpo, tls=tls, cookies=cookies, expira=expira)
+            return Resposta(url=url, status=resp.status, headers=headers, corpo=corpo, tls=tls, cookies=cookies, expira=expira, emitido=emitido)
         except ssl.SSLCertVerificationError as e:
             raise ErroConexao("certificado", e.verify_message or str(e)) from e
         except ssl.SSLError as e:
@@ -207,8 +211,20 @@ def avaliar_headers(headers):
     csp = headers.get("content-security-policy", "").lower()
     frame = "x-frame-options" in headers or "frame-ancestors" in csp
 
+    # CSP que nao libera script inline nem eval: a que de fato segura um XSS
+    estrita = bool(csp) and "'unsafe-inline'" not in csp and "'unsafe-eval'" not in csp
     if nosniff and frame:
-        extras = [nome for nome, tem in (("CSP", csp), ("Referrer-Policy", "referrer-policy" in headers), ("Permissions-Policy", "permissions-policy" in headers)) if tem]
+        extras = [
+            nome
+            for nome, tem in (
+                ("CSP", csp),
+                ("CSP estrita", estrita),
+                ("Referrer-Policy", "referrer-policy" in headers),
+                ("Permissions-Policy", "permissions-policy" in headers),
+                ("COOP", "cross-origin-opener-policy" in headers),
+            )
+            if tem
+        ]
         return Resultado("headers", PASS, "nosniff e anti-clickjacking" + (", com " + ", ".join(extras) if extras else ""))
     if nosniff or frame:
         falta = "anti-clickjacking" if nosniff else "X-Content-Type-Options"
@@ -227,6 +243,33 @@ ATIVO = re.compile(
 PASSIVO = re.compile(r"<(?:img|audio|video|source)\b[^>]*?\ssrc\s*=\s*[\"']?http://", re.I)
 
 
+SCRIPT_EXTERNO = re.compile(r"<script\b([^>]*?)\ssrc\s*=\s*[\"']?(?:https?:)?//([^/\"'>\s:]+)", re.I)
+
+
+def scripts_de_fora(html, url):
+    """Sites de fora de onde a pagina puxa script, e se todos vem com SRI (integrity).
+
+    Cada site de fora e mais alguem que, se for invadido, roda codigo na pagina da
+    prefeitura. Com SRI o navegador recusa o script se ele mudar."""
+    host = (urlsplit(url).hostname or "").lower().removeprefix("www.")
+    hosts, sem_sri = set(), 0
+    for atributos, h in SCRIPT_EXTERNO.findall(html):
+        h = h.lower()
+        if h == host or h.endswith("." + host) or host.endswith("." + h.removeprefix("www.")):
+            continue
+        hosts.add(h)
+        if "integrity" not in atributos.lower():
+            sem_sri += 1
+    return hosts, sem_sri == 0
+
+
+def _sobre_scripts(html, url):
+    hosts, com_sri = scripts_de_fora(html, url)
+    if not hosts:
+        return "; nenhum script de fora"
+    return f"; scripts de {len(hosts)} site(s) de fora" + (", todos com SRI" if com_sri else "")
+
+
 def avaliar_conteudo_misto(resp):
     if not resp.url.startswith("https://"):
         return Resultado("conteudo_misto", FAIL, "a pagina final e servida sem HTTPS")
@@ -238,8 +281,8 @@ def avaliar_conteudo_misto(resp):
     if ativos:
         return Resultado("conteudo_misto", FAIL, f"{ativos} script(s), iframe(s) ou formulario(s) por http://")
     if passivos:
-        return Resultado("conteudo_misto", WARN, f"{passivos} imagem(ns) ou midia(s) por http://")
-    return Resultado("conteudo_misto", PASS, "nenhum recurso carregado sem criptografia")
+        return Resultado("conteudo_misto", WARN, f"{passivos} imagem(ns) ou midia(s) por http://" + _sobre_scripts(html, resp.url))
+    return Resultado("conteudo_misto", PASS, "nenhum recurso carregado sem criptografia" + _sobre_scripts(html, resp.url))
 
 
 def _atributos_cookie(cookie):
@@ -271,14 +314,16 @@ def avaliar_cookies(cookies):
     return Resultado("cookies", PASS, detalhe)
 
 
-def avaliar_validade(expira, agora=None):
+def avaliar_validade(expira, agora=None, emitido=None):
     """Complementa o check de HTTPS: certificado valido mas vencendo logo vira parcial."""
     if expira is None:
         return Resultado("https", PASS, "certificado valido")
     dias = round((expira - (agora or time.time())) / 86400)
+    # duracao total: certificado de ate ~3 meses quase sempre e renovado sozinho (ACME)
+    duracao = f"; certificado de {round((expira - emitido) / 86400)} dias" if emitido else ""
     if dias < CERT_DIAS_AVISO:
-        return Resultado("https", WARN, f"certificado valido, mas vence em {dias} dia(s)")
-    return Resultado("https", PASS, f"certificado valido por mais {dias} dias")
+        return Resultado("https", WARN, f"certificado valido, mas vence em {dias} dia(s){duracao}")
+    return Resultado("https", PASS, f"certificado valido por mais {dias} dias{duracao}")
 
 
 def avaliar_security_txt(resp):
@@ -363,7 +408,7 @@ def checar_web(host, cliente):
     try:
         resp_https = cliente.get(f"https://{host}/", verificar=True, ler=CORPO_MAXIMO)
         cert_ok = True
-        resultados.append(avaliar_validade(resp_https.expira))
+        resultados.append(avaliar_validade(resp_https.expira, emitido=resp_https.emitido))
     except ErroConexao as e:
         erro_https = e
         if e.tipo == "certificado":

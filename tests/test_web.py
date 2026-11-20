@@ -275,3 +275,29 @@ def test_cookies_sem_samesite_e_security_txt_sem_expires():
     corpo = b"Contact: mailto:a@b\nExpires: 2027-01-01T00:00:00Z"
     r = avaliar_security_txt(resp("https://x/.well-known/security.txt", headers={"content-type": "text/plain"}, corpo=corpo))
     assert r.detalhe == "arquivo com Contact e Expires"
+
+
+def test_scripts_de_fora_e_sri():
+    from farol.checks.web import avaliar_conteudo_misto, scripts_de_fora
+
+    html = (
+        '<script src="/js/app.js"></script>'
+        '<script src="https://www.cidade.sp.gov.br/a.js"></script>'
+        '<script src="https://cdn.jsdelivr.net/x.js" integrity="sha384-abc"></script>'
+        '<script src="//www.googletagmanager.com/gtm.js"></script>'
+    )
+    hosts, com_sri = scripts_de_fora(html, "https://www.cidade.sp.gov.br/")
+    assert hosts == {"cdn.jsdelivr.net", "www.googletagmanager.com"} and not com_sri
+    r = avaliar_conteudo_misto(resp("https://www.cidade.sp.gov.br/", corpo=b"<html><p>oi</p></html>"))
+    assert r.detalhe.endswith("; nenhum script de fora")
+
+
+def test_csp_estrita_e_duracao_do_certificado():
+    from farol.checks.web import avaliar_validade
+
+    h = {"x-content-type-options": "nosniff", "content-security-policy": "default-src 'self'; frame-ancestors 'self'"}
+    assert "CSP estrita" in avaliar_headers(h).detalhe
+    h["content-security-policy"] += "; script-src 'self' 'unsafe-inline'"
+    assert "CSP estrita" not in avaliar_headers(h).detalhe
+    r = avaliar_validade(1000 * 86400, agora=940 * 86400, emitido=910 * 86400)
+    assert r.detalhe == "certificado valido por mais 60 dias; certificado de 90 dias"

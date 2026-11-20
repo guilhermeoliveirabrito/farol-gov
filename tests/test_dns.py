@@ -196,3 +196,24 @@ def test_email_tls():
 def test_dmarc_com_pct_menor_que_100():
     r = avaliar_dmarc(["v=DMARC1; p=reject; pct=50; rua=mailto:x@y"])
     assert r.status == PASS and r.detalhe == "p=reject; com relatorios; pct=50"
+
+
+def test_detalhes_de_dmarc_e_caa():
+    r = avaliar_dmarc(["v=DMARC1; p=reject; adkim=s; rua=mailto:x@y"])
+    assert r.detalhe == "p=reject; com relatorios; alinhamento estrito"
+    resolver = FakeResolver(caa={"cidade.sp.gov.br": ['0 issue "letsencrypt.org"', '0 iodef "mailto:ti@cidade.sp.gov.br"']})
+    assert checar_caa("cidade.sp.gov.br", resolver).detalhe == "1 registro(s) CAA com iodef"
+
+
+def test_infra_dns():
+    from farol.checks.dns import infra_dns
+
+    class R(FakeResolver):
+        def tem_ipv6(self, nome):
+            return True
+
+        def ns(self, nome):
+            return ["ns1.provedor.com.br", "ns2.provedor.com.br", "dns1.outro.net"] if nome == "cidade.sp.gov.br" else []
+
+    assert infra_dns("www.cidade.sp.gov.br", "cidade.sp.gov.br", R()) == "IPv6; 3 servidores DNS em 2 provedor(es)"
+    assert infra_dns("www.cidade.sp.gov.br", "cidade.sp.gov.br", FakeResolver()) == ""

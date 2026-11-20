@@ -113,6 +113,16 @@ class ResolverDNS:
             return []
         return [r.to_text() for r in resp.rrset]
 
+    def ns(self, nome):
+        resp, _ = self._resolve(nome, "NS")
+        if resp is None or resp.rrset is None:
+            return []
+        return [r.to_text().rstrip(".").lower() for r in resp.rrset]
+
+    def tem_ipv6(self, nome):
+        resp, _ = self._resolve(nome, "AAAA")
+        return resp is not None and resp.rrset is not None and len(resp.rrset) > 0
+
 
 def avaliar_spf(registros):
     spf = [r for r in registros if r.lower().startswith("v=spf1")]
@@ -164,6 +174,9 @@ def avaliar_dmarc(registros):
         pct = tags.get("pct", "100").strip()
         if pct.isdigit() and int(pct) < 100:
             detalhe += f"; pct={int(pct)}"
+        # estrito: o dominio do remetente tem que ser exatamente o da prefeitura, nao um subdominio
+        if tags.get("adkim", "").strip() == "s" or tags.get("aspf", "").strip() == "s":
+            detalhe += "; alinhamento estrito"
         return Resultado("dmarc", PASS, detalhe)
     if politica == "none":
         return Resultado("dmarc", WARN, "p=none so monitora, nao bloqueia")
@@ -224,6 +237,42 @@ def checar_email_tls(dominio, resolver):
         return Resultado("email_tls", ERROR, str(e))
 
 
+def _dominio_registrado(nome):
+    """ns1.provedor.com.br -> provedor.com.br; dns.google -> dns.google."""
+    partes = nome.rstrip(".").split(".")
+    if len(partes) >= 3 and partes[-1] == "br" and partes[-2] in ("com", "net", "org", "gov", "edu", "art", "nom", "eti", "inf"):
+        return ".".join(partes[-3:])
+    return ".".join(partes[-2:])
+
+
+def infra_dns(host, dominio, resolver):
+    """Texto que vai junto do resultado de DNSSEC: IPv6 no site e servidores DNS.
+
+    Nao muda a nota: vira detalhe. Servidor DNS em dois provedores diferentes segura o
+    dominio no ar quando um deles cai; IPv6 e o protocolo atual da internet."""
+    partes = []
+    try:
+        if getattr(resolver, "tem_ipv6", None) and resolver.tem_ipv6(host):
+            partes.append("IPv6")
+    except ErroDNS:
+        pass
+    servidores = []
+    nomes = dominio.rstrip(".").split(".")
+    try:
+        if getattr(resolver, "ns", None):
+            # zona da prefeitura ou, se ela nao for delegada, a de cima (sem chegar no gov.br)
+            for i in range(max(1, len(nomes) - 3)):
+                servidores = resolver.ns(".".join(nomes[i:]))
+                if servidores:
+                    break
+    except ErroDNS:
+        servidores = []
+    if servidores:
+        provedores = {_dominio_registrado(s) for s in servidores}
+        partes.append(f"{len(servidores)} servidores DNS em {len(provedores)} provedor(es)")
+    return "; ".join(partes)
+
+
 def checar_dnssec(host, resolver):
     """Devolve (existe, Resultado, ips). Se o host nem existe, o resto nem precisa rodar."""
     try:
@@ -254,10 +303,13 @@ def checar_caa(dominio, resolver, zona_responde=False):
     try:
         for i in range(len(partes) - 1):
             nome = ".".join(partes[i:])
-            registros = [r for r in resolver.caa(nome) if " issue " in f" {r} " or " issuewild " in f" {r} "]
+            todos = resolver.caa(nome)
+            registros = [r for r in todos if " issue " in f" {r} " or " issuewild " in f" {r} "]
             if registros:
                 origem = "" if i == 0 else f" (herdado de {nome})"
-                return Resultado("caa", PASS, f"{len(registros)} registro(s) CAA{origem}")
+                # iodef: pra onde a autoridade avisa quando alguem pede certificado que a politica nao deixa
+                iodef = " com iodef" if any(" iodef " in f" {r} " for r in todos) else ""
+                return Resultado("caa", PASS, f"{len(registros)} registro(s) CAA{iodef}{origem}")
     except ErroDNS as e:
         if zona_responde:
             return Resultado("caa", FAIL, f"o DNS de {nome} nao responde a consultas CAA")

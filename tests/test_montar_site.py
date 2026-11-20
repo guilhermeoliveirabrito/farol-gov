@@ -240,3 +240,15 @@ def test_lista_segue_a_ordem_do_desempate():
     campo = {c: i for i, c in enumerate(resumo["campos"])}
     ordem = {m[campo["ibge"]]: m[campo["ord"]] for m in resumo["municipios"]}
     assert ordem == {"2304400": 1, "2611606": 2}
+
+
+def test_grupo_de_mesma_configuracao():
+    a, b, c = _resultado("2611606", "PE"), _resultado("2304400", "CE"), _resultado("3550308", "SP", status="warn")
+    for r in (a, b, c):
+        r["ip"] = "10.0.0.1"
+    resumo, _, _ = montar_site.resumir({"gerado_em": "2026-11-19T09:00:00+00:00", "total": 3, "resultados": [a, b, c]}, [])
+    campo = {k: i for i, k in enumerate(resumo["campos"])}
+    grp = {m[campo["ibge"]]: m[campo["grp"]] for m in resumo["municipios"]}
+    # a e b: mesmo ip e mesma nota; c tem nota diferente
+    assert grp["2611606"] == grp["2304400"] is not None
+    assert grp["3550308"] is None

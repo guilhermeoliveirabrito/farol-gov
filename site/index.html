@@ -42,11 +42,11 @@
       </a>
       <nav aria-label="Seções">
         <a href="#itens">O que falta</a>
-        <a href="#evolucao">Evolução</a>
-        <a href="#medalhas">Medalhas</a>
+        <a href="#medalhas">Pódio</a>
         <a href="#movimento">Quem subiu</a>
         <a href="#estados">Estados</a>
         <a href="#cidades">Cidades</a>
+        <a href="#evolucao">Evolução</a>
         <a href="https://github.com/guilhermeoliveirabrito/farol-gov" rel="noopener">Código</a>
       </nav>
     </header>
@@ -88,6 +88,24 @@
     </p>
   </noscript>
 
+  <div class="barra" id="barra" aria-hidden="true">
+    <div class="largura barra-dentro">
+      <a class="marca" href="#" tabindex="-1">
+        <img src="favicon.svg" alt="" width="20" height="20">
+        farol-gov
+      </a>
+      <nav aria-label="Seções (barra fixa)">
+          <a tabindex="-1" href="#itens">O que falta</a>
+          <a tabindex="-1" href="#medalhas">Pódio</a>
+          <a tabindex="-1" href="#movimento">Quem subiu</a>
+          <a tabindex="-1" href="#estados">Estados</a>
+          <a tabindex="-1" href="#cidades">Cidades</a>
+          <a tabindex="-1" href="#evolucao">Evolução</a>
+      </nav>
+      <button type="button" class="barra-busca" id="barra-busca" tabindex="-1">Buscar<span class="so-largo"> cidade</span></button>
+    </div>
+  </div>
+
   <main class="dia">
     <section class="secao largura" id="itens">
       <div class="cabeca">
@@ -95,19 +113,6 @@
         <p>Parte das prefeituras que cumpre cada item. Os que mais protegem o cidadão contam mais na nota.</p>
       </div>
       <ol class="itens" id="lista-itens"></ol>
-    </section>
-
-    <section class="secao largura" id="evolucao" hidden>
-      <div class="cabeca">
-        <h2>Semana a semana</h2>
-        <p id="evolucao-texto"></p>
-      </div>
-      <div class="controles-grafico">
-        <label for="metrica">Mostrar</label>
-        <select id="metrica"></select>
-      </div>
-      <div class="grafico-evolucao" id="grafico-evolucao"></div>
-      <p class="nota-grafico">As notas de todas as semanas são recalculadas com as regras atuais. Quando um item novo passa a ser verificado, ele só entra na conta a partir daquela semana.</p>
     </section>
 
     <section class="secao largura" id="medalhas" hidden>
@@ -122,13 +127,17 @@
           <select id="semana-podio"></select>
         </label>
       </div>
-      <div id="podio"></div>
-      <p class="podio-desempate" id="podio-desempate"></p>
+      <div class="medalhas-grade">
+        <div class="podio-caixa">
+          <div id="podio"></div>
+          <p class="podio-desempate" id="podio-desempate"></p>
+        </div>
 
       <div class="hall-caixa">
         <h3 id="hall-titulo">Hall da fama</h3>
         <p>Ouro vale 10 pontos, prata 5 e bronze 2,5. Em empate de pontos, ganha quem tem mais ouros, depois mais pratas. Se ainda empatar, divide a posição.</p>
         <ol class="hall" id="hall"></ol>
+      </div>
       </div>
     </section>
 
@@ -223,6 +232,19 @@
           Detalhes na <a href="https://github.com/guilhermeoliveirabrito/farol-gov/blob/main/docs/metodologia.md" rel="noopener">metodologia</a>.
         </p>
       </details>
+    </section>
+
+    <section class="secao largura" id="evolucao" hidden>
+      <div class="cabeca">
+        <h2>Semana a semana</h2>
+        <p id="evolucao-texto"></p>
+      </div>
+      <div class="controles-grafico">
+        <label for="metrica">Mostrar</label>
+        <select id="metrica"></select>
+      </div>
+      <div class="grafico-evolucao" id="grafico-evolucao"></div>
+      <p class="nota-grafico">As notas de todas as semanas são recalculadas com as regras atuais. Quando um item novo passa a ser verificado, ele só entra na conta a partir daquela semana.</p>
     </section>
 
     <section class="secao largura" id="como-funciona">

@@ -62,6 +62,7 @@ let oficiais = []; // os 13 itens verificados: quem tem posicao, seta e medalha
 let totalRanking = 0;
 let listaOrdenada = []; // ranking primeiro, depois quem ficou sem posicao, depois sem nota
 let filtrados = [];
+let itensLista = []; // o que a lista mostra: cada item e uma cidade e as copias dela no mesmo servidor
 let mostrando = 0;
 
 // ---------- utilitarios ----------
@@ -216,6 +217,7 @@ function decodificar(resumo) {
       oficial: Boolean(l[idx.flags] & 4),
       posBr: typeof l[idx.pos] === "number" ? l[idx.pos] : null,
       ordem: typeof l[idx.ord] === "number" ? l[idx.ord] : null,
+      grupo: typeof l[idx.grp] === "number" ? l[idx.grp] : null,
       variacao: typeof l[idx.var] === "number" ? l[idx.var] : null,
       st,
       medalhas: medalhasDe(resumo.premios, String(l[idx.ibge])),
@@ -1293,10 +1295,33 @@ function aplicarFiltros() {
   else if (ordem === "subiu") filtrados.sort((a, b) => semValor(b.variacao, -1e9) - semValor(a.variacao, -1e9));
   else if (ordem === "caiu") filtrados.sort((a, b) => semValor(a.variacao, 1e9) - semValor(b.variacao, 1e9));
   else if (ordem === "nome") filtrados.sort((a, b) => ordemAlfabetica(a.municipio, b.municipio));
+  // na ordem por nota, cidades seguidas no mesmo servidor e com a mesma nota viram uma
+  // linha so; quando a pessoa filtra pelo nome ou muda a ordem, cada uma aparece sozinha
+  itensLista = [];
+  const juntar = ordem === "nota" && !termo;
+  for (const r of filtrados) {
+    const anterior = itensLista[itensLista.length - 1];
+    if (juntar && r.grupo != null && anterior && anterior.r.grupo === r.grupo) anterior.copias.push(r);
+    else itensLista.push({ r, copias: [] });
+  }
   mostrando = 0;
   $("lista").replaceChildren();
   $("lista").removeAttribute("aria-busy");
   mostrarMais();
+}
+
+function linhaGrupo(item) {
+  const n = item.copias.length;
+  const ufs = [...new Set(item.copias.map((r) => r.uf))].join(", ");
+  const botao = el(
+    "button",
+    { type: "button", class: "grupo-botao", "aria-expanded": "false" },
+    `e mais ${num(n)} ${n === 1 ? "prefeitura" : "prefeituras"} de ${ufs} no mesmo servidor, com a mesma nota`,
+    el("span", { class: "grupo-acao", text: "mostrar" }),
+  );
+  const li = el("li", { class: "grupo" }, botao);
+  botao.addEventListener("click", () => li.replaceWith(...item.copias.map(linhaCidade)));
+  return li;
 }
 
 // explica as bolinhas da lista uma vez so, em cima dela
@@ -1315,14 +1340,14 @@ function legendaLuzes() {
 }
 
 function mostrarMais() {
-  const proximos = filtrados.slice(mostrando, mostrando + POR_PAGINA);
-  $("lista").append(...proximos.map(linhaCidade));
+  const proximos = itensLista.slice(mostrando, mostrando + POR_PAGINA);
+  $("lista").append(...proximos.flatMap((item) => (item.copias.length ? [linhaCidade(item.r), linhaGrupo(item)] : [linhaCidade(item.r)])));
   mostrando += proximos.length;
   const criterio = { nota: "da maior nota para a menor", menor: "da menor nota para a maior", subiu: "das que mais subiram", caiu: "das que mais caíram", nome: "em ordem alfabética" }[$("ordem").value];
   $("contagem").textContent = filtrados.length
     ? `${num(filtrados.length)} cidades, ${criterio}. Toque em uma para ver o detalhe.`
     : "Nenhuma cidade com esse filtro. Confira a grafia ou procure pelo domínio do site.";
-  $("mais").hidden = mostrando >= filtrados.length;
+  $("mais").hidden = mostrando >= itensLista.length;
 }
 
 // ---------- baixar csv ----------
@@ -1544,6 +1569,40 @@ function medalhasSecao(resumo) {
   $("medalhas").hidden = false;
 }
 
+// ---------- barra fixa ----------
+
+function barraFixa() {
+  const barra = $("barra");
+  const hero = document.querySelector(".noite");
+  if (!barra || !hero || !("IntersectionObserver" in window)) return;
+  const focaveis = barra.querySelectorAll("a, button");
+  new IntersectionObserver(([e]) => {
+    const mostrar = !e.isIntersecting;
+    barra.classList.toggle("visivel", mostrar);
+    barra.setAttribute("aria-hidden", String(!mostrar));
+    for (const f of focaveis) f.tabIndex = mostrar ? 0 : -1;
+  }).observe(hero);
+  barra.querySelector(".marca").addEventListener("click", (ev) => {
+    ev.preventDefault();
+    scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  });
+  $("barra-busca").addEventListener("click", () => {
+    scrollTo({ top: 0 });
+    $("busca").focus();
+  });
+
+  // marca na barra a secao que esta na tela
+  const links = new Map([...barra.querySelectorAll("nav a")].map((a) => [a.getAttribute("href").slice(1), a]));
+  const secoes = [...links.keys()].map((id) => $(id)).filter(Boolean);
+  const observador = new IntersectionObserver(
+    (entradas) => {
+      for (const e of entradas) if (e.isIntersecting) for (const [id, a] of links) a.classList.toggle("atual", id === e.target.id);
+    },
+    { rootMargin: "-45% 0px -50% 0px" },
+  );
+  for (const sec of secoes) observador.observe(sec);
+}
+
 // ---------- topo ----------
 
 function contarAte(elemento, valor) {
@@ -1635,6 +1694,7 @@ async function iniciar() {
   cabecalho(resumo);
   iniciarBusca();
   iniciarFicha();
+  barraFixa();
 
   const semSite = await pedidoSemSite;
   const listaSemSite = Array.isArray(semSite) ? semSite : [];

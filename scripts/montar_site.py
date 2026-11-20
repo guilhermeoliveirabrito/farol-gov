@@ -122,6 +122,18 @@ def resumir(dados, snapshots=(), populacao=None):
     ordem = medalhas.podios(tempo, "oficial", populacao)[-1]["ordem"] if tempo else []
     ordem_desempate = {ibge: n for n, ibge in enumerate(ordem, 1)}
 
+    # mesma configuracao: mesmo servidor e mesma nota, no ranking. a lista junta essas
+    # numa linha so ("e mais 23 no mesmo servidor"), senao o topo vira 24 copias iguais
+    por_config = defaultdict(list)
+    for r in dados["resultados"]:
+        linha = agora.get(r["ibge"])
+        if r.get("ip") and linha and linha[2] is not None:
+            por_config[(r["ip"], linha[0])].append(r["ibge"])
+    grupo = {}
+    for n, membros in enumerate((m for m in por_config.values() if len(m) > 1), 1):
+        for ibge in membros:
+            grupo[ibge] = n
+
     linhas = []
     por_uf = defaultdict(dict)
     for r in dados["resultados"]:
@@ -136,7 +148,7 @@ def resumir(dados, snapshots=(), populacao=None):
         linhas.append([
             r["ibge"], r["municipio"], r["uf"], r["dominio"],
             r.get("lat"), r.get("lon"), nota, conceito,
-            flags, status, pos, variacao, ordem_desempate.get(r["ibge"]),
+            flags, status, pos, variacao, ordem_desempate.get(r["ibge"]), grupo.get(r["ibge"]),
         ])
         semanas = [[data, aval[r["ibge"]][0], aval[r["ibge"]][2]] for data, _, aval in semanal if r["ibge"] in aval]
         por_uf[r["uf"] or "XX"][r["ibge"]] = {
@@ -157,7 +169,7 @@ def resumir(dados, snapshots=(), populacao=None):
         "ranqueados": sum(1 for v in agora.values() if v[3] is not None),
         "oficiais": sum(1 for v in agora.values() if v[2] is not None),
         "checks": CHECKS,
-        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var", "ord"],
+        "campos": ["ibge", "municipio", "uf", "dominio", "lat", "lon", "nota", "conceito", "flags", "status", "pos", "var", "ord", "grp"],
         "municipios": linhas,
         "premios": premios(tempo, populacao),
     }

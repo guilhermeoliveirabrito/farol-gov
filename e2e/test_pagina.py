@@ -116,20 +116,6 @@ def test_cidade_sem_posicao_vem_depois_do_ranking(pagina):
     assert pagina.erros == []
 
 
-def test_copias_no_mesmo_servidor_juntas_e_expansiveis(pagina):
-    grupos = pagina.locator("#lista .grupo")
-    if grupos.count() == 0:
-        return  # dados sem grupo (ex.: varredura antiga)
-    antes = pagina.locator("#lista .linha").count()
-    grupos.first.locator("button").click()
-    assert pagina.locator("#lista .linha").count() > antes
-    # filtrar pelo nome mostra cada cidade sozinha
-    pagina.fill("#filtro", "a")
-    pagina.wait_for_timeout(300)
-    assert pagina.locator("#lista .grupo").count() == 0
-    assert pagina.erros == []
-
-
 def test_barra_fixa_aparece_depois_do_mapa(pagina):
     assert "visivel" not in (pagina.get_attribute("#barra", "class") or "")
     pagina.evaluate("scrollTo(0, document.body.scrollHeight / 2)")

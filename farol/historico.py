@@ -97,7 +97,9 @@ def nota_do_status(checks, status, graus=""):
 
 
 def posicoes(notas):
-    """Posicao no ranking, com empate dividindo a mesma posicao (1, 2, 2, 4...)."""
+    """Posicao no ranking, com empate dividindo a mesma posicao (1, 2, 2, 4...).
+
+    `notas` pode ter numero ou tupla (nota e os criterios de desempate)."""
     ordem = sorted(notas.values(), reverse=True)
     primeira = {}
     for i, n in enumerate(ordem, 1):
@@ -105,7 +107,25 @@ def posicoes(notas):
     return {ibge: primeira[n] for ibge, n in notas.items()}
 
 
-def avaliar_snapshot(snap):
+# o que separa duas cidades com a mesma nota, nessa ordem (o 1o elemento da chave e a nota)
+CRITERIOS = (
+    "nota",
+    "mais itens cumpridos por inteiro",
+    "mais pontos de excelência",
+    "maior população (mais gente protegida)",
+)
+
+
+def chave(nota, status, excelencia_, populacao):
+    """Chave do ranking. Com 13 itens, mesmo com graus, muita cidade fica com a mesma nota
+    (24 de SE no mesmo servidor do estado, com o site montado igual). Em vez de deixar
+    todas empatadas, desempata por: itens cumpridos por inteiro, pontos de excelencia
+    e, por ultimo, populacao: entre configuracoes identicas, fica na frente quem protege
+    mais gente. Empate total so sobra sem populacao (testes, dado faltando)."""
+    return (nota, str(status).count("p"), excelencia_ or 0, populacao or 0)
+
+
+def avaliar_snapshot(snap, populacao=None):
     """Devolve {ibge: [nota, conceito, posicao oficial, posicao geral]} com as regras atuais.
 
     Ranking oficial: so quem teve todos os itens daquela varredura verificados. Item nao
@@ -119,9 +139,11 @@ def avaliar_snapshot(snap):
         nota = nota_do_status(checks, status, graus) if flags & ACESSIVEL else None
         saida[ibge] = [nota, conceito(nota) if nota is not None else None, None, None]
         if nota is not None and flags & ELEGIVEL:
-            geral[ibge] = nota
+            extra = resto[0] if resto and isinstance(resto[0], (int, float)) else 0
+            k = chave(nota, status, extra, (populacao or {}).get(ibge))
+            geral[ibge] = k
             if "e" not in status:
-                oficial[ibge] = nota
+                oficial[ibge] = k
     for ibge, pos in posicoes(oficial).items():
         saida[ibge][2] = pos
     for ibge, pos in posicoes(geral).items():

@@ -85,28 +85,14 @@ def test_desempate_por_itens_inteiros_e_excelencia():
     assert s["desempate"] == {"ouro": "mais pontos de excelência", "prata": "mais itens cumpridos por inteiro"}
 
 
-def test_desempate_pela_media_das_semanas_anteriores():
-    snap = _snap({"a": ("pppp", 0), "b": ("pppp", 0)})
-    tempo = [
-        ("2026-11-09", snap, {"a": [80.0, "B", 2], "b": [90.0, "A", 1]}),
-        ("2026-11-16", snap, {"a": [95.0, "A", 1], "b": [95.0, "A", 1]}),
-    ]
-    s = podios(tempo)[1]
-    assert s["ouro"] == ["b"] and s["prata"] == ["a"]
-    assert s["desempate"]["ouro"] == "melhor média nas semanas anteriores"
-
-
-def test_uma_medalha_por_configuracao_no_mesmo_servidor():
-    # a, b e c no mesmo servidor com a mesma nota: so a primeira (maior populacao) leva;
-    # prata e bronze vao pra outras configuracoes
-    aval = {"a": [90.0, "A", 1], "b": [90.0, "A", 1], "c": [90.0, "A", 1], "d": [85.0, "B", 4], "e": [80.0, "B", 5]}
-    snap = {"m": {
-        "a": [3, "pppp", 0, "", "10.0.0.1"], "b": [3, "pppp", 0, "", "10.0.0.1"], "c": [3, "pppp", 0, "", "10.0.0.1"],
-        "d": [3, "pppw", 0, "", "10.0.0.2"], "e": [3, "ppww", 0, "", "10.0.0.3"],
-    }}
+def test_mesmo_servidor_desempata_pela_populacao_e_nao_pula_ninguem():
+    # a, b e c no mesmo servidor com tudo igual: o podio e das tres, pela populacao.
+    # d tem nota menor e nao leva nada so por estar em outro servidor
+    aval = {"a": [90.0, "A", 1], "b": [90.0, "A", 1], "c": [90.0, "A", 1], "d": [85.0, "B", 4]}
+    snap = {"m": {x: [3, "pppp", 0, "", "10.0.0.1"] for x in "abc"} | {"d": [3, "pppw", 0, "", "10.0.0.2"]}}
     s = podios([("2026-11-19", snap, aval)], populacao={"a": 100, "b": 300, "c": 200})[0]
-    assert (s["ouro"], s["prata"], s["bronze"]) == (["b"], ["d"], ["e"])
-    assert s["mesmo_servidor"] == {"ouro": 2}
+    assert (s["ouro"], s["prata"], s["bronze"]) == (["b"], ["c"], ["a"])
+    assert s["desempate"] == {"ouro": "maior população (mais gente protegida)", "prata": "maior população (mais gente protegida)"}
 
 
 def test_mesmo_servidor_com_nota_diferente_concorre_normal():

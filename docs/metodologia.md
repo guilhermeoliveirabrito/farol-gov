@@ -50,12 +50,14 @@ Todos os casos de cadastro vão para `data/revisar_wikidata.csv`, que serve de l
 | `conteudo_misto` | 1 | A página inicial (em HTTPS) não carrega nada por `http://` | Só imagens/mídia por `http://` |
 | `cookies` | 1 | Todos os cookies da página inicial têm `Secure` e `HttpOnly` (ou ela não define cookies) | Todos com `Secure`, algum sem `HttpOnly` |
 | `security_txt` | 1 | `/.well-known/security.txt` responde 200 e tem campo `Contact:` | - |
+| `versao_exposta` | 1 | Nem os headers `Server`/`X-Powered-By`/`X-AspNet-Version` nem o `<meta name="generator">` da página mostram número de versão (ex.: `Apache/2.4.29`, `PHP/7.4.3`, `WordPress 6.4.3`) | - |
 | `dnssec` | 2 | Resolver validador marca a resposta com o bit AD | - |
 | `caa` | 1 | Existe registro CAA `issue`/`issuewild` no domínio ou em um domínio acima (ex.: `sp.gov.br`) | - |
 | `spf` | 1 | Registro `v=spf1` terminando em `-all` ou `~all` | `?all` ou sem mecanismo `all` |
 | `dmarc` | 3 | `_dmarc` com `p=reject` ou `p=quarantine` | `p=none` |
+| `email_tls` | 1 | `_mta-sts` com `v=STSv1` (MTA-STS: quem manda e-mail para a prefeitura tem que usar TLS válido) | Só TLS-RPT (`_smtp._tls`), que manda relatório mas não exige TLS |
 
-Total: 20 pontos.
+Total: 22 pontos. `versao_exposta` e `email_tls` entraram na semana de 16/11 (metodologia 4).
 
 DMARC e HTTPS têm peso maior porque são os que mais afetam o cidadão diretamente: um protege contra golpe por e-mail em nome do órgão, o outro protege o que é digitado no site.
 
@@ -79,6 +81,13 @@ Item cumprido vale 1, menos quando para no mínimo:
 | `dmarc` | `p=quarantine` em vez de `p=reject`: −0,15; sem relatórios (`rua=`): −0,1 |
 | `spf` | `~all` em vez de `-all`: −0,2 |
 | `caa` | registro herdado do domínio do estado, não do próprio: −0,2 |
+| `cookies` | algum cookie sem `SameSite`: −0,1 |
+| `security_txt` | sem o campo `Expires`, obrigatório pela RFC 9116: −0,2 |
+| `versao_exposta` | mostra o nome do software, mesmo sem a versão: −0,1 |
+| `email_tls` | MTA-STS sem TLS-RPT: −0,2 |
+| `dmarc` (de novo) | `pct=` menor que 100, a política só vale para parte dos e-mails: −0,1 |
+
+Os parciais também têm graus: `cookies` vale de 0,3 a 0,7 conforme a proporção de cookies sem `HttpOnly`, e `conteudo_misto` vale 0,7 com uma imagem por `http://`, 0,5 com até três e 0,3 com mais.
 
 Até a metodologia 2, todo item cumprido valia o cheio. Com 13 itens a nota tinha umas 30 combinações possíveis: na varredura de 19/11 eram 565 cidades com a mesma nota e 29 empatadas no topo. Com os graus passam de 200 notas diferentes. As semanas antigas guardaram só o status de cada item, então nelas o item cumprido continua valendo 1.
 
@@ -98,21 +107,19 @@ Até a metodologia 2, todo item cumprido valia o cheio. Com 13 itens a nota tinh
 
 ## Posição e histórico
 
-- **Posição no Brasil**: ordem das notas entre as cidades que estão no ranking. Empates dividem a mesma posição (1º, 2º, 2º, 4º...).
-- **Variação**: diferença de posição em relação à semana anterior (a última varredura daquela semana). Se a varredura rodar de novo na mesma semana, a seta não compara as duas rodadas, porque a diferença entre elas não tem a ver com os sites. Quando entram itens novos entre uma semana e outra, a página avisa que parte do movimento vem deles. Como as notas têm poucos valores possíveis, muitas cidades empatam, e uma mudança pequena de nota pode mover uma cidade centenas de posições.
+- **Posição no Brasil**: ordem das notas entre as cidades que estão no ranking. Nota igual desempata, nesta ordem, por:
+  1. mais itens cumpridos por inteiro (dois parciais somam o mesmo que um inteiro na nota, mas aqui valem menos);
+  2. mais pontos de excelência: DMARC com `p=reject`, DMARC mandando relatórios (`rua=`), SPF com `-all`, TLS 1.3, HSTS com `includeSubDomains`, HSTS com `preload`, HSTS de 2 anos ou mais, Content-Security-Policy, Referrer-Policy, Permissions-Policy e CAA no próprio domínio;
+  3. maior população, ou seja, mais gente protegida. Esse critério existe porque várias prefeituras ficam no mesmo servidor, com o site montado igual (24 de SE no servidor do governo do estado), e nenhum critério técnico consegue separá-las.
+  Só cidades sem população conhecida e com tudo igual dividem a posição.
+- **Variação**: diferença de posição em relação à semana anterior (a última varredura daquela semana). Se a varredura rodar de novo na mesma semana, a seta não compara as duas rodadas, porque a diferença entre elas não tem a ver com os sites. Quando entram itens novos entre uma semana e outra, a página avisa que parte do movimento vem deles. Como as notas têm poucos valores possíveis, muitas cidades empatam, e uma mudança pequena de nota ainda pode mover uma cidade muitas posições.
 - **Histórico**: cada varredura completa é guardada em `data/historico/AAAA-MM-DD.json` (vale a última do dia), só com o status de cada item. O gráfico da página e o histórico de cada cidade mostram uma varredura por semana. **As notas das semanas antigas são recalculadas com as regras atuais**, para que a comparação faça sentido. Um item novo só entra na conta a partir da semana em que começou a ser verificado. No gráfico da página, a semana em que a metodologia mudou aparece marcada.
 
 ## Medalhas e hall da fama
 
 - **Semana** vai de segunda a domingo, no horário de Brasília. Se houver mais de uma varredura na semana, vale só a última, do mesmo jeito que no histórico vale só a última varredura de cada dia.
 - **Quem concorre:** só quem teve todos os itens verificados naquela varredura.
-- **Uma medalha por configuração:** prefeituras no mesmo servidor e com a mesma nota têm o site montado do mesmo jeito (na semana de 16/11 eram 24 prefeituras de SE no servidor do governo do estado). Só a primeira delas no desempate leva a medalha, e a seguinte vai para outra configuração. Assim o pódio mostra três jeitos diferentes de fazer certo, e o pódio diz quantas ficaram de fora por serem cópia da medalhista.
-- **Pódio:** ouro, prata e bronze vão para as três maiores notas. Nota igual desempata, nesta ordem, por:
-  1. mais itens cumpridos por inteiro (dois parciais somam o mesmo que um inteiro, mas valem menos aqui);
-  2. mais pontos de excelência, que não mudam a nota e só desempatam: DMARC com `p=reject`, DMARC mandando relatórios (`rua=`), SPF com `-all`, TLS 1.3, HSTS com `includeSubDomains`, HSTS com `preload`, HSTS de 2 anos ou mais, Content-Security-Policy, Referrer-Policy, Permissions-Policy e CAA no próprio domínio;
-  3. melhor média de nota nas 4 semanas anteriores;
-  4. maior população, ou seja, mais gente protegida. Esse critério existe porque várias prefeituras ficam no mesmo servidor, com a configuração idêntica, e nenhum critério técnico consegue separá-las.
-  Se ainda assim empatar, a medalha é dividida e o seguinte leva a próxima: dois ouros e uma prata, nunca um pódio só de ouro. Quando o desempate decide uma medalha, o pódio mostra qual critério decidiu.
+- **Pódio:** ouro, prata e bronze vão para o 1º, o 2º e o 3º do ranking, com o mesmo desempate da posição (itens inteiros, pontos de excelência, população). Quando o desempate decide uma medalha, o pódio mostra qual critério decidiu. Se duas cidades empatarem em tudo, dividem a medalha e a seguinte leva a próxima.
 - **Semana em andamento:** o pódio da semana atual aparece como parcial até domingo, porque uma nova varredura ainda pode mudá-lo.
 - **Hall da fama:** ouro vale 10 pontos, prata 5 e bronze 2,5. Em empate de pontos, fica na frente quem tem mais ouros e depois quem tem mais pratas. Se tudo empatar, as cidades dividem a posição.
 - As notas de semanas antigas são recalculadas com as regras atuais, então as medalhas de semanas passadas também seguem a metodologia de hoje.
@@ -128,7 +135,7 @@ Até a metodologia 2, todo item cumprido valia o cheio. Com 13 itens a nota tinh
 ## Detalhes técnicos
 
 - **DNS**: consultas em cinco resolvers públicos que validam DNSSEC (Cloudflare, Google e Quad9), com rodízio entre eles, 3 segundos por servidor, até 12 segundos por consulta e uma nova tentativa quando dá timeout. O DNSSEC é considerado válido quando a resposta para o registro `A` vem com a flag AD.
-- **Domínio de e-mail**: SPF, DMARC e CAA são consultados no domínio do site sem o `www.` (ex.: `www.recife.pe.gov.br` vira `recife.pe.gov.br`).
+- **Domínio de e-mail**: SPF, DMARC, CAA e MTA-STS são consultados no domínio do site sem o `www.` (ex.: `www.recife.pe.gov.br` vira `recife.pe.gov.br`).
 - **TLS antigo**: um único handshake oferecendo só TLS 1.0 e 1.1, sem nenhuma requisição HTTP depois. É o mesmo teste que ferramentas como o SSL Labs fazem. Se o servidor fica sem responder por 6 segundos (comum em firewall que descarta versões antigas), conta como recusa: ele já tinha respondido ao handshake moderno logo antes, então está no ar e simplesmente não fala TLS 1.0.
 - **Página inicial**: lemos até 512 KB do HTML da página final (depois dos redirecionamentos) para os itens de conteúdo misto e headers. A página é baixada uma vez só.
 - **Limite por servidor**: muitas prefeituras ficam hospedadas no mesmo servidor. A varredura verifica no máximo 3 sites por IP ao mesmo tempo e embaralha a ordem da lista, para não sobrecarregar ninguém.

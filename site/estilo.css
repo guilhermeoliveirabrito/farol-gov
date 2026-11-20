@@ -281,16 +281,6 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .incompleta { margin-left: 8px; font-size: .74rem; font-weight: 600; color: var(--suave); border: 1px solid var(--linha); border-radius: 99px; padding: 1px 8px; white-space: nowrap; }
 .aviso-oficial { flex-basis: 100%; margin: 4px 0 0; font-size: .88rem; color: var(--suave); }
 
-/* copias no mesmo servidor, juntas numa linha */
-.grupo { border-bottom: 1px solid var(--linha); }
-.grupo-botao {
-  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16px;
-  padding: 10px 8px 12px 56px; background: none; border: 0; cursor: pointer; text-align: left;
-  font: inherit; font-size: .88rem; color: var(--suave);
-}
-.grupo-botao:hover { color: var(--tinta); background: var(--papel); }
-.grupo-acao { flex: none; font-weight: 600; color: var(--tinta); text-decoration: underline; text-underline-offset: 3px; }
-
 /* legenda das bolinhas e esqueleto enquanto o json chega */
 .legenda-luzes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0 0 12px; color: var(--suave); font-size: .84rem; }
 .legenda-luzes > span { display: inline-flex; align-items: center; gap: 6px; }
@@ -363,7 +353,6 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
 .podio-cidade span { color: var(--suave); font-size: .85rem; }
 .podio-desempate { text-align: center; color: var(--suave); font-size: .88rem; margin: 14px auto 0; max-width: 60ch; }
 .podio-desempate:empty { display: none; }
-.podio-copias { display: block; margin-top: 2px; color: var(--suave); font-size: .76rem; line-height: 1.3; max-width: 22ch; }
 .podio-vazio { color: var(--suave); font-size: .85rem; font-style: italic; }
 .degrau .bloco {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 18px;
@@ -570,7 +559,6 @@ h1, h2, h3 { font-family: var(--titulo); font-weight: 800; letter-spacing: -.03e
   .mapa { height: 360px; }
   .linha { grid-template-columns: minmax(0, 1fr) 36px 52px 34px; gap: 10px; }
   .linha .uf, .linha .luzes { display: none; }
-  .grupo-botao { padding-left: 8px; }
   .pos-lista { min-width: 0; margin-right: 4px; }
   .hall-linha { grid-template-columns: 34px minmax(0, 1fr) 68px; }
   .hall-medalhas { grid-column: 2; grid-row: 2; display: flex; gap: 12px; }

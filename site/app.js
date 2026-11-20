@@ -20,10 +20,12 @@ const ITENS = {
   conteudo_misto: ["Sem conteúdo misto", "A página protegida não puxa scripts e imagens por conexão aberta."],
   cookies: ["Cookies protegidos", "Os cookies só viajam com criptografia e scripts de terceiros não leem."],
   security_txt: ["security.txt", "Diz a quem encontrar uma falha para onde mandar o aviso."],
+  versao_exposta: ["Não mostra a versão do software", "Esconde qual versão do servidor e do sistema o site usa, para não entregar a lista de falhas conhecidas."],
   dnssec: ["DNSSEC", "Assina o endereço do site para ninguém desviar você para outro lugar."],
   caa: ["CAA", "Diz quais empresas podem emitir certificado para o site."],
   spf: ["SPF", "Lista quais servidores podem mandar e-mail em nome da prefeitura."],
   dmarc: ["DMARC", "Manda os provedores recusarem e-mail falso com o nome da prefeitura."],
+  email_tls: ["E-mail com TLS obrigatório", "Exige que o e-mail enviado para a prefeitura viaje com criptografia (MTA-STS)."],
 };
 
 const STATUS = { pass: "cumpre", warn: "parcial", fail: "não cumpre", error: "não verificado", na: "novo, ainda não verificado" };
@@ -58,11 +60,10 @@ const reduzirMovimento = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let todos = [];
 let ranqueados = []; // todo mundo com nota: base das medias e da adocao
-let oficiais = []; // os 13 itens verificados: quem tem posicao, seta e medalha
+let oficiais = []; // todos os itens verificados: quem tem posicao, seta e medalha
 let totalRanking = 0;
 let listaOrdenada = []; // ranking primeiro, depois quem ficou sem posicao, depois sem nota
 let filtrados = [];
-let itensLista = []; // o que a lista mostra: cada item e uma cidade e as copias dela no mesmo servidor
 let mostrando = 0;
 
 // ---------- utilitarios ----------
@@ -217,7 +218,6 @@ function decodificar(resumo) {
       oficial: Boolean(l[idx.flags] & 4),
       posBr: typeof l[idx.pos] === "number" ? l[idx.pos] : null,
       ordem: typeof l[idx.ord] === "number" ? l[idx.ord] : null,
-      grupo: typeof l[idx.grp] === "number" ? l[idx.grp] : null,
       variacao: typeof l[idx.var] === "number" ? l[idx.var] : null,
       st,
       medalhas: medalhasDe(resumo.premios, String(l[idx.ibge])),
@@ -1295,33 +1295,10 @@ function aplicarFiltros() {
   else if (ordem === "subiu") filtrados.sort((a, b) => semValor(b.variacao, -1e9) - semValor(a.variacao, -1e9));
   else if (ordem === "caiu") filtrados.sort((a, b) => semValor(a.variacao, 1e9) - semValor(b.variacao, 1e9));
   else if (ordem === "nome") filtrados.sort((a, b) => ordemAlfabetica(a.municipio, b.municipio));
-  // na ordem por nota, cidades seguidas no mesmo servidor e com a mesma nota viram uma
-  // linha so; quando a pessoa filtra pelo nome ou muda a ordem, cada uma aparece sozinha
-  itensLista = [];
-  const juntar = ordem === "nota" && !termo;
-  for (const r of filtrados) {
-    const anterior = itensLista[itensLista.length - 1];
-    if (juntar && r.grupo != null && anterior && anterior.r.grupo === r.grupo) anterior.copias.push(r);
-    else itensLista.push({ r, copias: [] });
-  }
   mostrando = 0;
   $("lista").replaceChildren();
   $("lista").removeAttribute("aria-busy");
   mostrarMais();
-}
-
-function linhaGrupo(item) {
-  const n = item.copias.length;
-  const ufs = [...new Set(item.copias.map((r) => r.uf))].join(", ");
-  const botao = el(
-    "button",
-    { type: "button", class: "grupo-botao", "aria-expanded": "false" },
-    `e mais ${num(n)} ${n === 1 ? "prefeitura" : "prefeituras"} de ${ufs} no mesmo servidor, com a mesma nota`,
-    el("span", { class: "grupo-acao", text: "mostrar" }),
-  );
-  const li = el("li", { class: "grupo" }, botao);
-  botao.addEventListener("click", () => li.replaceWith(...item.copias.map(linhaCidade)));
-  return li;
 }
 
 // explica as bolinhas da lista uma vez so, em cima dela
@@ -1340,14 +1317,14 @@ function legendaLuzes() {
 }
 
 function mostrarMais() {
-  const proximos = itensLista.slice(mostrando, mostrando + POR_PAGINA);
-  $("lista").append(...proximos.flatMap((item) => (item.copias.length ? [linhaCidade(item.r), linhaGrupo(item)] : [linhaCidade(item.r)])));
+  const proximos = filtrados.slice(mostrando, mostrando + POR_PAGINA);
+  $("lista").append(...proximos.map(linhaCidade));
   mostrando += proximos.length;
   const criterio = { nota: "da maior nota para a menor", menor: "da menor nota para a maior", subiu: "das que mais subiram", caiu: "das que mais caíram", nome: "em ordem alfabética" }[$("ordem").value];
   $("contagem").textContent = filtrados.length
     ? `${num(filtrados.length)} cidades, ${criterio}. Toque em uma para ver o detalhe.`
     : "Nenhuma cidade com esse filtro. Confira a grafia ou procure pelo domínio do site.";
-  $("mais").hidden = mostrando >= itensLista.length;
+  $("mais").hidden = mostrando >= filtrados.length;
 }
 
 // ---------- baixar csv ----------
@@ -1503,14 +1480,11 @@ function podio(semana, porIbge, atual) {
     const cidades = semana[tipo].map((ibge) => porIbge.get(ibge)).filter(Boolean);
     const nomes = cidades.length
       ? cidades.map((r) => {
-          const copias = semana.g?.[tipo];
           const b = el(
             "button",
             { type: "button", class: "podio-cidade", title: titulo(tipo) },
             el("b", { text: r.municipio }),
             el("span", { text: atual ? `${r.uf}, nota ${fmtNota(r.nota)}` : r.uf }),
-            // a medalha vale pra configuracao; as copias no mesmo servidor nao levam outra
-            copias > 0 ? el("small", { class: "podio-copias", text: `e mais ${copias} no mesmo servidor, com a mesma configuração` }) : null,
           );
           b.addEventListener("click", () => abrirFicha(r));
           return b;
@@ -1528,7 +1502,7 @@ function medalhasSecao(resumo) {
   const porIbge = new Map(todos.map((r) => [r.ibge, r]));
 
   // monta o podio de cada semana a partir das medalhas de cada cidade
-  const semanas = semanasPremio.map((s, i) => ({ ...s, ouro: [], prata: [], bronze: [], x: (dados.x || [])[i] || s.x || {}, g: (dados.g || [])[i] || {} }));
+  const semanas = semanasPremio.map((s, i) => ({ ...s, ouro: [], prata: [], bronze: [], x: (dados.x || [])[i] || s.x || {} }));
   for (const [ibge, lista] of Object.entries(dados.cidades || {})) {
     for (const [i, t] of lista) if (semanas[i] && MEDALHAS[t]) semanas[i][MEDALHAS[t]].push(ibge);
   }
@@ -1677,7 +1651,7 @@ async function iniciar() {
   ranqueados = todos.filter((r) => r.acessivel && r.ranking);
   oficiais = todos.filter((r) => r.acessivel && r.oficial);
   // resumo antigo (antes do ranking oficial) nao tem o campo: trata todo mundo como oficial
-  // resumo antigo (antes de exigir os 13 itens) nao tem o bit: quem tem posicao entra
+  // resumo antigo (antes de exigir todos os itens) nao tem o bit: quem tem posicao entra
   if (!resumo.campos.includes("posg") && !oficiais.length) {
     for (const r of ranqueados) r.oficial = r.posBr != null;
     oficiais = ranqueados.filter((r) => r.oficial);
